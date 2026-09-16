@@ -1,0 +1,367 @@
+# WorkPulse Implementation Status
+
+## Deliverable desain — 16 September 2026
+
+Permintaan terarah mockup S01–S14: DONE untuk 14 screen representatif, bukan implementasi fitur. Acuan: Design.md root, wireframe S01–S14 (R01–R10/F01–F07), keputusan scope IMPLEMENTATION_PLAN §1. Catatan desain ini terpisah dari status implementasi T01–T25.
+
+File: `design-mockups/` di root, berisi galeri `index.html`, S01–S14 HTML, CSS, font lokal berlisensi OFL, 56 PNG desktop/mobile light/dark, generator dan catatan verifikasi. `node design-mockups/build.mjs` berhasil; `node design-mockups/render.mjs` berhasil untuk 56 render pada 1440/360 px, tanpa horizontal overflow, font terpasang, menu mobile dan autofocus Quick log lolos. Bukti: `design-mockups/verification.json` dan `design-mockups/README.md`.
+
+Keterbatasan: data ilustrasi dan aksi simulasi; belum semua state alternatif, audit aksesibilitas menyeluruh, atau integrasi produk. Build/test aplikasi tidak dijalankan karena deliverable terpisah dari aplikasi. Langkah berikutnya: review desain; implementasi berikutnya tetap mengikuti dependensi task tracker.
+
+Terakhir diperbarui untuk desain: 16 September 2026.
+
+Rencana: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Target pelaksana: LUNA MAX. Status: T01 DONE; T02 DONE; T03 DONE; T04 DONE. T03 Auth/Profile dan T04 frame lulus pada stack lokal; hosted SMTP tetap integration item sebelum production. Task berikutnya: T05.
+
+## Task tracker
+
+| ID | Paket | Status |
+| --- | --- | --- |
+| T01 | Bootstrap | DONE |
+| T02 | Schema dan tenant boundary | DONE |
+| T03 | Auth dan profil | DONE |
+| T04 | Design system dan app frame | DONE |
+| T05 | Private storage foundation | TODO |
+| T06 | Activity persistence | TODO |
+| T07 | Capture dan activity UI | TODO |
+| T08 | Projects dan context | TODO |
+| T09 | Manual achievements dan skills | TODO |
+| T10 | Evidence reservation dan screening | TODO |
+| T11 | Evidence UI dan lifecycle | TODO |
+| T12 | Dashboard dan timeline | TODO |
+| T13 | AI jobs dan consent | TODO |
+| T14 | Detection dan review | TODO |
+| T15 | Import staging | TODO |
+| T16 | Import commit | TODO |
+| T17 | Import review UI | TODO |
+| T18 | CV schema dan selection | TODO |
+| T19 | CV builder dan overrides | TODO |
+| T20 | CV freshness dan deletion | TODO |
+| T21 | Export backend | TODO |
+| T22 | Preview dan PDF QA | TODO |
+| T23 | Account deletion dan retention | TODO |
+| T24 | Instrumentation dan performance | TODO |
+| T25 | Regression dan release handoff | TODO |
+
+Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
+
+## Checkpoint T04
+
+Task / tanggal / status:
+T04 Design system dan application frame / 16 September 2026 / DONE.
+
+Dependensi DONE:
+T01 Bootstrap, T02 Schema dan tenant boundary, dan T03 Auth dan profil.
+
+Scope yang selesai:
+- Token semantic sage untuk light/dark, control border dan focus contrast, warna status,
+  typography, spacing, radius, shadows, focus, touch targets, dan reduced motion.
+- Theme switch menyimpan pilihan `light`/`dark` dalam cookie `wp-theme`; tanpa pilihan
+  eksplisit, tema sistem dipakai. Root bootstrap menerapkan atribut sebelum workspace paint.
+- Route group workspace tetap memakai URL canonical. Server layout hanya membungkus
+  profile yang sudah selesai; onboarding provisional tetap melalui flow T03.
+- Frame desktop/mobile menyediakan skip link, enam navigasi canonical, profile/settings,
+  sign out, theme switch, dan Quick log. Drawer memakai native dialog dengan Escape dan
+  mengembalikan fokus ke tombol pemicu.
+- Route Activity menerima filter GET `from`, `to`, `project`, memulihkan state dari URL,
+  mendukung back/forward, menghilangkan nilai kosong, dan tidak memperlakukan query lain
+  sebagai state filter. `/activity/new` memfokuskan input; save tetap unavailable.
+- Achievements, Projects, Timeline, dan CV memakai unavailable state tanpa data contoh,
+  fake success, maupun persistence yang belum ada.
+- Shared UI states dipakai oleh frame, placeholder, Dashboard, dan Profile: controls,
+  card/badge, tooltip, dialog, toast, skeleton, empty/unavailable/error, unsaved guard,
+  named delete, dan revision conflict. T03 server action, owner, revision, operation key,
+  dan session draft contracts tetap berlaku.
+- Copy dan accessible names untuk navigasi, tema, Activity, Quick log, placeholder, serta
+  state bersama tersedia dalam locale `en` dan `id` melalui dictionary produk.
+- Keputusan token/control contrast, cookie tema, native dialog, package pins, filter
+  allowlist, dan placeholder scope ada di
+  [0005-design-system-application-frame.md](decisions/0005-design-system-application-frame.md).
+
+File T04 yang ditambah atau disesuaikan:
+`README.md`, `package.json`, `pnpm-lock.yaml`, `playwright.config.ts`,
+`playwright.ui.config.ts`, `src/app/layout.tsx`, `src/app/globals.css`,
+`src/app/(workspace)/` (layout, loading, Dashboard/Profile, dan lima destination pages
+beserta Quick log), `src/styles/tokens.css`, `src/components/layout/`,
+`src/components/ui/`, `src/components/forms/` (feedback, submit, conflict),
+`src/features/profile/` (frame/form adaptation), `src/features/auth/sign-out-form.tsx`,
+`src/domain/routes/url-filters.ts`, `src/domain/theme/theme-preference.ts`,
+`src/server/supabase/server.ts`, `src/i18n/messages.ts`,
+`tests/unit/theme-preference.test.ts`, `tests/unit/url-filters.test.ts`,
+`tests/unit/session-draft.test.ts`, `tests/e2e/app-frame.spec.ts`,
+`tests/e2e/auth-profile.spec.ts`, dan decision/verification records T04.
+Tidak ada migration, schema, database type, atau worker yang diubah.
+
+Acceptance checklist serta bukti:
+- [x] Clean install `pnpm install --frozen-lockfile` berhasil; lockfile pnpm tunggal,
+      `lucide-react` 1.46.0 dan `@axe-core/playwright` 4.12.1 dipin exact.
+- [x] `pnpm lint` lulus dengan zero warnings; `pnpm typecheck -- --incremental false`
+      lulus.
+- [x] `pnpm test` lulus: 13 files, 51/51 tests, termasuk tema/token contrast, URL
+      filters, dan draft-key isolation.
+- [x] `pnpm build` menghasilkan production build. E2E UI juga membangun dan menjalankan
+      production server sebelum pengujian.
+- [x] `pnpm test:e2e` lulus: 2 smoke tests (health dan anonymous root).
+- [x] `pnpm test:e2e:auth` lulus: 1 end-to-end test meliputi signup/confirmation,
+      onboarding, recovery, profile, draft/conflict, CRUD foundation, named delete,
+      dan sign out pada Supabase lokal/Mailpit.
+- [x] `pnpm test:e2e:ui` lulus: 1 authenticated test meliputi enam route/active states,
+      explicit dan system theme, URL filter/reload/back/forward, Quick log focus, unsaved
+      guard, skip link, drawer/Escape/focus return, reduced motion, sign out, serta
+      viewport 360/1440 di light/dark untuk Dashboard, Activity, Quick log, dan Profile.
+- [x] Axe route scans Dashboard, Activity, dan Profile melaporkan 0 serious/critical
+      violations. Screenshot light/dark desktop, mobile, serta mobile drawer ditinjau;
+      tidak terlihat clipping atau horizontal overflow.
+- [x] Tidak ada fake success, placeholder records, database migration, atau business
+      persistence yang diperkenalkan. T05 berikutnya; Gate M1 masih terbuka.
+
+Perintah dan hasil aktual terakhir:
+`pnpm install --frozen-lockfile` exit 0; `pnpm lint` exit 0; `pnpm typecheck -- --incremental false`
+exit 0; `pnpm test` exit 0 (13 files / 51 tests); `pnpm build` exit 0;
+`pnpm test:e2e` exit 0 (2 tests); `pnpm test:e2e:auth` exit 0 (1 test);
+`pnpm test:e2e:ui` exit 0 (1 test, Axe serious/critical 0). Bukti E2E menggunakan
+Supabase lokal, Auth email confirmation, Mailpit, dan Chromium; tidak ada hosted account
+atau production service yang diakses.
+
+Checks yang tidak dijalankan beserta alasan:
+`pnpm db:reset`, `pnpm db:test`, `pnpm db:lint`, dan `pnpm db:types` tidak dijalankan
+untuk T04 karena tidak ada migration/schema/type changes dan suite database tidak
+termasuk acceptance task ini. `pnpm db:status` tidak dijadikan bukti; status container
+lokal diperiksa secara read-only. Hosted SMTP dan deployment tidak diuji karena bukan
+scope T04.
+
+Blocker: tidak ada untuk T04. Activity/project/achievement/timeline/CV masih state
+unavailable sampai task bisnis terkait; itu adalah batas scope yang direncanakan.
+
+Langkah berikutnya:
+T05 Private storage foundation sesuai dependency plan. Jangan menutup Gate M1 sampai
+acceptance T05 selesai.
+
+## Checkpoint T03
+
+Task / tanggal / status:
+T03 Auth dan profil / 16 September 2026 / DONE.
+
+Dependensi DONE:
+T01 Bootstrap dan kontrak proyek; T02 Schema dasar dan tenant boundary.
+
+Scope yang selesai:
+- Auth SSR, lifecycle routing, confirmation/recovery actions, profile/onboarding, dan
+  empat foundation editor tetap pada scope T03. Identitas mutation berasal dari
+  session server, RLS, dan RPC; client tidak dipercaya mengirim owner ID.
+- Phase 1: sessionStorage draft memakai key versi baru per authenticated profile ID
+  dan form. Legacy key tanpa owner dibuang. Password, hidden/server fields, identity,
+  revision, file, serta field tak dikenal tidak disimpan. Sign-out membersihkan draft
+  milik akun aktif.
+- Phase 2: conflict reload/retry memakai field allowlist per form. Record identity,
+  owner, revision, timestamps, lifecycle, dan discriminator terlindungi. Experience
+  kind dipetakan ke control experience_kind; tanggal memakai mapping precision.
+  Reload mengganti field editable dan expected_revision; retry mempertahankan input
+  lokal, mengubah expected_revision saja, dan melakukan satu resubmit.
+- Phase 3: create experience, education, certification, dan skill menggunakan typed
+  authenticated RPCs dan tidak memakai direct insert di saveFoundationAction.
+  Operation key UUID tersimpan per owner/form sampai success; error/ambiguous retry
+  mempertahankan key. Private operation_requests menggunakan unique
+  (user_id, operation_kind, operation_key), input_revision 0, hash SHA-256 atas
+  canonical JSONB, dan owned result. Ledger + row create terjadi pada satu transaksi.
+  Identik replay mengembalikan row yang sama; payload berbeda untuk key sama ditolak.
+  Update/delete tetap memakai RPC revision-checked yang sudah ada.
+- Migration, action, dan conflict errors memakai safe localized results tanpa raw
+  database message atau data record akun lain.
+- E2E Auth/profile dijalankan terhadap Supabase lokal dengan confirmation dan Mailpit:
+  signup/verification, manual onboarding, dashboard, recovery/password update,
+  isolation dua akun, revision conflict, draft restore, CRUD foundation, partial dates,
+  dan sign-out lulus.
+- Recovery token-hash lokal menghasilkan AMR `otp`; password update mengharuskan
+  callback `type=recovery` yang sudah diverifikasi, cookie flow HttpOnly, dan bukti AMR
+  terbaru. PKCE tanpa type tetap mengharuskan AMR `recovery`.
+- Scope tetap T03; T04 belum dimulai.
+
+File yang berubah pada remediation:
+src/components/forms/session-draft.ts, src/components/forms/conflict-controls.tsx,
+src/components/forms/operation-key.ts, src/features/auth/sign-out-form.tsx,
+src/app/dashboard/page.tsx, src/app/settings/profile/page.tsx,
+src/features/profile/onboarding-form.tsx, src/features/profile/profile-editor.tsx,
+src/features/profile/foundation-editors.tsx, src/features/profile/foundation-actions.ts,
+src/features/profile/onboarding-draft-cleanup.tsx,
+src/server/auth/recovery-session.ts, src/server/supabase/database.types.ts,
+src/i18n/messages.ts,
+tests/unit/session-draft.test.ts, tests/unit/conflict-mapping.test.ts,
+tests/unit/operation-key.test.ts, tests/unit/recovery-session.test.ts,
+tests/e2e/auth-profile.spec.ts,
+supabase/tests/database/foundation.test.sql,
+supabase/migrations/20260916170000_t03_foundation_create_idempotency.sql,
+docs/decisions/0003-auth-session.md, docs/decisions/0004-foundation-create-idempotency.md,
+docs/verification/T03-auth-profile.md, docs/IMPLEMENTATION_STATUS.md.
+Daftar T03 baseline sebelumnya tetap dirinci di verification record.
+
+Migration dan keputusan:
+Migration 20260916170000_t03_foundation_create_idempotency.sql membuat private
+operation ledger dan empat authenticated typed create RPCs. Supabase migration list
+menunjukkan versi 20260916170000 pada repository dan database lokal; db push
+melaporkan local database up to date. Keputusan transaction/key/hash/error tercatat
+di docs/decisions/0004-foundation-create-idempotency.md. `database.types.ts` dihasilkan
+ulang dari schema lokal dan dibandingkan dengan output typegen baru; hasilnya identik.
+
+Acceptance checklist serta bukti:
+- [x] Draft isolation dan allowlist unit test: tests/unit/session-draft.test.ts.
+- [x] Conflict field/date mapping unit test: tests/unit/conflict-mapping.test.ts.
+- [x] Create-key UUID/storage unit test: tests/unit/operation-key.test.ts.
+- [x] Full pnpm test lulus: 11 files, 43/43 tests.
+- [x] Local foundation pgTAP: 117/117 assertions, zero failures, plan 1..117,
+      transaction rollback.
+- [x] Two-session local PostgreSQL replay check: concurrent second call menunggu
+      first commit; kedua call menerima ID sama; satu skill dan satu ledger row.
+      Row test dihapus setelah check.
+- [x] pnpm install --frozen-lockfile, pnpm lint, pnpm typecheck, pnpm test, pnpm build,
+      pnpm db:lint, pnpm db:test, pnpm db:types, dan pnpm test:e2e:auth lulus.
+- [x] Generated `database.types.ts` identik dengan output baru dari schema Supabase
+      lokal.
+- [x] Auth lokal menggunakan email confirmation (`mailer_autoconfirm=false`); signup,
+      verification, recovery, dan update password terbukti melalui Mailpit.
+- [x] `pnpm db:reset` dijalankan dari nol pada stack Supabase disposable dengan
+      project ID `workpulse-t03-disposable-20260916`; kelima migration dan seed lulus.
+      `db:test` (117/117) dan `db:lint` lulus pada database hasil reset. Volume asli
+      `supabase_db_WorkPulse` dipertahankan dan stack WorkPulse dinyalakan kembali.
+
+Perintah verifikasi terakhir:
+1. pnpm lint — exit 0, zero warnings.
+2. pnpm typecheck -- --incremental false — exit 0.
+3. pnpm test — exit 0, 11 files / 43 tests.
+4. pnpm build — exit 0, production build dan route generation selesai.
+5. pnpm db:types — exit 0; output baru dibandingkan dengan
+   src/server/supabase/database.types.ts dan identik.
+6. pnpm db:test — exit 0, 1 file / 117 assertions, zero failures.
+7. pnpm db:lint — exit 0, no schema errors.
+8. pnpm test:e2e:auth — exit 0, 1 test passed; 22.1s test / 37.6s total.
+9. Supabase Auth `GET /auth/v1/settings` — signup enabled dan
+   mailer_autoconfirm=false; confirmation/recovery email ditangkap Mailpit.
+10. `pnpm run db:reset -- --local --workdir <disposable project> --yes` — exit 0;
+    semua lima migration diterapkan berurutan dan seed dijalankan. Seed assertion
+    membuktikan 2 auth users, 2 profil selesai, 1 education, 2 experience, 1 project,
+    dan 2 skill fixture. `pnpm run db:test -- --workdir <disposable project>` — exit 0
+    (117/117); `supabase db lint --level error` — exit 0.
+11. Stack WorkPulse asli dinyalakan kembali; DB/Auth/Kong healthy, lima migration
+    masih tercatat, `mailer_autoconfirm=false`, dan volume DB asli tetap ada.
+Tidak ada hosted database, production SMTP, atau data akun produksi yang diakses.
+
+Checks yang belum dijalankan beserta alasan:
+Hosted SMTP dan redirect configuration tidak diuji; pekerjaan tersebut berada di
+luar acceptance lokal T03 dan tidak ada klaim email production siap.
+
+Langkah berikutnya:
+Pada checkpoint T03, langkah berikutnya adalah T04. T04 selesai dan dicatat di atas;
+task berikutnya saat ini T05. Hosted SMTP tetap menjadi integration item sebelum production.
+
+## Checkpoint T02 (sebelumnya)
+
+Task / tanggal / status:
+T02 Schema dasar dan tenant boundary / 16 September 2026 / DONE.
+
+Dependensi DONE:
+T01 Bootstrap dan kontrak proyek.
+
+Scope yang selesai:
+- Migration foundation untuk profiles, experiences, education, certifications, projects, dan skills beserta dua migration follow-up; auth profile trigger/backfill; partial dates; timezone dari katalog PostgreSQL; normalized skill; owner constraints; indexes; dan RLS.
+- Semua update/delete record foundation yang sudah ada melewati RPC revision-checked dan scoped ke `auth.uid()`; grant `UPDATE`/`DELETE` langsung untuk `authenticated` dicabut. Patch profile hanya menerima field editable; onboarding, consent, dan deletion state memiliki operasi sempit.
+- Seed deterministik local-only untuk fresh graduate dengan unknown education dates dan employee dengan overlapping experiences.
+- Suite pgTAP transaction/rollback untuk schema, constraints, RLS dua akun, revision, direct-mutation rejection, profile lifecycle, timezone catalog, dan atomic deletion.
+- Scripts `db:reset`, `db:test`, `db:lint`; README local database workflow; decision 0002; verification record.
+
+File yang berubah:
+`supabase/migrations/20260916090000_foundation_schema.sql`, `supabase/migrations/20260916120000_secure_foundation_mutations.sql`, `supabase/migrations/20260916124500_fix_foundation_rpc_row_checks.sql`, `supabase/seed.sql`, `supabase/tests/database/foundation.test.sql`, `package.json`, `README.md`, `docs/decisions/0002-foundation-schema.md`, `docs/verification/T02-foundation-schema.md`, `docs/IMPLEMENTATION_STATUS.md`. Tidak ada dependency baru atau perubahan lockfile.
+
+Migration dan keputusan:
+Keputusan ada di [0002-foundation-schema.md](decisions/0002-foundation-schema.md). Profile provisional hanya valid untuk workspace/CV setelah nama nyata dan onboarding timestamp; helper berada di schema `internal` yang tidak diekspos PostgREST. Migration follow-up mengunci update/delete dengan compare-and-swap, mengisolasi state lifecycle, dan menerima timezone yang terdaftar di `pg_timezone_names`. Extension §4 untuk jobs, import, cleanup, evidence, activities/achievements, dan CV tetap pada task terkait.
+
+Acceptance checklist serta bukti:
+Implementasi, source mapping, acceptance checklist, dan runtime evidence tercatat di [T02-foundation-schema.md](verification/T02-foundation-schema.md). Baseline PostgreSQL 17 sebelumnya dibangun ulang dengan seed; dua migration review kemudian diterapkan incremental pada database lokal. Seluruh 94 assertion pgTAP lulus dan DB lint melaporkan tidak ada schema error. `db:status` mengonfirmasi `linked_project: null`.
+
+Perintah verifikasi dan hasil aktual:
+Pada review follow-up: `pnpm lint` exit 0 · `pnpm typecheck` exit 0 · `pnpm test` exit 0 (3 file, 8/8 test) · `pnpm exec supabase migration up` exit 0 (dua migration baru diterapkan ke DB lokal) · `pnpm db:test` exit 0 (1 file, 94 assertion) · `pnpm db:lint` exit 0 (extensions/internal/public, no schema errors) · `pnpm db:status` exit 0 (`linked_project: null`). `pnpm build` exit 0 pada checkpoint T02 sebelumnya; tidak dijalankan ulang karena perubahan follow-up hanya SQL, pgTAP, dan dokumentasi. Perintah database dan Vitest dijalankan dengan akses proses lokal karena batas child-process/Docker pada shell sandbox; tidak ada database hosted yang diakses.
+
+Checks yang belum dijalankan beserta alasan:
+`pnpm db:reset` tidak diulang setelah migration review karena akan mengganti isi database lokal yang sedang dipakai. Base migration dan seed sudah pernah lolos clean reset; dua migration follow-up berhasil diterapkan berurutan dengan `migration up`, lalu pgTAP dan DB lint dijalankan pada database tersebut.
+
+Risiko atau blocker konkret:
+Container `supabase_vector_WorkPulse` sebelumnya restart-loop dan `db:status` saat ini juga mencatat `imgproxy` serta `pooler` berhenti; PostgreSQL, API, pgTAP, dan lint yang dipakai T02 tetap berfungsi. T02 tidak bergantung pada layanan tersebut.
+
+Langkah berikutnya:
+T02 selesai. Task implementasi berikutnya sesuai tracker adalah T03 (Auth dan profil); T03 belum dimulai pada checkpoint ini.
+
+## Checkpoint T01 (sebelumnya)
+
+Task / tanggal / status:
+T01 Bootstrap dan kontrak proyek / 14 September 2026 / DONE.
+
+Dependensi DONE:
+Tidak ada (task pertama).
+
+Scope yang selesai:
+- Git lokal pada branch `main`, tanpa commit dan tanpa remote, dengan `.gitignore`, `.editorconfig`, `.npmrc` (dependency exact).
+- Single-package pnpm project (bukan monorepo) di root: `pnpm@11.19.0` via Corepack, Node 24.18.0, satu `pnpm-lock.yaml`, `save-exact` + `strict-peer-dependencies`.
+- Aplikasi Next.js 16.3.5 App Router, React 19.3.0, TypeScript strict, Tailwind CSS 4.3.3 melalui `@tailwindcss/postcss`, halaman root shell tanpa data karier palsu.
+- `GET /api/health`: HTTP 200, `Cache-Control: no-store`, body tetap `{"status":"ok","service":"workpulse-web","version":"0.1.0"}`, `force-dynamic`, tanpa probe dependency dan tanpa echo konfigurasi.
+- Worker bootstrap satu proses di `workers/`; `pnpm worker:check` mencetak satu baris JSON lalu exit 0. Queue, lease dan job handler tetap milik T13.
+- Supabase CLI 2.117.0 diinisialisasi (`supabase/config.toml`), scripts `db:start`, `db:status`, `db:stop` (tanpa `--no-backup`, volume tidak dihapus).
+- `.env.example` berisi nama variabel saja tanpa nilai rahasia.
+- Quality gate scripts `dev`, `start`, `lint`, `typecheck`, `test`, `test:e2e`, `build`, `worker:check`, `db:start`, `db:status`, `db:stop`.
+- Unit test Vitest (halaman shell, kontrak health, output worker) dan smoke test Playwright (halaman root + `/api/health`).
+- Dokumentasi: `README.md`, `docs/decisions/0001-foundation-stack.md`, `docs/verification/T01-bootstrap.md`.
+
+File yang berubah (semua file baru, tidak ada dokumen sumber atau file pengguna yang ditimpa):
+`.npmrc`, `.editorconfig`, `.gitignore`, `.env.example`, `README.md`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`, `vitest.config.ts`, `playwright.config.ts`, `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css`, `src/app/api/health/route.ts`, `workers/bootstrap.ts`, `workers/check.ts`, `tests/unit/home-page.test.ts`, `tests/unit/health-route.test.ts`, `tests/unit/worker-bootstrap.test.ts`, `tests/e2e/smoke.spec.ts`, `supabase/config.toml`, `supabase/.gitignore`, `docs/decisions/0001-foundation-stack.md`, `docs/verification/T01-bootstrap.md`, `IMPLEMENTATION_STATUS.md`. `AGENTS.md`, `Design.md`, `IMPLEMENTATION_PLAN.md` dan dokumen `.docx` tidak diubah.
+
+Migration dan keputusan:
+Belum ada migration (T02). Keputusan tercatat di `docs/decisions/0001-foundation-stack.md`: (1) `typescript` 6.0.3, bukan 7.0.2 — `typescript-eslint` menolak TS 7.0, deviasi disetujui pengguna; (2) `eslint` tetap 9.39.1 — 10.10.0 gagal dengan parser bawaan `eslint-config-next`; (3) settings pnpm 11 dipindah ke `pnpm-workspace.yaml` tanpa key `packages`; (4) `"type": "module"` pada package; (5) Tailwind hanya memuat token font, palet/tema menyusul di T04; (6) health endpoint liveness statis; (7) worker bootstrap hanya readiness check; (8) `db:stop` tidak menghapus volume.
+
+Acceptance checklist serta bukti:
+- [x] Install bersih dari lockfile — `pnpm install --frozen-lockfile` exit 0 ("Already up to date").
+- [x] `pnpm lint` exit 0 tanpa warning.
+- [x] `pnpm typecheck` exit 0.
+- [x] `pnpm test` exit 0, 8 test lulus (3 file).
+- [x] `pnpm build` exit 0; route `/` statis, `/api/health` dinamis.
+- [x] Health endpoint pada production build: 200, `no-store`, `application/json`, body sesuai kontrak.
+- [x] Smoke test Playwright 2/2 lulus terhadap production build.
+- [x] `pnpm db:start` → `pnpm db:status` (setup running) → `pnpm db:stop`; volume `supabase_db_WorkPulse`, `supabase_storage_WorkPulse`, `supabase_edge_runtime_WorkPulse` tetap ada setelah stop.
+- [x] Tidak ada `.env.local`, nilai key, credential, atau cache generated pada daftar file Git.
+- [x] `AGENTS.md`, `IMPLEMENTATION_PLAN.md`, `Design.md`, dan dokumen sumber tidak diubah.
+Bukti lengkap dengan perintah dan output: `docs/verification/T01-bootstrap.md`.
+
+Perintah verifikasi dan hasil aktual:
+`pnpm install --frozen-lockfile` (exit 0) · `pnpm lint` (exit 0) · `pnpm typecheck` (exit 0) · `pnpm test` (8/8 lulus) · `pnpm build` (exit 0) · `pnpm start --port 3100` + `Invoke-WebRequest /api/health` (200, `no-store`, body kontrak) · `pnpm test:e2e` (2/2 lulus) · `pnpm db:start` (exit 0) · `pnpm db:status` (exit 0, "supabase local development setup is running.") · `pnpm db:stop` (exit 0, volume tetap).
+
+Checks yang belum dijalankan beserta alasan:
+- Deployment/hosting dan Supabase hosted: di luar scope T01 dan tidak ada otorisasi atau credential.
+- Integration test PostgreSQL, RLS, composite FK, concurrency, PDF: scope T02+ dan belum ada schema.
+- `supabase test`/`db reset`: belum ada migration atau seed.
+- Playwright hanya Chromium; viewport 360/1440, light/dark dan aksesibilitas adalah acceptance T04.
+- Unit test tidak memakai DOM environment; halaman shell dirender ke static markup (`renderToStaticMarkup`). Environment DOM/jsdom belum dibutuhkan.
+
+Risiko atau blocker konkret:
+1. `eslint@9.39.1` sudah deprecated/EOL di hulu. Naik ke ESLint 10 baru bisa dilakukan setelah `eslint-config-next` mengirim parser yang kompatibel dengan scope API ESLint 10, atau setelah config berhenti memakai parser Next (berarti `typescript-eslint` menjadi dependency langsung).
+2. `typescript` masih 6.0.3 karena `typescript-eslint` belum mendukung TS 7.0 (typescript-eslint#10940). Jadi TypeScript 6 tetap dipakai sampai dukungan TS ≥7.1 ada atau pola side-by-side resmi diterapkan.
+3. Container `supabase_vector_WorkPulse` (log collector opsional) sempat restart loop saat stack lokal dinyalakan; stack utama dan `supabase status` tetap sehat. Perlu dipantau pada T02 saat stack dipakai untuk migration.
+4. `@types/node` 24.13.4 mengikuti jalur Node 24, sedangkan patch mesin 24.18.0; tidak ada mismatch yang terdeteksi pada `pnpm typecheck`.
+5. Belum ada commit Git karena identitas Git belum dikonfigurasi pada environment ini; branch `main` masih kosong tanpa remote.
+6. Dependensi besar (Playwright browser, image Docker Supabase) terunduh di level mesin, bukan bagian repository.
+
+Langkah berikutnya:
+T02 Schema dasar dan tenant boundary — selesaikan lifecycle profile awal dan extension §4 rencana, buat migration `profiles`, `experiences`, `education`, `certifications`, `projects`, `skills` dengan check partial date, normalisasi skill, index, revision dan RLS, plus fixtures dua akun dan DB test harness. Jalankan Docker Desktop sebelum `pnpm db:start`.
+
+## Format checkpoint per task
+
+Salin format berikut ketika task dikerjakan:
+
+```text
+Task / tanggal / status:
+Dependensi DONE:
+Scope yang selesai:
+File yang berubah:
+Migration dan keputusan:
+Acceptance checklist serta bukti:
+Perintah verifikasi dan hasil aktual:
+Checks yang belum dijalankan beserta alasan:
+Risiko atau blocker konkret:
+Langkah berikutnya:
+```
+

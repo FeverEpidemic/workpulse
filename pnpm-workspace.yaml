@@ -1,0 +1,5 @@
+# pnpm settings for this single-package project (pnpm 11 reads settings here).
+# No `packages` key on purpose: WorkPulse is one Next.js package at the repository
+# root, not a monorepo. Native build scripts are allow-listed explicitly.
+allowBuilds:
+  unrs-resolver: true
