@@ -3,6 +3,11 @@ export interface SupabasePublicConfig {
   publishableKey: string;
 }
 
+export interface SupabaseAdminConfig {
+  url: string;
+  secretKey: string;
+}
+
 export class SupabaseConfigurationError extends Error {
   constructor() {
     super("Supabase server configuration is missing or invalid");
@@ -20,6 +25,31 @@ export function getSupabasePublicConfig(): SupabasePublicConfig | null {
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
     if (parsed.username || parsed.password || parsed.search || parsed.hash) return null;
     return { url: parsed.origin, publishableKey };
+  } catch {
+    return null;
+  }
+}
+
+/** Return credentials for a server-only Supabase client. */
+export function getSupabaseAdminConfig(): SupabaseAdminConfig | null {
+  const rawUrl = process.env.SUPABASE_URL?.trim();
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (!rawUrl || !secretKey) return null;
+
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (
+      !parsed.hostname ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== "/" ||
+      parsed.search ||
+      parsed.hash
+    ) {
+      return null;
+    }
+    return { url: parsed.origin, secretKey };
   } catch {
     return null;
   }

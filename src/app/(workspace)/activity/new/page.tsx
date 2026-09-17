@@ -6,7 +6,7 @@ import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
 import { t } from "@/i18n/messages";
 
 export default async function QuickLogPage() {
-  const { locale } = await requireCompletedWorkspace("/activity/new");
+  const { locale, profile } = await requireCompletedWorkspace("/activity/new");
 
   return (
     <section>
@@ -15,7 +15,7 @@ export default async function QuickLogPage() {
         <p>{t(locale, "quickLog.description")}</p>
       </header>
       <Card className="space-y-5">
-        <QuickLogCapture locale={locale} />
+        <QuickLogCapture key={profile.id} locale={locale} ownerId={profile.id} />
         <Link className="button-secondary inline-flex" href="/activity">
           {t(locale, "quickLog.backToActivity")}
         </Link>

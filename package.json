@@ -17,6 +17,7 @@
     "test:e2e": "playwright test",
     "test:e2e:auth": "playwright test --config playwright.auth.config.ts tests/e2e/auth-profile.spec.ts",
     "test:e2e:ui": "playwright test --config playwright.ui.config.ts tests/e2e/app-frame.spec.ts",
+    "test:integration:storage": "vitest run --config vitest.integration.config.ts --configLoader native",
     "build": "next build",
     "worker:check": "node workers/check.ts",
     "db:start": "supabase start",

@@ -97,14 +97,18 @@ select ok(
 
 select ok(
   has_table_privilege('authenticated', 'public.experiences', 'SELECT')
-  and has_table_privilege('authenticated', 'public.experiences', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.experiences', 'INSERT')
   and not has_table_privilege('authenticated', 'public.experiences', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.experiences', 'DELETE'),
-  'experience updates and deletion require revision-checked RPCs'
+  'experience creation, updates, and deletion require typed RPCs'
 );
 
 select ok(
-  not has_table_privilege('authenticated', 'public.education', 'UPDATE')
+  not has_table_privilege('authenticated', 'public.education', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.certifications', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.skills', 'INSERT')
+  and has_table_privilege('authenticated', 'public.projects', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.education', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.education', 'DELETE')
   and not has_table_privilege('authenticated', 'public.certifications', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.certifications', 'DELETE')
@@ -112,7 +116,7 @@ select ok(
   and not has_table_privilege('authenticated', 'public.projects', 'DELETE')
   and not has_table_privilege('authenticated', 'public.skills', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.skills', 'DELETE'),
-  'authenticated has no direct update or delete privilege on foundation records'
+  'foundation updates and deletes remain RPC-only while project insert privilege is unchanged'
 );
 
 select ok(
@@ -379,6 +383,36 @@ select is(
   'account A cannot read account B experiences'
 );
 
+select throws_ok(
+  $$insert into public.experiences (user_id, organization, role_title, kind)
+    values (auth.uid(), 'Direct insert', 'Experience', 'employment')$$,
+  '42501', null,
+  'authenticated direct insert into experiences is denied'
+);
+
+select throws_ok(
+  $$insert into public.education (user_id, institution, qualification)
+    values (auth.uid(), 'Direct insert', 'Degree')$$,
+  '42501', null,
+  'authenticated direct insert into education is denied'
+);
+
+select throws_ok(
+  $$insert into public.certifications (user_id, name)
+    values (auth.uid(), 'Direct insert')$$,
+  '42501', null,
+  'authenticated direct insert into certifications is denied'
+);
+
+select throws_ok(
+  $$insert into public.skills (user_id, name)
+    values (auth.uid(), 'Direct insert')$$,
+  '42501', null,
+  'authenticated direct insert into skills is denied'
+);
+
+reset role;
+
 select lives_ok(
   $$
     insert into public.experiences (
@@ -392,8 +426,10 @@ select lives_ok(
       'volunteer'
     )
   $$,
-  'account A can insert its own experience'
+  'the database owner can prepare an experience fixture without opening client INSERT'
 );
+
+set local role authenticated;
 
 select is(
   (select revision from public.experiences where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'::uuid),
@@ -539,6 +575,8 @@ select is(
   'project deletion succeeds with the current expected revision'
 );
 
+reset role;
+
 select lives_ok(
   $$
     insert into public.education (
@@ -551,13 +589,13 @@ select lives_ok(
       'BSc'
     )
   $$,
-  'unknown education dates are accepted'
+  'the database accepts unknown education dates without client INSERT access'
 );
 
 select throws_ok(
   $$
     insert into public.skills (user_id, name)
-    values ('11111111-1111-4111-8111-111111111111'::uuid, '  typescript  ')
+    values ('11111111-1111-4111-8111-111111111111'::uuid, 'typescript')
   $$,
   '23505',
   null,
@@ -569,7 +607,7 @@ select lives_ok(
     insert into public.skills (user_id, name)
     values ('11111111-1111-4111-8111-111111111111'::uuid, 'SQL')
   $$,
-  'a distinct normalized skill remains valid'
+  'the database accepts a distinct normalized skill without client INSERT access'
 );
 
 select is(
@@ -680,6 +718,8 @@ select throws_ok(
   null,
   'the composite FK rejects a project pointing to another account experience'
 );
+
+reset role;
 
 select throws_ok(
   $$
@@ -887,6 +927,8 @@ select throws_ok(
   'unknown timezone names are rejected by the PostgreSQL catalog check'
 );
 
+set local role authenticated;
+
 select is(
   (select count(*) from public.delete_experience(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'::uuid,
@@ -1043,15 +1085,15 @@ reset role;
 select ok(
   pg_catalog.to_regclass('internal.operation_requests') is not null
   and (
-    select pg_catalog.count(*) = 5
+    select pg_catalog.count(*) = 6
     from information_schema.columns
     where table_schema = 'internal'
       and table_name = 'operation_requests'
       and column_name = any(array[
-        'operation_key', 'payload_hash', 'result_table', 'result_id', 'completed_at'
+        'operation_key', 'payload_hash', 'result_table', 'result_id', 'result_payload', 'completed_at'
       ])
   ),
-  'the private operation ledger records keys, payload hashes, typed results, and completion time'
+  'the private operation ledger records keys, payload hashes, immutable result snapshots, and completion time'
 );
 
 select ok(
@@ -1099,6 +1141,134 @@ select is(
 select pg_temp.set_jwt_subject('11111111-1111-4111-8111-111111111111'::uuid);
 set local role authenticated;
 
+select lives_ok(
+  $$select * from public.create_experience_idempotent(
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3'::uuid,
+    'RPC Experience Organization', 'RPC Experience Role', null, 'employment',
+    null, null, null, null, false
+  )$$,
+  'the authenticated experience create RPC accepts a valid owner record'
+);
+
+select lives_ok(
+  $$select * from public.create_education_idempotent(
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee4'::uuid,
+    'RPC University', 'Bachelor Degree', null, null,
+    null, null, null, null, false
+  )$$,
+  'the authenticated education create RPC accepts a valid owner record'
+);
+
+select lives_ok(
+  $$select * from public.create_certification_idempotent(
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee5'::uuid,
+    'RPC Certification', 'RPC Issuer', 'https://example.test/certificate', null, null
+  )$$,
+  'the authenticated certification create RPC accepts a valid owner record'
+);
+
+select lives_ok(
+  $$select * from public.create_skill_idempotent(
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee6'::uuid,
+    'RPC Skill'
+  )$$,
+  'the authenticated skill create RPC accepts a valid owner record'
+);
+
+select throws_ok(
+  $$select * from public.create_experience_idempotent(
+    'ffffffff-ffff-4fff-8fff-ffffffffffe1'::uuid,
+    pg_catalog.repeat('o', 201), 'Role', null, 'employment', null, null, null, null, false
+  )$$,
+  '23514', null,
+  'database contract rejects oversized experience create values'
+);
+
+select throws_ok(
+  $$select * from public.create_education_idempotent(
+    'ffffffff-ffff-4fff-8fff-ffffffffffe2'::uuid,
+    pg_catalog.repeat('i', 201), 'Degree', null, null, null, null, null, null, false
+  )$$,
+  '23514', null,
+  'database contract rejects oversized education create values'
+);
+
+select throws_ok(
+  $$select * from public.create_certification_idempotent(
+    'ffffffff-ffff-4fff-8fff-ffffffffffe3'::uuid,
+    pg_catalog.repeat('c', 201), null, null, null, null
+  )$$,
+  '23514', null,
+  'database contract rejects oversized certification create values'
+);
+
+select throws_ok(
+  $$select * from public.create_skill_idempotent(
+    'ffffffff-ffff-4fff-8fff-ffffffffffe4'::uuid,
+    pg_catalog.repeat('s', 101)
+  )$$,
+  '23514', null,
+  'database contract rejects oversized skill create values'
+);
+
+select throws_ok(
+  $$select * from public.create_certification_idempotent(
+    'ffffffff-ffff-4fff-8fff-ffffffffffe5'::uuid,
+    'Invalid URL Certification', null, 'javascript:alert(1)', null, null
+  )$$,
+  '23514', null,
+  'database contract rejects a non-http certification URL'
+);
+
+select throws_ok(
+  $$select * from public.update_experience(
+    (select id from public.experiences where role_title = 'RPC Experience Role'),
+    (select revision from public.experiences where role_title = 'RPC Experience Role'),
+    pg_catalog.jsonb_build_object('role_title', pg_catalog.repeat('r', 201))
+  )$$,
+  '23514', null,
+  'database contract rejects oversized experience update values'
+);
+
+select throws_ok(
+  $$select * from public.update_education(
+    (select id from public.education where institution = 'RPC University'),
+    (select revision from public.education where institution = 'RPC University'),
+    pg_catalog.jsonb_build_object('qualification', pg_catalog.repeat('q', 201))
+  )$$,
+  '23514', null,
+  'database contract rejects oversized education update values'
+);
+
+select throws_ok(
+  $$select * from public.update_certification(
+    (select id from public.certifications where name = 'RPC Certification'),
+    (select revision from public.certifications where name = 'RPC Certification'),
+    pg_catalog.jsonb_build_object('issuer', pg_catalog.repeat('i', 201))
+  )$$,
+  '23514', null,
+  'database contract rejects oversized certification update values'
+);
+
+select throws_ok(
+  $$select * from public.update_skill(
+    (select id from public.skills where name = 'RPC Skill'),
+    (select revision from public.skills where name = 'RPC Skill'),
+    pg_catalog.jsonb_build_object('name', pg_catalog.repeat('u', 101))
+  )$$,
+  '23514', null,
+  'database contract rejects oversized skill update values'
+);
+
+select throws_ok(
+  $$select * from public.update_profile(
+    (select revision from public.profiles where id = auth.uid()),
+    pg_catalog.jsonb_build_object('headline', pg_catalog.repeat('h', 121))
+  )$$,
+  '23514', null,
+  'database contract rejects oversized profile update values'
+);
+
 select is(
   (
     select id::text
@@ -1128,6 +1298,71 @@ select is(
   'identical replay creates exactly one domain row'
 );
 
+select is(
+  (
+    select revision
+    from public.update_skill(
+      (
+        select id from public.skills
+        where user_id = auth.uid() and name = 'Idempotency replay skill'
+      ),
+      1,
+      '{"name":"Updated after create"}'::jsonb
+    )
+  ),
+  2,
+  'the created skill can be edited after the create transaction'
+);
+
+select is(
+  (
+    select name || '|' || revision::text
+    from public.create_skill_idempotent(
+      'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2'::uuid,
+      'Idempotency replay skill'
+    )
+  ),
+  'Idempotency replay skill|1',
+  'replay after edit returns the original immutable create snapshot'
+);
+
+select lives_ok(
+  $$select public.delete_skill(
+    (
+      select id from public.skills
+      where user_id = auth.uid() and name = 'Updated after create'
+    ),
+    2
+  )$$,
+  'the created skill can be deleted after its snapshot is stored'
+);
+
+select lives_ok(
+  $$
+    do $test$
+    declare
+      v_record public.skills;
+    begin
+      select * into v_record
+      from public.create_skill_idempotent(
+        'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2'::uuid,
+        'Idempotency replay skill'
+      );
+      if v_record.name <> 'Idempotency replay skill' or v_record.revision <> 1 then
+        raise exception using errcode = 'P0001', message = 'SNAPSHOT_MISMATCH';
+      end if;
+      if exists (
+        select 1 from public.skills
+        where user_id = auth.uid() and id = v_record.id
+      ) then
+        raise exception using errcode = 'P0001', message = 'DELETED_ROW_RECREATED';
+      end if;
+    end;
+    $test$
+  $$,
+  'replay after delete returns the create snapshot without recreating the row'
+);
+
 select throws_ok(
   $$select * from public.create_skill_idempotent(
     'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2'::uuid,
@@ -1143,10 +1378,10 @@ select is(
     select count(*)
     from public.skills
     where user_id = auth.uid()
-      and name in ('Idempotency replay skill', 'Different payload skill')
+      and name in ('Idempotency replay skill', 'Different payload skill', 'Updated after create')
   ),
-  1::bigint,
-  'different-payload rejection leaves the first row unchanged and creates nothing'
+  0::bigint,
+  'the deleted original stays absent and different-payload rejection creates nothing'
 );
 
 reset role;
@@ -1155,12 +1390,11 @@ select ok(
   (
     select input_revision = 0
        and result_table = 'skills'
-       and result_id = (
-         select id
-         from public.skills
-         where user_id = '11111111-1111-4111-8111-111111111111'::uuid
-           and name = 'Idempotency replay skill'
-       )
+       and result_id is not null
+       and (pg_catalog.to_jsonb(operation_requests) -> 'result_payload' ->> 'name') = 'Idempotency replay skill'
+       and (pg_catalog.to_jsonb(operation_requests) -> 'result_payload' ->> 'revision') = '1'
+       and (pg_catalog.to_jsonb(operation_requests) -> 'result_payload' ->> 'id') = result_id::text
+       and (pg_catalog.to_jsonb(operation_requests) -> 'result_payload' ->> 'user_id') = user_id::text
        and pg_catalog.octet_length(payload_hash) = 32
        and created_at is not null
        and completed_at is not null

@@ -254,3 +254,66 @@ All T03 local acceptance gates are complete, so T03 is DONE. The original WorkPu
 volume remains intact. Hosted SMTP, hosted redirect configuration, and production
 email delivery remain separate integration work before deployment; this verification
 does not claim production email readiness.
+
+## T03 review remediation completed — 17 September 2026
+
+Status: **DONE for local T03 acceptance.** This dated checkpoint extends the earlier
+117-assertion evidence above; the original checkpoint remains historical.
+
+- Migration `20260916190000_t03_foundation_contract_hardening.sql` revokes direct
+  authenticated `INSERT` on experiences, education, certifications, and skills. It
+  adds matching profile/foundation database limits and URL/canonical-null checks after
+  a data preflight. Incompatible existing values stop migration instead of being
+  truncated or rewritten. Shared Zod/UI limits live in
+  `src/domain/profile/field-contract.ts`; SQLSTATE `23514` maps to a safe localized
+  validation result.
+- `internal.operation_requests.result_payload` stores the first create result in the
+  same transaction as its domain row. Identical replay returns that snapshot after
+  edit/delete; a different payload for the same key returns the stable conflict. Owned
+  live rows are backfilled. A previously deleted legacy result receives the explicit
+  unavailable marker instead of invented data.
+- The expanded pgTAP suite verifies the four INSERT revokes, rejected direct inserts,
+  successful typed create RPCs, oversized create/update rejection, invalid URLs,
+  ownership, and replay after edit/delete. The first run found two test-fixture
+  mismatches (padded duplicate skill and an experience row deleted earlier in the test);
+  those assertions were corrected to reach the intended uniqueness/length constraints.
+  The final suite passes **139/139** on both the original local database and the clean
+  disposable database.
+- A two-session replay check held the first authenticated create transaction open while
+  the second session submitted the same owner, key, and payload. Both returned the same
+  ID. The database contained one skill and one ledger row; the ledger snapshot matched
+  the row. The exact test fixture was removed afterward.
+- Disposable reset project `workpulse_t03_t04_20260917` ran all six migrations and
+  `supabase/seed.sql` from zero. Seed counts were 2 auth users, 2 completed profiles,
+  2 experiences, 1 education, 1 project, and 2 skills. pgTAP passed 139/139 and DB lint
+  reported no schema errors. Its containers, volume, network, and temporary project
+  folder were removed after confirming the original `supabase_db_WorkPulse` remained.
+- The new local typegen output is byte-equivalent to
+  `src/server/supabase/database.types.ts` after line-ending normalization. No generated
+  public RPC signature changed, so that file did not need editing.
+- Final Auth/Mailpit Playwright acceptance passes **1/1** with synthetic local accounts,
+  including sign-in/onboarding error association, profile conflict recovery, partial
+  date correction, foundation CRUD, duplicate-skill field error, cross-account Quick
+  log draft isolation, password recovery, and sign-out cleanup.
+
+### Remediation commands and results
+
+| Command | Result |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | Exit 0; lockfile consistent, dependencies already installed. |
+| `pnpm lint` | Exit 0; zero warnings. |
+| `pnpm typecheck -- --incremental false` | Exit 0. |
+| `pnpm test` | Exit 0; 15 files, 55/55 tests. |
+| `pnpm build` | Exit 0; production build and route generation completed. |
+| `pnpm db:status` | Exit 0; `linked_project: null`. Only the local WorkPulse stack was used. |
+| `supabase migration list --local` | Exit 0; all six repository migrations, including `20260916190000`, are recorded locally. |
+| `pnpm db:test` | Exit 0; 1 file, 139/139 assertions. |
+| `pnpm db:lint` | Exit 0; no schema errors. |
+| `pnpm db:types` parity comparison | Exit 0; generated output matches `database.types.ts` exactly after line-ending normalization. |
+| `pnpm db:reset -- --local --workdir <disposable project> --yes` | Exit 0; all six migrations and seed completed from zero on the unique disposable project. |
+| `pnpm db:test -- --workdir <disposable project>` | Exit 0; 1 file, 139/139 assertions. |
+| `pnpm db:lint -- --workdir <disposable project>` | Exit 0; no schema errors. |
+| `pnpm test:e2e:auth` | Exit 0; 1 Auth/Profile test passed against local Supabase Auth and Mailpit. |
+
+No hosted Supabase, production SMTP, production redirect, or real user account was
+accessed. The local Auth/Mailpit run does not establish production email readiness.

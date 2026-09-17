@@ -87,11 +87,63 @@ status.
 
 No hosted Supabase project, production SMTP, or production deployment was used.
 
-## Not run and next step
+## Initial T04 checkpoint: not run and next step
 
-Database reset/test/lint/type-generation commands were not run for T04 because the task
-adds no database migration, schema, or generated database types. Hosted email delivery and
-deployment checks are not T04 acceptance. There is no T04 blocker.
+At the original 16 September T04 checkpoint, database reset/test/lint/type-generation
+commands were not run because that checkpoint added no migration, schema, or generated
+database types. The 17 September T03/T04 review remediation did run those local database
+checks; its results are recorded below. Hosted email delivery and deployment checks remain
+outside T04 acceptance. There is no T04 blocker.
 
 Next task: T05 Private storage foundation. Gate M1 remains open until the T05 acceptance
 criteria are complete.
+
+## T03/T04 review remediation completed — 17 September 2026
+
+Status: **T04 local acceptance is DONE.** This checkpoint covers the review findings
+after the initial T04 record above.
+
+- Same-document Back/Forward now uses the unsaved-change dialog for dirty forms. The
+  history wrapper preserves Next App Router state, blocks the traversal until the user
+  chooses, restores focus when staying, and performs the pending traversal once when
+  continuing. Playwright verifies Back → Stay, Back → Continue, and Forward without a
+  loop.
+- Quick log receives the authenticated profile ID from the server page and saves only
+  `raw_text` under that owner's versioned session-draft key. At 360px, the mobile
+  header's Quick log action opens `/activity/new` and focuses the note in one action.
+  The Auth E2E switches between two local accounts: B sees an empty note, B sign-out
+  clears B's draft while preserving A's, and A can restore its draft after sign-in.
+  Quick log save remains unavailable until T07.
+- Every `FieldError` now has an explicit deterministic ID. Its input references the
+  error while preserving help IDs; `aria-invalid` is set only for invalid controls.
+  Error text sits outside the control label and uses polite status announcements. The
+  test helper checks unique IDs, exactly one associated control, invalid state, and that
+  error text does not enter the accessible name.
+- Axe now checks all selected WCAG 2.0/2.1/2.2 A/AA tags without filtering by impact.
+  Sign-in and sign-up, onboarding, profile validation, conflict, partial-date, duplicate
+  skill, Dashboard, Activity, and Profile states passed with zero violations and no
+  waivers.
+- The final UI E2E passed **1/1** after the shared session-draft fix. It covers the
+  mobile Quick log action, Back/Forward protection, filter history, error associations,
+  drawer Escape/focus return, keyboard skip path, reduced motion, and 360/1440px light/dark
+  overflow checks. Dashboard desktop/mobile light/dark and mobile-drawer screenshots were
+  reviewed; no clipping or horizontal overflow was visible.
+- The Auth E2E passed **1/1** after testing retained partial-date values and Quick log
+  owner isolation. The package smoke E2E passed **2/2**. All runs used local Supabase,
+  Mailpit, and Chromium.
+
+### Remediation commands and results
+
+| Command | Result |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | Exit 0. |
+| `pnpm lint` | Exit 0; zero warnings. |
+| `pnpm typecheck -- --incremental false` | Exit 0. |
+| `pnpm test` | Exit 0; 15 files, 55/55 tests. |
+| `pnpm build` | Exit 0; production build and route generation completed. |
+| `pnpm test:e2e` | Exit 0; 2 smoke tests. |
+| `pnpm test:e2e:auth` | Exit 0; 1 full Auth/Profile test. |
+| `pnpm test:e2e:ui` | Exit 0; 1 authenticated app-frame test, all selected WCAG A/AA Axe scans had zero violations. |
+
+No T05 or later feature was started. Gate M1 stays open until T05 acceptance is
+complete. Hosted services and deployment remain outside this local verification.

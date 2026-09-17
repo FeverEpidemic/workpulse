@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { parsePartialDateForm, PartialDateValidationError, type CanonicalPartialDate } from "@/domain/dates/partial-date";
+import { FOUNDATION_FIELD_LIMITS } from "@/domain/profile/field-contract";
 import type { MessageKey } from "@/i18n/messages";
 import { actionFailure, actionSuccess, type ActionState } from "@/server/action-result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -122,9 +123,9 @@ function parseFoundationForm(formData: FormData): ParsedFoundationForm | ActionS
 
   if (parsedKind.data === "experience") {
     const parsed = z.object({
-      organization: z.string().trim().min(1, "validation.required").max(200),
-      role_title: z.string().trim().min(1, "validation.required").max(200),
-      description: z.string().trim().max(5000),
+      organization: z.string().trim().min(1, "validation.required").max(FOUNDATION_FIELD_LIMITS.organization),
+      role_title: z.string().trim().min(1, "validation.required").max(FOUNDATION_FIELD_LIMITS.roleTitle),
+      description: z.string().trim().max(FOUNDATION_FIELD_LIMITS.experienceDescription),
       kind: z.enum(["employment", "internship", "volunteer"]),
     }).safeParse({
       organization: text(formData, "organization"),
@@ -153,10 +154,10 @@ function parseFoundationForm(formData: FormData): ParsedFoundationForm | ActionS
 
   if (parsedKind.data === "education") {
     const parsed = z.object({
-      institution: z.string().trim().min(1, "validation.required").max(200),
-      qualification: z.string().trim().min(1, "validation.required").max(200),
-      field_of_study: z.string().trim().max(200),
-      description: z.string().trim().max(5000),
+      institution: z.string().trim().min(1, "validation.required").max(FOUNDATION_FIELD_LIMITS.institution),
+      qualification: z.string().trim().min(1, "validation.required").max(FOUNDATION_FIELD_LIMITS.qualification),
+      field_of_study: z.string().trim().max(FOUNDATION_FIELD_LIMITS.fieldOfStudy),
+      description: z.string().trim().max(FOUNDATION_FIELD_LIMITS.educationDescription),
     }).safeParse({
       institution: text(formData, "institution"),
       qualification: text(formData, "qualification"),
@@ -185,9 +186,9 @@ function parseFoundationForm(formData: FormData): ParsedFoundationForm | ActionS
   if (parsedKind.data === "certification") {
     const credentialUrl = text(formData, "credential_url").trim();
     const parsed = z.object({
-      name: z.string().trim().min(1, "validation.required").max(200),
-      issuer: z.string().trim().max(200),
-      credential_url: z.string().trim().max(2048).refine((value) => {
+      name: z.string().trim().min(1, "validation.required").max(FOUNDATION_FIELD_LIMITS.certificationName),
+      issuer: z.string().trim().max(FOUNDATION_FIELD_LIMITS.issuer),
+      credential_url: z.string().trim().max(FOUNDATION_FIELD_LIMITS.credentialUrl).refine((value) => {
         if (!value) return true;
         try {
           const url = new URL(value);
@@ -221,7 +222,7 @@ function parseFoundationForm(formData: FormData): ParsedFoundationForm | ActionS
     }
   }
 
-  const skill = z.string().trim().min(1, "validation.required").max(100).safeParse(text(formData, "name"));
+  const skill = z.string().trim().min(1, "validation.required").max(FOUNDATION_FIELD_LIMITS.skillName).safeParse(text(formData, "name"));
   if (!skill.success) return zodFailure(skill.error);
   return { kind: "skill", ...common, operationKey, payload: { name: skill.data } };
 }
@@ -271,11 +272,7 @@ function databaseFailure(
       fieldErrors: { name: "validation.skillDuplicate" },
     });
   }
-  if (error.code === "23514" && (kind === "experience" || kind === "education")) {
-    return actionFailure("VALIDATION", "error.validation", {
-      fieldErrors: { end_year: "validation.dateRange" },
-    });
-  }
+  if (error.code === "23514") return actionFailure("VALIDATION", "error.validation");
   if (/^(22|23)/.test(error.code ?? "")) return actionFailure("VALIDATION", "error.validation");
   return actionFailure("UNAVAILABLE", "error.unavailable");
 }

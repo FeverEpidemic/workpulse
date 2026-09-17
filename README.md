@@ -43,6 +43,7 @@ credentials.
 | `pnpm lint` | ESLint flat config, `--max-warnings 0` |
 | `pnpm typecheck` | `tsc --noEmit` (TypeScript strict, `noUncheckedIndexedAccess`) |
 | `pnpm test` | Vitest unit suite (`tests/unit`) |
+| `pnpm test:integration:storage` | Local Storage access, signed download, and expiry checks (`tests/integration`) |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
 | `pnpm test:e2e:ui` | Authenticated app-frame, theme, filter, keyboard, responsive, and Axe checks |
@@ -115,12 +116,19 @@ stack definition and loads the seed after migrations.
 
 ### Local authentication and profile
 
-T03 uses the same local Supabase stack. After `pnpm db:start`, copy the local API URL
-and public key reported by `pnpm db:status` into `.env.local` as
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Keep
-`WORKPULSE_SITE_URL=http://127.0.0.1:3000`; confirmation and recovery redirects use
-this trusted origin. Apply pending migrations incrementally with
-`pnpm exec supabase migration up`, then start the app with `pnpm dev`.
+T03 and T05 use the same local Supabase stack. After `pnpm db:start`, copy the local API
+URL and publishable key reported by `pnpm db:status` into `.env.local` as
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Also set
+`SUPABASE_URL` to the local API URL and `SUPABASE_SECRET_KEY` to the local secret key
+reported by `pnpm db:status`. The secret key stays in `.env.local` and must never use a
+`NEXT_PUBLIC_` name. Keep `WORKPULSE_SITE_URL=http://127.0.0.1:3000`; confirmation and
+recovery redirects use this trusted origin. Apply pending migrations incrementally with
+`pnpm exec supabase migration up --local`, then start the app with `pnpm dev`.
+
+The T05 Storage integration check is `pnpm test:integration:storage`. It uses temporary
+local accounts and an object, then removes them in cleanup. It verifies owner-authorized
+attachment downloads, short URL expiry, private bucket behavior, denied user-token signing
+and upload, and that user-token delete attempts leave the stored object unchanged.
 
 Local signup and recovery emails are captured by Supabase's Mailpit at
 `http://127.0.0.1:54324`. The full auth/profile flow can be exercised with

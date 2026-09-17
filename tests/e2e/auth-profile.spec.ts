@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
+import { expectEveryFieldErrorAssociated, expectNoWcagViolations } from "./helpers/accessibility";
+
 const APP_ORIGIN = "http://127.0.0.1:3000";
 const MAILPIT_ORIGIN = process.env["WORKPULSE_MAILPIT_URL"] ?? "http://127.0.0.1:54324";
 const INITIAL_PASSWORD = "Test-password-123!";
@@ -148,7 +150,7 @@ async function deleteRecord(section: Locator, summary: string, experience = fals
   await expect(section.getByText(summary, { exact: true })).toHaveCount(0);
 }
 
-test("email auth, onboarding, profile recovery, conflict recovery, and foundation ownership", async ({ page, request }) => {
+test("email auth, onboarding, profile recovery, conflict recovery, and foundation ownership", async ({ page, request }, testInfo) => {
   test.setTimeout(240_000);
   const suffix = randomUUID().slice(0, 8);
   const email = `wp-${suffix}@example.test`;
@@ -156,6 +158,14 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   const profileName = `WorkPulse ${suffix}`;
 
   await page.goto("/sign-in");
+  const signInForm = page.locator("#sign-in-form");
+  await signInForm.evaluate((form) => { (form as HTMLFormElement).noValidate = true; });
+  await page.getByLabel("Email address").fill("not-an-email");
+  await page.getByLabel("Password", { exact: true }).fill(INITIAL_PASSWORD);
+  await signInForm.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(signInForm.locator(".field-error")).toContainText("Enter a valid email address.");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "sign-in-validation");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(INITIAL_PASSWORD);
@@ -169,6 +179,17 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await page.getByLabel("Display name").fill(`A onboarding draft ${suffix}`);
   const userADraftKey = await page.evaluate(() => Object.keys(sessionStorage).find((key) => key.endsWith(":onboarding-profile")) ?? "");
   expect(userADraftKey.startsWith("workpulse:draft:v2:")).toBe(true);
+  await page.getByLabel("Display name").fill("Pending onboarding");
+  await page.getByLabel("Time zone").fill("Mars/Phobos");
+  await page.getByRole("button", { name: "Continue to dashboard" }).click();
+  await expect(page.locator(".field-error").filter({ hasText: "Enter a real display name." })).toHaveCount(1);
+  await expect(page.locator(".field-error").filter({ hasText: "Choose a valid IANA time zone." })).toHaveCount(1);
+  await expect(page.locator("#onboarding-display-name")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#onboarding-timezone")).toHaveAttribute("aria-invalid", "true");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "onboarding-validation");
+  await page.getByLabel("Display name").fill(`A onboarding draft ${suffix}`);
+  await page.getByLabel("Time zone").fill("UTC");
 
   await page.context().clearCookies();
   await page.goto("/sign-in");
@@ -221,11 +242,27 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await expect.poll(() => page.evaluate((key) => sessionStorage.getItem(key), userADraftKey)).toBeNull();
   await expect(page.getByRole("heading", { name: "Your workspace is ready" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.getByRole("link", { name: "Quick log", exact: true }).click();
+  const quickLogNoteA = `A private quick log ${suffix}`;
+  await page.getByLabel("Work note").fill(quickLogNoteA);
+  const quickLogDraftKeyA = await page.evaluate(() => Object.keys(sessionStorage).find((key) => key.endsWith(":quick-log-note")) ?? "");
+  expect(quickLogDraftKeyA.startsWith("workpulse:draft:v2:")).toBe(true);
+  expect(await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? "null") as unknown, quickLogDraftKeyA)).toEqual({ raw_text: quickLogNoteA });
+  await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await page.getByRole("dialog", { name: "Leave without saving?" }).getByRole("button", { name: "Continue without saving" }).click();
+  await expect(page).toHaveURL(/\/activity$/);
+  await page.context().clearCookies();
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in/);
 
+  await signIn(page, email, INITIAL_PASSWORD, "/activity/new");
+  await expect(page).toHaveURL(/\/activity\/new$/);
+  await expect(page.getByLabel("Work note")).toHaveValue(quickLogNoteA);
+  await page.getByRole("link", { name: "Profile and settings", exact: true }).click();
+  await expect(page).toHaveURL(/\/settings\/profile$/);
+  await page.context().clearCookies();
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/sign-in/);
   await signIn(page, email, INITIAL_PASSWORD, "/settings/profile");
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await page.getByLabel("Headline").fill("Career systems builder");
@@ -287,6 +324,7 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await staleTab.locator("#profile-settings-form").getByRole("button", { name: "Save profile" }).click();
   await expect(staleTab.locator("#profile-settings-form").getByRole("alert")).toContainText("Your draft is still here");
   await expect(staleTab.getByLabel("Headline")).toHaveValue("Retained draft from the stale tab");
+  await expectNoWcagViolations(staleTab, testInfo, "profile-conflict");
   await staleTab.getByRole("button", { name: "Review and retry my changes" }).click();
   await expect(staleTab.locator("#profile-settings-form").getByRole("status")).toContainText("Profile saved.");
 
@@ -309,6 +347,31 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await staleTab.close();
 
   const experiences = await careerSection(page, "Experience");
+  const partialDateOrganization = `Partial Date Org ${suffix}`;
+  const partialDateRole = `Partial Date Role ${suffix}`;
+  const partialDateForm = experiences.locator(":scope > details").last().locator("form");
+  await ensureDetailsOpen(experiences.locator(":scope > details").last());
+  await partialDateForm.locator('[name="organization"]').fill(partialDateOrganization);
+  await partialDateForm.locator('[name="role_title"]').fill(partialDateRole);
+  await partialDateForm.locator('[name="start_precision"]').selectOption("day");
+  await partialDateForm.locator('[name="start_year"]').fill("2021");
+  await partialDateForm.locator('[name="start_month"]').fill("2");
+  await partialDateForm.locator('[name="start_day"]').fill("30");
+  await partialDateForm.getByRole("button", { name: "Save record" }).click();
+  const partialDayError = partialDateForm.locator(".field-error").filter({ hasText: "Enter a complete date for the selected precision." });
+  await expect(partialDayError).toHaveCount(1);
+  await expect(partialDateForm.locator('[name="start_day"]')).toHaveAttribute("aria-invalid", "true");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "foundation-partial-date-validation");
+  await expect(partialDateForm.locator('[name="start_precision"]')).toHaveValue("day");
+  await expect(partialDateForm.locator('[name="start_year"]')).toHaveValue("2021");
+  await expect(partialDateForm.locator('[name="start_month"]')).toHaveValue("2");
+  await expect(partialDateForm.locator('[name="start_day"]')).toHaveValue("30");
+  await partialDateForm.locator('[name="start_day"]').fill("28");
+  await partialDateForm.getByRole("button", { name: "Save record" }).click();
+  await expect(partialDateForm.getByRole("status")).toContainText("Record saved.");
+  await deleteRecord(experiences, `${partialDateRole} · ${partialDateOrganization}`, true);
+
   const privateOrganization = `Private Org ${suffix}`;
   const privateRole = `Private Role ${suffix}`;
   const privateRoleAfterReload = `Private Role Saved ${suffix}`;
@@ -375,12 +438,29 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await deleteRecord(certifications, certificate);
 
   const skills = await careerSection(page, "Skills");
+  const duplicateSkill = `Review Duplicate ${suffix}`;
+  const replacementSkill = `Review Replacement ${suffix}`;
+  await addRecord(skills, { name: duplicateSkill });
+  const duplicateSkillForm = skills.locator(":scope > details").last().locator("form");
+  await duplicateSkillForm.locator('[name="name"]').fill(duplicateSkill);
+  await duplicateSkillForm.getByRole("button", { name: "Save record" }).click();
+  await expect(duplicateSkillForm.locator(".field-error")).toContainText("You already added this skill.");
+  await expect(duplicateSkillForm.locator('[name="name"]')).toHaveAttribute("aria-invalid", "true");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "foundation-duplicate-skill-validation");
+  await duplicateSkillForm.locator('[name="name"]').fill(replacementSkill);
+  await duplicateSkillForm.getByRole("button", { name: "Save record" }).click();
+  await expect(duplicateSkillForm.getByRole("status")).toContainText("Record saved.");
+  await deleteRecord(skills, replacementSkill);
+  await deleteRecord(skills, duplicateSkill);
+
   const skill = `Testing ${suffix}`;
   await addRecord(skills, { name: skill });
   await editRecord(skills, skill, "name", `Testing Updated ${suffix}`, `Testing Updated ${suffix}`);
   await deleteRecord(skills, `Testing Updated ${suffix}`);
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.context().clearCookies();
+  await page.goto("/sign-in");
   await expect(page).toHaveURL(/\/sign-in$/);
   expect(await page.evaluate((key) => sessionStorage.getItem(key) !== null, userBDraftKey)).toBe(true);
   await page.getByRole("button", { name: "Forgot password?" }).click();
@@ -396,7 +476,8 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await signIn(page, email, UPDATED_PASSWORD, "/dashboard");
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.context().clearCookies();
+  await page.goto("/sign-in");
   await expect(page).toHaveURL(/\/sign-in$/);
   await signIn(page, otherEmail, INITIAL_PASSWORD, "/settings/profile?mode=onboarding");
   await expect(page).toHaveURL(/\/onboarding\/import$/);
@@ -421,11 +502,30 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   const bProfileDraftKey = await page.evaluate(() => Object.keys(sessionStorage).find((key) => key.endsWith(":profile-settings")) ?? "");
   expect(bProfileDraftKey.startsWith("workpulse:draft:v2:")).toBe(true);
 
+  await page.getByRole("link", { name: "Quick log", exact: true }).click();
+  await page.getByRole("dialog", { name: "Leave without saving?" }).getByRole("button", { name: "Continue without saving" }).click();
+  await expect(page).toHaveURL(/\/activity\/new$/);
+  await expect(page.getByLabel("Work note")).toHaveValue("");
+  const quickLogNoteB = `B private quick log ${suffix}`;
+  await page.getByLabel("Work note").fill(quickLogNoteB);
+  const quickLogDraftKeyB = await page.evaluate((userADraftKey) =>
+    Object.keys(sessionStorage).find((key) => key.endsWith(":quick-log-note") && key !== userADraftKey) ?? "",
+  quickLogDraftKeyA);
+  expect(quickLogDraftKeyB.startsWith("workpulse:draft:v2:")).toBe(true);
+  expect(quickLogDraftKeyB).not.toBe(quickLogDraftKeyA);
+  expect(await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? "null") as unknown, quickLogDraftKeyB)).toEqual({ raw_text: quickLogNoteB });
+
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   expect(await page.evaluate((key) => sessionStorage.getItem(key), bProfileDraftKey)).toBeNull();
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyB)).toBeNull();
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyA)).toBe(JSON.stringify({ raw_text: quickLogNoteA }));
 
   await signIn(page, email, UPDATED_PASSWORD, "/settings/profile");
+  await expect(page).toHaveURL(/\/settings\/profile$/);
+  await page.getByRole("link", { name: "Quick log", exact: true }).click();
+  await expect(page.getByLabel("Work note")).toHaveValue(quickLogNoteA);
+  await page.getByRole("link", { name: "Profile and settings", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await page.getByLabel("Headline").fill("A private cross-account draft");
   const experienceSectionA = await careerSection(page, "Experience");
@@ -443,6 +543,10 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
 
   await page.context().clearCookies();
   await signIn(page, otherEmail, INITIAL_PASSWORD, "/settings/profile");
+  await expect(page).toHaveURL(/\/settings\/profile$/);
+  await page.getByRole("link", { name: "Quick log", exact: true }).click();
+  await expect(page.getByLabel("Work note")).toHaveValue("");
+  await page.getByRole("link", { name: "Profile and settings", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await expect(page.getByLabel("Headline")).toHaveValue("");
   const experienceSectionBReloaded = await careerSection(page, "Experience");
@@ -464,6 +568,7 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
 
   await signIn(page, email, UPDATED_PASSWORD, "/settings/profile");
   await expect(page).toHaveURL(/\/settings\/profile$/);
+  await expect(page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyA)).resolves.toBe(JSON.stringify({ raw_text: quickLogNoteA }));
   await expect(page.getByLabel("Headline")).toHaveValue("A private cross-account draft");
   const experienceSectionAReloaded = await careerSection(page, "Experience");
   const addExperienceAReloaded = experienceSectionAReloaded.locator("details").last();
@@ -473,6 +578,7 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await expect(experienceFormAReloaded.locator('[name="role_title"]')).toHaveValue(`A private role ${suffix}`);
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyA)).toBeNull();
   expect(await page.evaluate((key) => sessionStorage.getItem(key), aProfileDraftKey)).toBeNull();
   expect(await page.evaluate((key) => sessionStorage.getItem(key), aExperienceDraftKey)).toBeNull();
 });

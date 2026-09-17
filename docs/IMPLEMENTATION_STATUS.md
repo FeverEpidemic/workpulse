@@ -10,7 +10,17 @@ Keterbatasan: data ilustrasi dan aksi simulasi; belum semua state alternatif, au
 
 Terakhir diperbarui untuk desain: 16 September 2026.
 
-Rencana: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Target pelaksana: LUNA MAX. Status: T01 DONE; T02 DONE; T03 DONE; T04 DONE. T03 Auth/Profile dan T04 frame lulus pada stack lokal; hosted SMTP tetap integration item sebelum production. Task berikutnya: T05.
+## Remediasi review T03–T04 — 17 September 2026
+
+Status: **DONE.** Empat temuan pada [rencana remediasi](verification/T03-T04-review-remediation-plan.md) sudah ditutup dengan acceptance database, replay, history guard, draft isolation, field-error association, dan Axe pada error state. Checkpoint T03/T04 bertanggal 16 September di bawah tetap menjadi catatan historis; status saat ini ada pada checkpoint remediasi bertanggal 17 September.
+
+Scope: direct INSERT foundation dan validasi database (R01, F01, S12), immutable create replay, perlindungan Quick log pada Back/Forward (R04, F02, S05), serta hubungan field error dan kontrol dengan audit Axe WCAG A/AA. Tidak memulai T05 atau fitur bisnis berikutnya.
+
+Baseline sebelum perubahan, semua exit 0: `pnpm install --frozen-lockfile`; `pnpm lint`; `pnpm typecheck -- --incremental false`; `pnpm test` (13 file / 51 test); `pnpm build`; `pnpm db:test` (117 assertion); `pnpm db:lint`; `pnpm test:e2e:auth` (1 test); `pnpm test:e2e:ui` (1 test). Baseline lengkap tetap pada bagian historis. Final acceptance dan file list tercatat di [checkpoint remediasi](#checkpoint-remediasi-t03t04) serta [verification T03](verification/T03-auth-profile.md) dan [verification T04](verification/T04-design-system-app-frame.md).
+
+Supabase hanya lokal; `linked_project: null`. Migration baru diterapkan secara forward-only pada database WorkPulse lokal tanpa reset volume tersebut. Clean reset dijalankan pada project disposable terpisah, lalu container, volume, network, dan foldernya dihapus setelah verifikasi. Hosted SMTP, project hosted, dan deployment tidak digunakan.
+
+Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private storage foundation; Gate M1 masih terbuka sampai acceptance T05 selesai.
 
 ## Task tracker
 
@@ -20,7 +30,7 @@ Rencana: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Target pelaksana: LUN
 | T02 | Schema dan tenant boundary | DONE |
 | T03 | Auth dan profil | DONE |
 | T04 | Design system dan app frame | DONE |
-| T05 | Private storage foundation | TODO |
+| T05 | Private storage foundation | DONE |
 | T06 | Activity persistence | TODO |
 | T07 | Capture dan activity UI | TODO |
 | T08 | Projects dan context | TODO |
@@ -43,6 +53,81 @@ Rencana: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md). Target pelaksana: LUN
 | T25 | Regression dan release handoff | TODO |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
+
+## Checkpoint T05
+
+Task / tanggal / status:
+T05 Private storage foundation / 17 September 2026 / DONE.
+
+Dependensi DONE:
+T02 minimum; T01–T04 seluruhnya DONE.
+
+Scope yang selesai:
+- Bucket private `workpulse-private`, key owner/category/object kanonik, module admin server-only, authorization dari server auth context, validasi metadata, safe errors, dan signed download 1–300 detik dengan attachment disposition.
+- Durable `internal.storage_jobs`: idempotent enqueue, atomic claim, 120-second lease, attempt-token guard, explicit retry, serta tanpa FK ke parent/profile.
+- Scanner contract fail-closed; belum ada real vendor atau status file `ready`. Upload UI, quota reservation, evidence domain schema, dan worker daemon tetap pada task setelah T05.
+- Gate M1 ditinjau dan ditutup. Detail acceptance, file list, perintah, hasil, dan limitation ada di [verification T05](verification/T05-private-storage-foundation.md) dan [decision 0007](decisions/0007-private-storage-foundation.md).
+
+Migration dan keputusan:
+`20260917090000_t05_private_storage_foundation.sql` diterapkan forward-only ke Supabase lokal; tidak reset database aktif. `internal.storage_jobs` tidak mengubah public schema atau `database.types.ts`. Decision 0007 menjelaskan provider-owned ACL yang tidak dapat dicabut role migrasi; RLS tanpa WorkPulse policy dan direct user-token denial diverifikasi lewat test lokal.
+
+Acceptance dan perintah:
+Lint, typecheck, 19 file / 88 unit tests, local storage integration dua akun 1/1, production build, worker check, pgTAP aktif 174/174, DB lint, migration list, clean disposable rebuild (174/174 + DB lint), serta `git diff --check` lulus. Catatan rinci ada di verification record T05.
+
+Batasan / langkah berikutnya:
+Tidak ada hosted storage, production deployment, scanner malware nyata, reservation/quota, signature/actual-byte validation, atau upload UI pada T05. Container/volume/network disposable sudah dibuang; working folder sementara masih ada di `%TEMP%` setelah penghapusan folder ditolak policy shell. Langkah berikutnya T06 Activity persistence.
+
+## Checkpoint remediasi T03–T04
+
+Task / tanggal / status:
+Remediasi review setelah T03/T04 / 17 September 2026 / DONE.
+
+Dependensi DONE:
+T01 Bootstrap, T02 Schema dan tenant boundary, T03 Auth dan profil, serta T04 Design system dan application frame.
+
+Scope yang selesai:
+- Direct authenticated INSERT pada experiences, education, certifications, dan skills dicabut. Database limits/URL/canonical-null checks disejajarkan dengan contract TypeScript, dengan data preflight yang menolak incompatibility tanpa mengubah nilai lama.
+- `internal.operation_requests.result_payload` menyimpan hasil create immutable dalam transaksi yang sama. Replay identik tetap mengembalikan snapshot setelah row diubah/dihapus; key dengan payload berbeda mendapat conflict stabil.
+- Back/Forward pada form dirty menampilkan konfirmasi dan menjaga URL serta draft. Quick log memakai owner UUID pada key session draft dan tetap mempertahankan note sampai persistence Activity tersedia di T07.
+- Semua `FieldError` memakai ID deterministic dan hubungan ARIA langsung; draft form dipulihkan untuk semua action errors. Axe memeriksa tag WCAG 2.0/2.1/2.2 A/AA tanpa filter severity.
+- Tidak ada T05+ dimulai, tidak ada schema lama atau dokumen sumber yang diubah, dan tidak ada dependency baru.
+
+File yang berubah:
+- Migration/test database: `supabase/migrations/20260916190000_t03_foundation_contract_hardening.sql`, `supabase/tests/database/foundation.test.sql`.
+- Domain/UI: `src/domain/profile/field-contract.ts`, `src/domain/routes/unsaved-navigation.ts`, `src/components/forms/field-error-binding.ts`, `src/components/forms/session-draft.ts`, `src/components/forms/action-feedback.tsx`, `src/components/ui/unsaved-changes.tsx`, `src/components/ui/dialog.tsx`, `src/components/ui/inline-error.tsx`, `src/features/activity/quick-log-capture.tsx`, `src/app/(workspace)/activity/new/page.tsx`, `src/features/auth/sign-in-client.tsx`, `src/features/auth/update-password-form.tsx`, `src/features/profile/foundation-actions.ts`, `src/features/profile/foundation-editors.tsx`, `src/features/profile/onboarding-form.tsx`, `src/features/profile/profile-editor.tsx`, `src/features/profile/schemas.ts`.
+- Tests: `tests/unit/field-error-binding.test.ts`, `tests/unit/unsaved-navigation.test.ts`, `tests/e2e/helpers/accessibility.ts`, `tests/e2e/app-frame.spec.ts`, `tests/e2e/auth-profile.spec.ts`.
+- Records: `docs/decisions/0006-t03-t04-review-remediation.md`, `docs/verification/T03-auth-profile.md`, `docs/verification/T04-design-system-app-frame.md`, and this file.
+
+Migration dan keputusan:
+`20260916190000_t03_foundation_contract_hardening.sql` adalah migration forward-only keenam, diterapkan pada local WorkPulse DB. Preflight menghentikan migration bila nilai existing melanggar contract; tidak ada truncation atau rewrite. Decision `0006-t03-t04-review-remediation.md` mencatat mutation boundary, snapshot/legacy marker, history guard, Quick log owner scope, dan error accessibility. `database.types.ts` tidak berubah karena typegen parity identik.
+
+Acceptance checklist serta bukti:
+- [x] pgTAP membuktikan empat INSERT revoke, direct insert rejection, typed create success, constraints create/update, URL/duplicate/date/revision/ownership semantics: 139/139 assertions pada DB asli dan disposable.
+- [x] Replay setelah update dan delete mengembalikan snapshot; changed payload memakai stable error; row tidak dibuat kembali.
+- [x] Two-session replay mengembalikan ID sama, menyimpan satu skill dan satu ledger row dengan snapshot cocok ke row; fixture dibersihkan.
+- [x] Clean reset disposable `workpulse_t03_t04_20260917` menerapkan enam migration dan seed; seed count 2 auth users, 2 completed profiles, 2 experiences, 1 education, 1 project, 2 skills; pgTAP dan DB lint lulus. Resources disposable dihapus dan `supabase_db_WorkPulse` dipertahankan.
+- [x] Typegen output dari local DB identik dengan `src/server/supabase/database.types.ts` setelah normalisasi line ending.
+- [x] Auth E2E lulus 1/1: invalid sign-in/onboarding, field errors, profile conflict, partial-date recovery, foundation CRUD, owner-isolated Quick log draft, recovery, and sign-out cleanup.
+- [x] UI E2E lulus 1/1: Back/Stay/Continue/Forward, mobile Quick log focus, filter history, keyboard/drawer focus, WCAG A/AA Axe error states, 360/1440 viewport dan light/dark tanpa overflow.
+- [x] Default Playwright smoke lulus 2/2; lint, typecheck, 15 file/55 unit tests, build, DB status, migration list, pgTAP, DB lint, type parity, dan `git diff --check` berhasil.
+
+Perintah verifikasi dan hasil aktual:
+- `pnpm install --frozen-lockfile` — exit 0; dependencies sudah tersedia.
+- `pnpm lint` — exit 0; zero warnings. `pnpm typecheck -- --incremental false` — exit 0. `pnpm test` — exit 0; 15 files / 55 tests. `pnpm build` — exit 0.
+- `pnpm db:status` — exit 0; `linked_project: null`. `supabase migration list --local` — exit 0; enam migration tersinkron termasuk versi `20260916190000`.
+- `pnpm db:test` — exit 0; 139/139. `pnpm db:lint` — exit 0; no schema errors. `pnpm db:types` — exit 0 dan parity identik.
+- Disposable: `pnpm db:reset -- --local --workdir <disposable> --yes` exit 0; `pnpm db:test -- --workdir <disposable>` exit 0 (139/139); `pnpm db:lint -- --workdir <disposable>` exit 0. Setelah cek project ID/path, stop dengan `--no-backup`; container, volume, network, dan folder disposable sudah tidak ada.
+- `pnpm test:e2e` — exit 0; 2 smoke tests. `pnpm test:e2e:auth` — exit 0; 1 test. `pnpm test:e2e:ui` — exit 0; 1 test. Screenshots desktop/mobile light/dark telah ditinjau.
+- `git diff --check` — exit 0; Git hanya memberi notifikasi konversi LF/CRLF pada working tree.
+
+Checks yang belum dijalankan beserta alasan:
+Hosted Supabase, production SMTP/redirect delivery, dan deployment tidak dijalankan karena di luar scope remediasi serta tidak ada klaim readiness production. Checks lokal yang diwajibkan plan semuanya dijalankan.
+
+Risiko atau blocker konkret:
+Tidak ada blocker untuk T03/T04. `pnpm db:status` mencatat imgproxy dan pooler pada stack WorkPulse asli berhenti; PostgreSQL/Auth/API/Mailpit yang dipakai acceptance tetap berfungsi. Hosted email dan deployment masih menjadi integration work sebelum production.
+
+Langkah berikutnya:
+T05 Private storage foundation. Gate M1 tetap terbuka sampai acceptance T05 selesai.
 
 ## Checkpoint T04
 

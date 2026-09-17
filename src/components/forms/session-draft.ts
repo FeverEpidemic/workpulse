@@ -214,20 +214,16 @@ export function useSessionDraft(key: string, ownerId: string | null | undefined,
     }
   }, [state, storageKey]);
 
-  const conflictId = state.status === "error" && state.error.code === "CONFLICT"
-    ? state.error.correlationId
-    : "";
-
   useEffect(() => {
     const form = formRef.current;
-    if (!form || !storageKey || !conflictId) return;
+    if (!form || !storageKey || state.status !== "error") return;
     try {
       const raw = sessionStorage.getItem(storageKey);
       if (raw) restoreFormValues(form, JSON.parse(raw) as unknown);
     } catch {
       // Keep the rendered form values if browser storage is unavailable or malformed.
     }
-  }, [conflictId, storageKey]);
+  }, [state, storageKey]);
 
   const onInputCapture = useCallback((event: FormEvent<HTMLFormElement>) => persist(event.currentTarget), [persist]);
   const onChangeCapture = useCallback((event: FormEvent<HTMLFormElement>) => persist(event.currentTarget), [persist]);

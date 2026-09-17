@@ -12,7 +12,7 @@ export function InlineError({
   return (
     <div role="alert" className={["ui-message ui-message--danger space-y-2", className].filter(Boolean).join(" ")}>
       {children}
-      {correlationId ? <p className="text-xs opacity-80">{correlationId}</p> : null}
+      {correlationId ? <p className="text-xs">{correlationId}</p> : null}
     </div>
   );
 }

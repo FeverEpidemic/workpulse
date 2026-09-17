@@ -36,7 +36,10 @@ export function Dialog({
       className={["ui-dialog", className].filter(Boolean).join(" ")}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      onClose={() => onOpenChange(false)}
+      onClose={() => {
+        if (dialogRef.current?.open) return;
+        onOpenChange(false);
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) dialogRef.current?.close();
       }}

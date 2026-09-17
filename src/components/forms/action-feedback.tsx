@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId } from "react";
+import { useEffect } from "react";
 import { useFormStatus } from "react-dom";
 
+export { fieldErrorControlProps, fieldErrorId } from "@/components/forms/field-error-binding";
 import { InlineError } from "@/components/ui/inline-error";
 import { useToast } from "@/components/ui/toast";
 import type { ActionState } from "@/server/action-result";
@@ -62,19 +63,17 @@ export function FieldError({
   state: ActionState;
   field: string;
   locale: Locale;
-  id?: string;
+  id: string;
 }) {
-  const generatedId = useId();
-  const errorId = id ?? generatedId;
   if (state.status !== "error") {
-    return <span id={errorId} className="sr-only" />;
+    return <span id={id} className="sr-only" />;
   }
   const messageKey = state.error.fieldErrors?.[field];
   return (
     <span
-      id={errorId}
-      role={messageKey ? "alert" : undefined}
-      aria-live="polite"
+      id={id}
+      role={messageKey ? "status" : undefined}
+      aria-live={messageKey ? "polite" : undefined}
       className={messageKey ? "field-error" : "sr-only"}
     >
       {messageKey ? t(locale, messageKey) : ""}

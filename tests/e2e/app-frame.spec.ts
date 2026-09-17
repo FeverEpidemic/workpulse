@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from "@playwright/test";
+
+import { expectEveryFieldErrorAssociated, expectNoWcagViolations } from "./helpers/accessibility";
 
 const APP_ORIGIN = process.env["WORKPULSE_SITE_URL"] ?? "http://127.0.0.1:3000";
 const MAILPIT_ORIGIN = process.env["WORKPULSE_MAILPIT_URL"] ?? "http://127.0.0.1:54324";
@@ -63,18 +64,6 @@ async function confirmSignup(request: APIRequestContext, page: Page, email: stri
   await page.goto(confirmationUrl.toString());
 }
 
-async function expectNoSeriousAxeViolations(page: Page, testInfo: TestInfo, label: string): Promise<void> {
-  const results = await new AxeBuilder({ page }).analyze();
-  await testInfo.attach(`axe-${label}.json`, {
-    body: JSON.stringify(results.violations, null, 2),
-    contentType: "application/json",
-  });
-  const serious = results.violations.filter((violation) =>
-    violation.impact === "serious" || violation.impact === "critical",
-  );
-  expect(serious, `${label} serious/critical Axe violations`).toEqual([]);
-}
-
 async function attachViewportScreenshot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
   const path = testInfo.outputPath(name);
   await page.screenshot({ path, animations: "disabled" });
@@ -101,14 +90,27 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
 
   await page.goto("/sign-in");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
+  const signUpForm = page.locator("form").filter({ has: page.getByLabel("Email address") });
+  await signUpForm.evaluate((form) => { (form as HTMLFormElement).noValidate = true; });
+  await page.getByLabel("Email address").fill("not-an-email");
+  await page.getByLabel("Password", { exact: true }).fill(INITIAL_PASSWORD);
+  await signUpForm.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(signUpForm.locator(".field-error")).toContainText("Enter a valid email address.");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "sign-up-validation");
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(INITIAL_PASSWORD);
-  await page.getByRole("button", { name: "Create account", exact: true }).last().click();
+  await signUpForm.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Check your inbox");
   await confirmSignup(request, page, email);
   await expect(page).toHaveURL(/\/onboarding\/import$/);
   await page.getByRole("link", { name: "Start manually" }).click();
   await expect(page).toHaveURL(/\/settings\/profile\?mode=onboarding$/);
+  await page.getByLabel("Display name").fill("Pending onboarding");
+  await page.getByRole("button", { name: "Continue to dashboard" }).click();
+  await expect(page.locator(".field-error")).toContainText("Enter a real display name.");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "onboarding-validation");
   await page.getByLabel("Display name").fill(`UI test ${suffix}`);
   await page.getByRole("button", { name: "Continue to dashboard" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
@@ -132,7 +134,7 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
   }
 
   await page.goto("/dashboard");
-  await expectNoSeriousAxeViolations(page, testInfo, "dashboard");
+  await expectNoWcagViolations(page, testInfo, "dashboard");
   await page.setViewportSize({ width: 1440, height: 960 });
   await attachViewportScreenshot(page, testInfo, "dashboard-desktop-light.png");
   await expect(page.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
@@ -156,7 +158,7 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
   await page.goto("/activity");
-  await expectNoSeriousAxeViolations(page, testInfo, "activity");
+  await expectNoWcagViolations(page, testInfo, "activity");
   await page.getByLabel("From").fill("2025-01-02");
   await page.getByLabel("Project").fill("Launch planning");
   await page.getByRole("button", { name: "Apply filters" }).click();
@@ -176,13 +178,59 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
   await expect(page.getByLabel("From")).toHaveValue("");
   await expect(page).toHaveURL(/returnTo=https%3A%2F%2Fevil\.example/);
 
-  await page.goto("/activity/new");
+  await page.locator(".workspace-topbar").getByRole("link", { name: "Quick log", exact: true }).click();
   const quickLogInput = page.getByLabel("Work note");
   await expect(quickLogInput).toBeFocused();
   await expect(page.getByRole("button", { name: "Saving is not available yet" })).toBeDisabled();
+  const quickLogNote = `History protected note ${suffix}`;
+  await quickLogInput.fill(quickLogNote);
+  await expect(quickLogInput).toHaveValue(quickLogNote);
+  await expect(page.locator("#quick-log-length-help")).toContainText(`${quickLogNote.length}/10,000`);
+  const quickLogDraftKey = await page.evaluate(() => Object.keys(sessionStorage).find((key) => key.endsWith(":quick-log-note")) ?? "");
+  expect(quickLogDraftKey.startsWith("workpulse:draft:v2:")).toBe(true);
+  await expect.poll(() => page.evaluate((key) => {
+    const raw = sessionStorage.getItem(key);
+    const draft = raw ? JSON.parse(raw) as Record<string, unknown> : null;
+    return draft?.["raw_text"];
+  }, quickLogDraftKey)).toBe(quickLogNote);
+  await page.goBack();
+  const historyDialog = page.getByRole("dialog", { name: "Leave without saving?" });
+  await expect(historyDialog).toBeVisible();
+  await historyDialog.getByRole("button", { name: "Stay on this page" }).click();
+  await expect(page).toHaveURL(/\/activity\/new$/);
+  const quickLogAfterStay = await page.evaluate((key) => {
+    const raw = sessionStorage.getItem(key);
+    const draft = raw ? JSON.parse(raw) as Record<string, unknown> : null;
+    return {
+      value: (document.getElementById("quick-log-note") as HTMLTextAreaElement | null)?.value ?? null,
+      counter: document.getElementById("quick-log-length-help")?.textContent?.split("·").at(-1)?.trim() ?? null,
+      draft: draft?.["raw_text"] ?? null,
+    };
+  }, quickLogDraftKey);
+  expect(quickLogAfterStay).toEqual({
+    value: quickLogNote,
+    counter: `${quickLogNote.length}/10,000`,
+    draft: quickLogNote,
+  });
+  await page.goBack();
+  await expect(page.getByRole("dialog", { name: "Leave without saving?" })).toBeVisible();
+  await page.getByRole("dialog", { name: "Leave without saving?" })
+    .getByRole("button", { name: "Continue without saving" }).click();
+  await expect(page).toHaveURL(/\/activity(?:\?.*)?$/);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/activity\/new$/);
+  await expect(page.getByLabel("Work note")).toHaveValue(quickLogNote);
 
   await page.goto("/settings/profile");
-  await expectNoSeriousAxeViolations(page, testInfo, "profile");
+  await expectNoWcagViolations(page, testInfo, "profile");
+  await page.getByLabel("Time zone").fill("Mars/Phobos");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.locator(".field-error")).toContainText("Choose a valid IANA time zone.");
+  await expectEveryFieldErrorAssociated(page);
+  await expectNoWcagViolations(page, testInfo, "profile-validation");
+  await page.getByLabel("Time zone").fill("UTC");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.locator("#profile-settings-form").getByRole("status")).toContainText("Profile saved.");
   await page.getByLabel("Headline").fill(`Unsaved UI draft ${suffix}`);
   const activityLink = primaryNavigation.getByRole("link", { name: "Activity", exact: true });
   await activityLink.click();
@@ -218,9 +266,10 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
   await drawer.getByRole("link", { name: "Activity", exact: true }).click();
   await expect(page).toHaveURL(/\/activity$/);
   await expect(drawer).not.toBeVisible();
-  await expect(page.getByRole("link", { name: "Quick log", exact: true })).toBeVisible();
+  const mobileQuickLog = page.locator(".workspace-mobile-header").getByRole("link", { name: "Quick log", exact: true });
+  await expect(mobileQuickLog).toBeVisible();
 
-  await page.getByRole("link", { name: "Quick log", exact: true }).click();
+  await mobileQuickLog.click();
   await expect(page).toHaveURL(/\/activity\/new$/);
   await expect(page.getByLabel("Work note")).toBeFocused();
 
