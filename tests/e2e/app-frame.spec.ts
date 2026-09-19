@@ -7,6 +7,7 @@ import { expectEveryFieldErrorAssociated, expectNoWcagViolations } from "./helpe
 const APP_ORIGIN = process.env["WORKPULSE_SITE_URL"] ?? "http://127.0.0.1:3000";
 const MAILPIT_ORIGIN = process.env["WORKPULSE_MAILPIT_URL"] ?? "http://127.0.0.1:54324";
 const INITIAL_PASSWORD = "Test-password-123!";
+const UNAVAILABLE_PROJECT_ID = "d8edc2e3-618e-4f23-a1de-e9ae18cb9740";
 
 interface MailAddress {
   Address?: string;
@@ -159,29 +160,32 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
 
   await page.goto("/activity");
   await expectNoWcagViolations(page, testInfo, "activity");
-  await page.getByLabel("From").fill("2025-01-02");
-  await page.getByLabel("Project").fill("Launch planning");
+  await page.goto("/activity?from=2025-01-02");
+  await page.getByLabel("From", { exact: true }).fill("2025-01-02");
+  await page.getByLabel("To", { exact: true }).fill("2025-01-03");
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/\/activity\?/);
   const filteredUrl = new URL(page.url());
   expect(filteredUrl.searchParams.get("from")).toBe("2025-01-02");
-  expect(filteredUrl.searchParams.get("project")).toBe("Launch planning");
-  expect(filteredUrl.searchParams.has("to")).toBe(false);
-  await page.getByLabel("Project").fill("Customer launch");
-  await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page).toHaveURL(/project=Customer\+launch/);
+  expect(filteredUrl.searchParams.get("to")).toBe("2025-01-03");
   await page.goBack();
-  await expect(page.getByLabel("Project")).toHaveValue("Launch planning");
+  await expect(page.getByLabel("To", { exact: true })).toHaveValue("");
   await page.goForward();
-  await expect(page.getByLabel("Project")).toHaveValue("Customer launch");
+  await expect(page.getByLabel("To", { exact: true })).toHaveValue("2025-01-03");
+  await page.goto(`/activity?project=${UNAVAILABLE_PROJECT_ID}`);
+  const projectFilter = page.locator("#activity-filter-project");
+  await expect(projectFilter).toHaveValue(UNAVAILABLE_PROJECT_ID);
+  await expect(projectFilter).toContainText("This project selection is unavailable.");
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(new URL(page.url()).searchParams.get("project")).toBe(UNAVAILABLE_PROJECT_ID);
   await page.goto("/activity?from=not-a-date&returnTo=https%3A%2F%2Fevil.example&unknown=1");
-  await expect(page.getByLabel("From")).toHaveValue("");
+  await expect(page.getByLabel("From")).toHaveAttribute("aria-invalid", "true");
   await expect(page).toHaveURL(/returnTo=https%3A%2F%2Fevil\.example/);
 
   await page.locator(".workspace-topbar").getByRole("link", { name: "Quick log", exact: true }).click();
   const quickLogInput = page.getByLabel("Work note");
   await expect(quickLogInput).toBeFocused();
-  await expect(page.getByRole("button", { name: "Saving is not available yet" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save activity" })).toBeEnabled();
   const quickLogNote = `History protected note ${suffix}`;
   await quickLogInput.fill(quickLogNote);
   await expect(quickLogInput).toHaveValue(quickLogNote);

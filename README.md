@@ -4,11 +4,12 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T04 done.** Email/password auth, onboarding, profile settings, profile
-foundation editors, the design system, and the authenticated application frame are
-implemented. T03 Auth/Profile acceptance and T04 UI acceptance passed against the local
-Supabase stack. Activity, achievements, projects, timeline, and CV destinations are
-navigation placeholders until their feature tasks add persistence. See
+Status: **T01–T07 done.** Email/password auth, onboarding, profile settings, profile
+foundation editors, the design system, the authenticated application frame, and Activity
+capture, list, detail, and revision-safe edit are implemented. T03–T07 acceptance passed
+against local Supabase. Gate M2 remains open while T08–T12 are pending. Achievements,
+projects, timeline, and CV destinations remain placeholders until their feature tasks add
+persistence. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -21,8 +22,8 @@ navigation placeholders until their feature tasks add persistence. See
 | Docker Desktop | current | required only for the local Supabase stack (`pnpm db:*`) |
 | Supabase CLI | 2.117.0 | installed as a devDependency; use it through the `pnpm db:*` scripts |
 
-No environment file is needed for the four quality gates. Only the Supabase-backed work
-of later tasks needs one.
+Lint, typecheck, unit tests, and build can run without Supabase credentials. Activity
+integration and browser acceptance use the local Supabase stack and require `.env.local`.
 
 ## Setup
 
@@ -32,7 +33,8 @@ pnpm install --frozen-lockfile
 
 Copy `.env.example` to `.env.local` when you need local Supabase values. `.env*` files are
 git-ignored except the template, and the template holds variable names only — never commit
-credentials.
+credentials. The Activity browser test provisions local test accounts and context records,
+then removes them in `finally`; run it against the local stack only.
 
 ## Quality gates
 
@@ -43,10 +45,12 @@ credentials.
 | `pnpm lint` | ESLint flat config, `--max-warnings 0` |
 | `pnpm typecheck` | `tsc --noEmit` (TypeScript strict, `noUncheckedIndexedAccess`) |
 | `pnpm test` | Vitest unit suite (`tests/unit`) |
-| `pnpm test:integration:storage` | Local Storage access, signed download, and expiry checks (`tests/integration`) |
+| `pnpm test:integration:activity` | Activity persistence, ownership, idempotency, revision conflicts, and pagination against local Supabase |
+| `pnpm test:integration:storage` | Private Storage access, signed download, and expiry checks (`tests/integration/private-storage.test.ts`) |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
 | `pnpm test:e2e:ui` | Authenticated app-frame, theme, filter, keyboard, responsive, and Axe checks |
+| `pnpm test:e2e:activity` | Activity capture/list/detail/edit acceptance against local Supabase; fixtures are cleaned up |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -129,6 +133,14 @@ The T05 Storage integration check is `pnpm test:integration:storage`. It uses te
 local accounts and an object, then removes them in cleanup. It verifies owner-authorized
 attachment downloads, short URL expiry, private bucket behavior, denied user-token signing
 and upload, and that user-token delete attempts leave the stored object unchanged.
+
+The T06 Activity integration check is `pnpm test:integration:activity`. It uses two temporary
+authenticated accounts and local PostgreSQL to verify exact raw-text persistence, Chat create,
+idempotent replay, revision conflicts, owner isolation, context lifecycle, and 30-row keyset
+pagination. Both integration scripts read the local Supabase URL and keys from the process
+environment or `.env.local`; they remove their temporary accounts during cleanup. The Activity
+test uses `SUPABASE_SECRET_KEY` only for fixture setup/cleanup; assertions use authenticated
+user clients. Keep that key server/test-only and out of browser configuration and source control.
 
 Local signup and recovery emails are captured by Supabase's Mailpit at
 `http://127.0.0.1:54324`. The full auth/profile flow can be exercised with

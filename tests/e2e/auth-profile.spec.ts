@@ -247,7 +247,10 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await page.getByLabel("Work note").fill(quickLogNoteA);
   const quickLogDraftKeyA = await page.evaluate(() => Object.keys(sessionStorage).find((key) => key.endsWith(":quick-log-note")) ?? "");
   expect(quickLogDraftKeyA.startsWith("workpulse:draft:v2:")).toBe(true);
-  expect(await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? "null") as unknown, quickLogDraftKeyA)).toEqual({ raw_text: quickLogNoteA });
+  expect(await page.evaluate((key) => {
+    const value = JSON.parse(sessionStorage.getItem(key) ?? "null") as Record<string, unknown> | null;
+    return value?.["raw_text"];
+  }, quickLogDraftKeyA)).toBe(quickLogNoteA);
   await page.getByRole("link", { name: "Activity", exact: true }).click();
   await page.getByRole("dialog", { name: "Leave without saving?" }).getByRole("button", { name: "Continue without saving" }).click();
   await expect(page).toHaveURL(/\/activity$/);
@@ -259,6 +262,8 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await expect(page).toHaveURL(/\/activity\/new$/);
   await expect(page.getByLabel("Work note")).toHaveValue(quickLogNoteA);
   await page.getByRole("link", { name: "Profile and settings", exact: true }).click();
+  await page.getByRole("dialog", { name: "Leave without saving?" })
+    .getByRole("button", { name: "Continue without saving" }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await page.context().clearCookies();
   await page.goto("/dashboard");
@@ -513,19 +518,27 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   quickLogDraftKeyA);
   expect(quickLogDraftKeyB.startsWith("workpulse:draft:v2:")).toBe(true);
   expect(quickLogDraftKeyB).not.toBe(quickLogDraftKeyA);
-  expect(await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? "null") as unknown, quickLogDraftKeyB)).toEqual({ raw_text: quickLogNoteB });
+  expect(await page.evaluate((key) => {
+    const value = JSON.parse(sessionStorage.getItem(key) ?? "null") as Record<string, unknown> | null;
+    return value?.["raw_text"];
+  }, quickLogDraftKeyB)).toBe(quickLogNoteB);
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   expect(await page.evaluate((key) => sessionStorage.getItem(key), bProfileDraftKey)).toBeNull();
   expect(await page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyB)).toBeNull();
-  expect(await page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyA)).toBe(JSON.stringify({ raw_text: quickLogNoteA }));
+  expect(await page.evaluate((key) => {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Record<string, unknown>)["raw_text"] : null;
+  }, quickLogDraftKeyA)).toBe(quickLogNoteA);
 
   await signIn(page, email, UPDATED_PASSWORD, "/settings/profile");
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await page.getByRole("link", { name: "Quick log", exact: true }).click();
   await expect(page.getByLabel("Work note")).toHaveValue(quickLogNoteA);
   await page.getByRole("link", { name: "Profile and settings", exact: true }).click();
+  await page.getByRole("dialog", { name: "Leave without saving?" })
+    .getByRole("button", { name: "Continue without saving" }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await page.getByLabel("Headline").fill("A private cross-account draft");
   const experienceSectionA = await careerSection(page, "Experience");
@@ -568,7 +581,10 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
 
   await signIn(page, email, UPDATED_PASSWORD, "/settings/profile");
   await expect(page).toHaveURL(/\/settings\/profile$/);
-  await expect(page.evaluate((key) => sessionStorage.getItem(key), quickLogDraftKeyA)).resolves.toBe(JSON.stringify({ raw_text: quickLogNoteA }));
+  await expect.poll(() => page.evaluate((key) => {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Record<string, unknown>)["raw_text"] : null;
+  }, quickLogDraftKeyA)).toBe(quickLogNoteA);
   await expect(page.getByLabel("Headline")).toHaveValue("A private cross-account draft");
   const experienceSectionAReloaded = await careerSection(page, "Experience");
   const addExperienceAReloaded = experienceSectionAReloaded.locator("details").last();

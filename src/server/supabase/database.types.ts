@@ -9,6 +9,79 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      activities: {
+        Row: {
+          analysis_state: string
+          capture_mode: string
+          created_at: string
+          experience_id: string | null
+          id: string
+          occurred_on: string
+          outcome: string | null
+          project_id: string | null
+          raw_text: string
+          revision: number
+          role: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis_state?: string
+          capture_mode: string
+          created_at?: string
+          experience_id?: string | null
+          id?: string
+          occurred_on: string
+          outcome?: string | null
+          project_id?: string | null
+          raw_text: string
+          revision?: number
+          role?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis_state?: string
+          capture_mode?: string
+          created_at?: string
+          experience_id?: string | null
+          id?: string
+          occurred_on?: string
+          outcome?: string | null
+          project_id?: string | null
+          raw_text?: string
+          revision?: number
+          role?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_user_experience_fkey"
+            columns: ["user_id", "experience_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_user_project_fkey"
+            columns: ["user_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       certifications: {
         Row: {
           created_at: string
@@ -49,6 +122,51 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "certifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          activity_id: string
+          content: string
+          created_at: string
+          id: string
+          role: string
+          sequence_no: number
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          sequence_no: number
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          sequence_no?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_user_activity_fkey"
+            columns: ["user_id", "activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "chat_messages_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -382,6 +500,26 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_activity_idempotent: {
+        Args: {
+          p_capture_mode: string
+          p_experience_id: string
+          p_occurred_on: string
+          p_operation_key: string
+          p_outcome: string
+          p_project_id: string
+          p_raw_text: string
+          p_role: string
+          p_scope: string
+        }
+        Returns: {
+          activity_id: string
+          capture_mode: string
+          occurred_on: string
+          revision: number
+          user_id: string
+        }[]
+      }
       create_certification_idempotent: {
         Args: {
           p_credential_url: string
@@ -522,6 +660,35 @@ export type Database = {
       delete_skill: {
         Args: { p_expected_revision: number; p_skill_id: string }
         Returns: string
+      }
+      update_activity: {
+        Args: {
+          p_activity_id: string
+          p_changes: Json
+          p_expected_revision: number
+        }
+        Returns: {
+          analysis_state: string
+          capture_mode: string
+          created_at: string
+          experience_id: string | null
+          id: string
+          occurred_on: string
+          outcome: string | null
+          project_id: string | null
+          raw_text: string
+          revision: number
+          role: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "activities"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       update_certification: {
         Args: {

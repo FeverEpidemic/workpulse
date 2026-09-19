@@ -48,14 +48,31 @@ select is(
     from pg_catalog.pg_policies as policy
     where policy.schemaname = 'storage'
       and policy.tablename = 'objects'
-      and (
-        policy.policyname ilike '%workpulse-private%'
-        or coalesce(policy.qual, '') ilike '%workpulse-private%'
-        or coalesce(policy.with_check, '') ilike '%workpulse-private%'
-      )
+      and policy.policyname = 'workpulse_private_server_only'
   ),
-  0::bigint,
-  'no client Storage policy names or references the WorkPulse bucket'
+  1::bigint,
+  'the WorkPulse server-only policy has one stable name on Storage objects'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_catalog.pg_policies as policy
+    where policy.schemaname = 'storage'
+      and policy.tablename = 'objects'
+      and policy.policyname = 'workpulse_private_server_only'
+      and policy.permissive = 'RESTRICTIVE'
+      and policy.cmd = 'ALL'
+      and 'anon'::name = any (policy.roles)
+      and 'authenticated'::name = any (policy.roles)
+      and strpos(coalesce(policy.qual, ''), 'bucket_id') > 0
+      and strpos(coalesce(policy.qual, ''), '<>') > 0
+      and strpos(coalesce(policy.qual, ''), 'workpulse-private') > 0
+      and strpos(coalesce(policy.with_check, ''), 'bucket_id') > 0
+      and strpos(coalesce(policy.with_check, ''), '<>') > 0
+      and strpos(coalesce(policy.with_check, ''), 'workpulse-private') > 0
+  ),
+  'the restrictive policy covers every command for anon and authenticated and rejects the WorkPulse bucket in both checks'
 );
 
 select has_table('internal', 'storage_jobs', 'the private cleanup queue exists in the internal schema');
@@ -358,6 +375,45 @@ begin
 end;
 $$;
 
+insert into storage.buckets (id, name, public)
+values ('t05-policy-other', 't05-policy-other', false);
+
+insert into storage.objects (bucket_id, name)
+values
+  (
+    'workpulse-private',
+    '22222222-2222-4222-8222-222222222222/evidence/11111111-1111-4111-8111-111111111111'
+  ),
+  ('t05-policy-other', 'baseline');
+
+create policy t05_generic_objects_select
+on storage.objects as permissive for select to anon, authenticated using (true);
+
+create policy t05_generic_objects_insert
+on storage.objects as permissive for insert to anon, authenticated with check (true);
+
+create policy t05_generic_objects_update
+on storage.objects as permissive for update to anon, authenticated using (true) with check (true);
+
+create policy t05_generic_objects_delete
+on storage.objects as permissive for delete to anon, authenticated using (true);
+
+select ok(
+  exists (
+    select 1
+    from pg_catalog.pg_policies as policy
+    where policy.schemaname = 'storage'
+      and policy.tablename = 'objects'
+      and policy.policyname = 't05_generic_objects_delete'
+      and policy.permissive = 'PERMISSIVE'
+      and policy.cmd = 'DELETE'
+      and 'anon'::name = any (policy.roles)
+      and 'authenticated'::name = any (policy.roles)
+      and coalesce(policy.qual, '') not ilike '%workpulse-private%'
+  ),
+  'the regression fixture includes a generic DELETE policy for both browser roles'
+);
+
 select pg_temp.set_jwt_subject('22222222-2222-4222-8222-222222222222'::uuid);
 set local role authenticated;
 
@@ -368,7 +424,18 @@ select is(
     where bucket_id = 'workpulse-private'
   ),
   0::bigint,
-  'authenticated clients cannot read WorkPulse object metadata without a policy'
+  'authenticated clients cannot read WorkPulse object metadata despite a broad SELECT policy'
+);
+
+select is(
+  (
+    select count(*)
+    from storage.objects
+    where bucket_id = 't05-policy-other'
+      and name = 'baseline'
+  ),
+  1::bigint,
+  'the broad SELECT policy still works for another bucket'
 );
 
 select throws_ok(
@@ -381,7 +448,60 @@ select throws_ok(
   $$,
   '42501',
   null,
-  'authenticated clients cannot write directly to private Storage'
+  'the restrictive WITH CHECK rejects WorkPulse inserts despite a broad INSERT policy'
+);
+
+select lives_ok(
+  $$
+    insert into storage.objects (bucket_id, name)
+    values ('t05-policy-other', 'inserted')
+  $$,
+  'the broad INSERT policy still works for another bucket'
+);
+
+update storage.objects
+set bucket_id = 't05-policy-other',
+    name = 'moved-out'
+where bucket_id = 'workpulse-private'
+  and name = '22222222-2222-4222-8222-222222222222/evidence/11111111-1111-4111-8111-111111111111';
+
+select is(
+  (
+    select count(*)
+    from storage.objects
+    where bucket_id = 't05-policy-other'
+      and name = 'moved-out'
+  ),
+  0::bigint,
+  'the restrictive USING prevents moving a WorkPulse row out of the private bucket'
+);
+
+select throws_ok(
+  $$
+    update storage.objects
+    set bucket_id = 'workpulse-private'
+    where bucket_id = 't05-policy-other'
+      and name = 'baseline'
+  $$,
+  '42501',
+  null,
+  'the restrictive WITH CHECK prevents moving another row into the WorkPulse bucket'
+);
+
+update storage.objects
+set name = 'baseline-updated'
+where bucket_id = 't05-policy-other'
+  and name = 'baseline';
+
+select is(
+  (
+    select count(*)
+    from storage.objects
+    where bucket_id = 't05-policy-other'
+      and name = 'baseline-updated'
+  ),
+  1::bigint,
+  'the broad UPDATE policy still works for another bucket'
 );
 
 select throws_ok(
@@ -411,6 +531,57 @@ select ok(
       and user_id = '22222222-2222-4222-8222-222222222222'::uuid
   ),
   'the cleanup receipt survives deletion of the parent project'
+);
+
+select pg_temp.set_jwt_subject(null::uuid, 'anon');
+set local role anon;
+
+select is(
+  (
+    select count(*)
+    from storage.objects
+    where bucket_id = 'workpulse-private'
+  ),
+  0::bigint,
+  'anon clients cannot read WorkPulse object metadata despite a broad SELECT policy'
+);
+
+select throws_ok(
+  $$
+    insert into storage.objects (bucket_id, name)
+    values (
+      'workpulse-private',
+      '22222222-2222-4222-8222-222222222222/evidence/ffffffff-ffff-4fff-8fff-ffffffffffff'
+    )
+  $$,
+  '42501',
+  null,
+  'the restrictive WITH CHECK rejects anon WorkPulse inserts'
+);
+
+select throws_ok(
+  $$
+    update storage.objects
+    set bucket_id = 'workpulse-private'
+    where bucket_id = 't05-policy-other'
+      and name = 'baseline-updated'
+  $$,
+  '42501',
+  null,
+  'the restrictive WITH CHECK rejects anon updates into WorkPulse'
+);
+
+reset role;
+
+select is(
+  (
+    select count(*)
+    from storage.objects
+    where bucket_id = 'workpulse-private'
+      and name = '22222222-2222-4222-8222-222222222222/evidence/11111111-1111-4111-8111-111111111111'
+  ),
+  1::bigint,
+  'the WorkPulse object remains intact throughout the regression fixture'
 );
 
 select * from finish();

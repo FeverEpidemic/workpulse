@@ -27,6 +27,8 @@ export function clearUnsavedForm(formId: string): void {
 export function useUnsavedForm(formId: string, state?: ActionState): {
   onInputCapture: FormEventHandler<HTMLFormElement>;
   onChangeCapture: FormEventHandler<HTMLFormElement>;
+  markDirty: () => void;
+  markClean: () => void;
 } {
   const { markDirty, markClean } = useContext(UnsavedContext);
 
@@ -37,8 +39,15 @@ export function useUnsavedForm(formId: string, state?: ActionState): {
   const markCurrentDirty = useCallback((_event: FormEvent<HTMLFormElement>) => {
     markDirty(formId);
   }, [formId, markDirty]);
+  const markDirtyForm = useCallback(() => markDirty(formId), [formId, markDirty]);
+  const markCurrentClean = useCallback(() => markClean(formId), [formId, markClean]);
 
-  return { onInputCapture: markCurrentDirty, onChangeCapture: markCurrentDirty };
+  return {
+    onInputCapture: markCurrentDirty,
+    onChangeCapture: markCurrentDirty,
+    markDirty: markDirtyForm,
+    markClean: markCurrentClean,
+  };
 }
 
 export function UnsavedChangesProvider({

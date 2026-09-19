@@ -1,5 +1,12 @@
 import type { Locale } from "@/i18n/messages";
 import type { Database } from "@/server/supabase/database.types";
+import type {
+  ActivityAnalysisState,
+  ActivityCaptureMode,
+  ActivityCreateReceipt,
+  ActivityRow,
+  ChatMessageRow,
+} from "@/domain/activity/contracts";
 
 export type LocaleCode = Locale;
 export type DatePrecisionCode = "year" | "month" | "day";
@@ -33,3 +40,4 @@ export type ProjectRow = Omit<ProjectDatabaseRow, "status" | "start_precision" |
   end_precision: DatePrecisionCode | null;
 };
 export type SkillRow = Database["public"]["Tables"]["skills"]["Row"];
+export type { ActivityAnalysisState, ActivityCaptureMode, ActivityCreateReceipt, ActivityRow, ChatMessageRow };

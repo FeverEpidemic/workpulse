@@ -1,5 +1,133 @@
 # WorkPulse Implementation Status
 
+## Eksekusi T07 — 18 September 2026
+
+Status akhir: **DONE**. T07 menghubungkan S05–S06 ke persistence T06: Quick log Note/Form/Chat,
+owner-scoped Activity list dan detail, URL filters/cursor, edit dengan optimistic revision dan
+conflict recovery, serta bilingual/responsive/accessibility states. Acceptance ditrace ke PRD R04,
+Flow F02/shared recovery, Wireframe S05–S06, Database Schema §§1–3/6, dan Design.md.
+
+Tidak ada migration, perubahan schema/RPC/generated DB types, dependency, AI, Achievement, Evidence,
+Project CRUD, atau Activity delete dalam scope T07. Seluruh perubahan T05–T06 yang belum di-commit
+tetap dipertahankan. Rincian scope/file/acceptance dan hasil aktual ada di
+[verification T07](verification/T07-activity-ui.md) dan [rencana eksekusi](verification/T07-implementation-plan.md).
+
+Quality gates akhir lulus: install frozen, lint, typecheck, 25 file/124 unit tests, Activity
+integration 6/6, Storage integration 1/1, production build, worker check, pgTAP 240/240, DB lint,
+local migration ledger 9/9, Auth/UI/Activity E2E masing-masing 1/1, Axe WCAG 2.2 A/AA, responsive
+360/1440 light/dark, dan `git diff --check`. Supabase yang diuji hanya stack lokal; output key
+`db:status` disembunyikan dan tidak ada hosted project yang tertaut. Database aktif tidak di-reset.
+
+Langkah berikutnya T08 Projects dan context. Gate M2 tetap terbuka sampai T08–T12 selesai.
+
+## Rencana remediasi review T06 — 17 September 2026
+
+Status authoritative saat ini: **DONE**. Remediasi review menutup tiga gap boundary service Activity:
+missing/invalid session sekarang menjadi `UNAUTHENTICATED`, create replay mengembalikan receipt
+immutable dari RPC, dan setiap `ActivityServiceError` memiliki localized message key serta UUID
+correlation ID.
+
+Rencana lengkap dan hasil aktual ada di
+[T06 review remediation plan](verification/T06-review-remediation-plan.md). Acceptance dan command
+terakhir dicatat dalam [verification T06](verification/T06-activity-persistence.md) dan
+[decision 0010](decisions/0010-t06-activity-service-contract.md). Perubahan hanya pada service/domain
+contract, tests, dan dokumen. Tidak ada perubahan RPC, schema, migration, RLS, grants, package
+version, lockfile, generated database types, atau UI.
+
+Sebelum perbaikan, regression unit baru gagal 8/8: missing session menjadi `UNAVAILABLE`, error
+tidak memiliki `messageKey`/`correlationId`, dan create mengembalikan row live revision 2 melalui
+query tambahan. Setelah perbaikan, lint, typecheck, 23 file / 112 unit tests, Activity integration
+6/6, Storage integration 1/1, build, worker check, pgTAP 240/240, DB lint, migration list 9/9, dan
+`git diff --check` lulus.
+
+T07 tetap `TODO` dan belum dimulai. T07 — Capture dan Activity UI — menjadi task berikutnya setelah
+T06 selesai. Gate M2 tetap terbuka sampai T06–T12 selesai.
+
+## T06 Activity persistence — 17 September 2026
+
+Status akhir: **DONE** setelah remediasi review. UI Capture, list/detail, dan feedback save belum
+dimulai; semua itu tetap pada T07. Scope mengikuti T06 implementation plan dan trace PRD R04 / Content
+and AI behavior, Flow F02 / shared recovery, Screens S05/S06, dan Database Schema §§1–3/6.
+
+Migration `20260917160000_t06_activity_persistence.sql` diterapkan forward-only ke Supabase lokal
+aktif tanpa reset; `migration up` selanjutnya menghasilkan `applied: []`. Clean rebuild pada
+project disposable `workpulse_t06clean202609171620` menerapkan sembilan migration plus seed.
+pgTAP 240/240, Activity integration 6/6, dan Storage integration 1/1 lulus pada stack aktif saat
+remediasi; tidak ada reset atau migration baru. Clean rebuild sebelumnya tetap menjadi bukti T06 SQL
+dan tidak diulang karena remediasi ini hanya mengubah TypeScript. Container, volume, network, dan
+folder clean rebuild sudah dihapus; stack aktif tetap tidak linked ke hosted.
+
+Acceptance mencakup raw text persis tanpa trimming/truncation, Chat first message atomik, idempotent
+replay, batas Unicode 10.000, exact date/timezone, owner isolation dan direct mutation denial,
+revision conflict, context lifecycle, serta keyset pagination 30 baris. Detail per-case, file,
+replay receipt setelah edit dan project experience propagation, batas Unicode 10.000, exact
+date/timezone, owner isolation dan direct mutation denial, revision conflict, context lifecycle,
+serta keyset pagination 30 baris. Detail ada pada [verification T06](verification/T06-activity-persistence.md),
+[decision 0009](decisions/0009-activity-persistence.md), dan [decision 0010](decisions/0010-t06-activity-service-contract.md).
+
+Perubahan remediasi ada pada `src/features/activity/activity-service.ts`,
+`src/domain/activity/contracts.ts`, `src/domain/database-types.ts`, unit/integration tests, decision
+0010, verification T06, status, dan rencana remediasi. `createActivity()` mengembalikan lima-field
+receipt yang frozen; current Activity/Chat dibaca melalui `getActivity()`. Error service memakai
+key dictionary yang sudah ada, field errors bertipe `MessageKey`, pesan diagnostics generik, dan
+UUID baru per instance.
+
+### Quality gates akhir remediasi
+
+| Command | Hasil aktual |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | Exit 0; dependencies sudah tersedia, lockfile tidak berubah. |
+| `pnpm lint` | Exit 0; zero warnings. |
+| `pnpm typecheck -- --incremental false` | Exit 0. |
+| `pnpm test` | Exit 0; 23 file / 112 tests. |
+| `pnpm test:integration:activity` | Exit 0; 6/6 terhadap stack lokal, termasuk anonymous session dan replay setelah edit/context propagation. |
+| `pnpm test:integration:storage` | Exit 0; 1/1 terhadap stack lokal. |
+| `pnpm build` | Exit 0; production build. Sandbox awal menolak write ke `.next`; rerun dengan akses workspace berhasil. |
+| `pnpm worker:check` | Exit 0; worker ready, belum ada registered jobs seperti yang diharapkan pada T06. |
+| `pnpm db:test` | Exit 0; 240/240 pgTAP assertion. |
+| `pnpm db:lint` | Exit 0; tidak ada error pada severity `error`. |
+| `pnpm exec supabase migration list --local` | Exit 0; 9 migration lokal cocok dengan ledger database. |
+| `git diff --check` | Exit 0; peringatan line-ending LF/CRLF saja. |
+
+Integration menggunakan key dari status Supabase lokal hanya sebagai process environment; secret tidak
+dicetak atau disimpan. Account fixture dibersihkan oleh test, dan database aktif tidak di-reset.
+`db:types` tidak dijalankan karena schema/RPC tidak berubah. Browser E2E tidak dijalankan karena
+tidak ada route/component UI yang berubah. Clean rebuild tidak diulang karena tidak ada SQL; hosted
+migration, staging performance, dan production tetap di luar scope. Advisory PL/pgSQL lama tentang
+`v_revision` tercatat pada verification T06; konfigurasi repo `pnpm db:lint` tidak melaporkan error.
+
+Dependensi: T01–T05 DONE. Langkah berikutnya T07 Capture dan Activity UI. Gate M2 tetap terbuka
+sampai seluruh T06–T12 selesai.
+
+## Review T05 private storage policy (checkpoint sebelum T06) — 17 September 2026
+
+Status saat ini: **DONE**. Temuan review P1 ditutup dengan migration forward-only
+`20260917134500_t05_storage_policy_hardening.sql`, policy `workpulse_private_server_only` yang
+restriktif untuk `anon`/`authenticated`, dan regression pgTAP broad-policy. Migration T05 historis
+tidak diubah. Detail bukti ada di [verification T05](verification/T05-private-storage-foundation.md),
+[decision 0008](decisions/0008-private-storage-restrictive-policy.md), dan
+[rencana remediasi](verification/T05-review-remediation-plan.md).
+
+Reproduksi sebelum perbaikan membuat satu row WorkPulse terlihat oleh `authenticated` meskipun
+cleanup lama tidak mendeteksi policy generik. Seluruh policy dan object fixture hilang sesudah
+`ROLLBACK`. Sesudah perbaikan, pgTAP lulus 185/185; Storage integration dua akun tetap menolak
+signing langsung 3.600 detik, mempertahankan owner URL attachment TTL 3 detik sampai expiry, dan
+membuktikan upload/delete user-token tidak mengubah object.
+
+Migration diterapkan forward-only ke database Supabase lokal aktif tanpa reset. Clean rebuild pada
+project disposable `workpulse_t05_hardening_20260917_1345` menerapkan delapan migration dan seed,
+lalu pgTAP, DB lint, dan Storage integration lulus. Project disposable beserta folder, container,
+volume, dan network sudah dibuang; database aktif tetap sehat dan project tidak linked ke hosted.
+Gate M1 ditutup kembali. T06 menjadi task berikutnya dan belum dimulai.
+
+Dependensi: T02 minimum selesai; T01–T04 tetap DONE. Scope: hardening Storage boundary T05 untuk PRD R01/R07 dan Database Schema §4/§6; tidak memulai T06 atau T10+.
+
+File remediasi: migration baru `supabase/migrations/20260917134500_t05_storage_policy_hardening.sql`, regression `supabase/tests/database/private_storage.test.sql`, decision 0008, verification T05, rencana remediasi ini, dan checkpoint status ini. `tests/integration/private-storage.test.ts` sudah memiliki coverage langsung TTL 3.600 detik dan tidak memerlukan perubahan.
+
+Quality gates aktual lulus: install, lint, typecheck, unit 19 file/88 test, Storage integration 1/1, production build, worker check, pgTAP 185/185, DB lint, migration list delapan migration, clean disposable rebuild, dan `git diff --check`. Rincian perintah dan batasan test DELETE SQL ada di verification T05.
+
+Checks tidak dijalankan: browser E2E, karena UI tidak berubah; hosted Storage/production deployment, karena scope hanya stack lokal dan tidak ada migrasi hosted yang diminta. Blocker T05/M1: tidak ada. Scanner nyata, quota/reservation, dan lifecycle evidence tetap scope task berikutnya.
+
 ## Deliverable desain — 16 September 2026
 
 Permintaan terarah mockup S01–S14: DONE untuk 14 screen representatif, bukan implementasi fitur. Acuan: Design.md root, wireframe S01–S14 (R01–R10/F01–F07), keputusan scope IMPLEMENTATION_PLAN §1. Catatan desain ini terpisah dari status implementasi T01–T25.
@@ -31,8 +159,8 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T03 | Auth dan profil | DONE |
 | T04 | Design system dan app frame | DONE |
 | T05 | Private storage foundation | DONE |
-| T06 | Activity persistence | TODO |
-| T07 | Capture dan activity UI | TODO |
+| T06 | Activity persistence | DONE |
+| T07 | Capture dan activity UI | DONE |
 | T08 | Projects dan context | TODO |
 | T09 | Manual achievements dan skills | TODO |
 | T10 | Evidence reservation dan screening | TODO |
@@ -54,10 +182,11 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 
-## Checkpoint T05
+## Checkpoint T05 sebelum review policy
 
-Task / tanggal / status:
-T05 Private storage foundation / 17 September 2026 / DONE.
+Task / tanggal / status saat checkpoint:
+T05 Private storage foundation / 17 September 2026 / DONE saat checkpoint; status terkini
+dibuka kembali sementara untuk review policy lalu ditutup kembali sesuai remediasi di bagian atas.
 
 Dependensi DONE:
 T02 minimum; T01–T04 seluruhnya DONE.

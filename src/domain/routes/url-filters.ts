@@ -1,3 +1,8 @@
+import { z } from "zod";
+
+import { decodeActivityCursor } from "@/domain/activity/activity-cursor";
+import { isExactActivityDate } from "@/domain/activity/activity-date";
+
 export const activityFilterKeys = ["from", "to", "project"] as const;
 
 export type ActivityFilterKey = (typeof activityFilterKeys)[number];
@@ -8,10 +13,21 @@ export interface ActivityFilters {
   project: string;
 }
 
+export type ActivityFilterError = "invalid" | "range";
+
+export interface ActivityQueryState {
+  filters: ActivityFilters;
+  cursor: string;
+  errors: Partial<Record<ActivityFilterKey | "cursor", ActivityFilterError>>;
+  isValid: boolean;
+}
+
 type SearchInput =
   | string
   | URLSearchParams
   | Record<string, string | string[] | undefined>;
+
+const uuidSchema = z.uuid();
 
 function paramsFor(input: SearchInput): URLSearchParams {
   if (input instanceof URLSearchParams) return new URLSearchParams(input.toString());
@@ -27,28 +43,56 @@ function paramsFor(input: SearchInput): URLSearchParams {
   return params;
 }
 
-function isCalendarDate(value: string | null): value is string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  if (year === undefined || month === undefined || day === undefined) return false;
-  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const monthDays = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return month >= 1 && month <= 12 && day >= 1 && day <= (monthDays[month - 1] ?? 0);
+function singleValue(params: URLSearchParams, key: string): { value: string; duplicate: boolean } {
+  const values = params.getAll(key);
+  return { value: values[0] ?? "", duplicate: values.length > 1 };
 }
 
-function cleanProject(value: string | null): string {
-  return value?.trim().slice(0, 120) ?? "";
+function cleanProject(value: string): string {
+  return value.trim().slice(0, 120);
 }
 
-export function readActivityFilters(input: SearchInput): ActivityFilters {
+export function readActivityQuery(input: SearchInput): ActivityQueryState {
   const params = paramsFor(input);
-  const from = params.get("from");
-  const to = params.get("to");
+  const fromValue = singleValue(params, "from");
+  const toValue = singleValue(params, "to");
+  const projectValue = singleValue(params, "project");
+  const cursorValue = singleValue(params, "cursor");
+  const from = fromValue.value.trim();
+  const to = toValue.value.trim();
+  const project = cleanProject(projectValue.value);
+  const errors: ActivityQueryState["errors"] = {};
+
+  if (fromValue.duplicate || (from && !isExactActivityDate(from))) errors.from = "invalid";
+  if (toValue.duplicate || (to && !isExactActivityDate(to))) errors.to = "invalid";
+  if (projectValue.duplicate || (project && !uuidSchema.safeParse(project).success)) errors.project = "invalid";
+
+  let cursor = cursorValue.value;
+  if (cursorValue.duplicate) {
+    errors.cursor = "invalid";
+    cursor = "";
+  } else if (cursor) {
+    try {
+      decodeActivityCursor(cursor);
+    } catch {
+      errors.cursor = "invalid";
+      cursor = "";
+    }
+  }
+
+  if (!errors.from && !errors.to && from && to && from > to) errors.to = "range";
+
   return {
-    from: isCalendarDate(from) ? from : "",
-    to: isCalendarDate(to) ? to : "",
-    project: cleanProject(params.get("project")),
+    filters: { from, to, project },
+    cursor,
+    errors,
+    isValid: Object.keys(errors).length === 0,
   };
+}
+
+/** Read filter values for call sites that do not need validation feedback. */
+export function readActivityFilters(input: SearchInput): ActivityFilters {
+  return readActivityQuery(input).filters;
 }
 
 export function setActivityFilter(
@@ -59,7 +103,7 @@ export function setActivityFilter(
   const params = paramsFor(input);
   const normalized = value?.trim() ?? "";
 
-  if (!normalized || ((key === "from" || key === "to") && !isCalendarDate(normalized))) {
+  if (!normalized || ((key === "from" || key === "to") && !isExactActivityDate(normalized))) {
     params.delete(key);
   } else {
     params.set(key, key === "project" ? normalized.slice(0, 120) : normalized);
@@ -75,4 +119,11 @@ export function activityFilterQuery(filters: ActivityFilters): string {
     if (value) params.set(key, value);
   }
   return params.toString();
+}
+
+export function activityListHref(filters: ActivityFilters, cursor?: string | null): string {
+  const params = new URLSearchParams(activityFilterQuery(filters));
+  if (cursor) params.set("cursor", cursor);
+  const query = params.toString();
+  return query ? `/activity?${query}` : "/activity";
 }
