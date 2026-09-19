@@ -4,12 +4,12 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T07 done.** Email/password auth, onboarding, profile settings, profile
-foundation editors, the design system, the authenticated application frame, and Activity
-capture, list, detail, and revision-safe edit are implemented. T03–T07 acceptance passed
-against local Supabase. Gate M2 remains open while T08–T12 are pending. Achievements,
-projects, timeline, and CV destinations remain placeholders until their feature tasks add
-persistence. See
+Status: **T01–T06 done; T07 remediation planned.** Email/password auth, onboarding, profile
+settings, profile foundation editors, the design system, the authenticated application frame,
+and Activity capture/list/detail/edit are implemented. Post-review fixes for restored-draft
+revision safety, Note/Chat field preservation, and context-error correlation remain before T07
+returns to done. Gate M2 remains open; T08 has not started. Achievements, projects, timeline,
+and CV destinations remain placeholders until their feature tasks add persistence. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
