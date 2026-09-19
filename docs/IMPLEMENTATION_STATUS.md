@@ -1,8 +1,22 @@
 # WorkPulse Implementation Status
 
+## Rencana remediasi review T07 — 20 September 2026
+
+Status authoritative saat ini: **PARTIAL; perbaikan belum diimplementasikan**. Review pasca-T07
+menemukan tiga gap: restored edit draft tidak membawa base revision sehingga dapat silent-overwrite,
+edit Note/Chat dapat menghapus structured fields existing, dan kegagalan context options tidak
+memiliki correlation ID yang diteruskan ke UI.
+
+Rencana test-first, batas scope, keputusan teknis, matriks acceptance, file yang diperkirakan
+berubah, quality gates, dan Definition of Done ada di
+[T07 review remediation plan](verification/T07-review-remediation-plan.md). T01–T06 tetap `DONE`;
+T08 belum dimulai. Gate M2 tetap terbuka. T07 hanya kembali `DONE` setelah seluruh bukti remediasi
+lulus dan verification/status diperbarui dengan hasil aktual.
+
 ## Eksekusi T07 — 18 September 2026
 
-Status akhir: **DONE**. T07 menghubungkan S05–S06 ke persistence T06: Quick log Note/Form/Chat,
+Status historis pada 18 September: **DONE sebelum review; kini dibuka kembali sebagai PARTIAL**.
+T07 menghubungkan S05–S06 ke persistence T06: Quick log Note/Form/Chat,
 owner-scoped Activity list dan detail, URL filters/cursor, edit dengan optimistic revision dan
 conflict recovery, serta bilingual/responsive/accessibility states. Acceptance ditrace ke PRD R04,
 Flow F02/shared recovery, Wireframe S05–S06, Database Schema §§1–3/6, dan Design.md.
@@ -18,7 +32,8 @@ local migration ledger 9/9, Auth/UI/Activity E2E masing-masing 1/1, Axe WCAG 2.2
 360/1440 light/dark, dan `git diff --check`. Supabase yang diuji hanya stack lokal; output key
 `db:status` disembunyikan dan tidak ada hosted project yang tertaut. Database aktif tidak di-reset.
 
-Langkah berikutnya T08 Projects dan context. Gate M2 tetap terbuka sampai T08–T12 selesai.
+Langkah berikutnya adalah mengeksekusi remediasi T07. T08 Projects dan context menunggu remediasi
+selesai. Gate M2 tetap terbuka sampai T07 kembali DONE dan T08–T12 selesai.
 
 ## Rencana remediasi review T06 — 17 September 2026
 
@@ -160,7 +175,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T04 | Design system dan app frame | DONE |
 | T05 | Private storage foundation | DONE |
 | T06 | Activity persistence | DONE |
-| T07 | Capture dan activity UI | DONE |
+| T07 | Capture dan activity UI | PARTIAL |
 | T08 | Projects dan context | TODO |
 | T09 | Manual achievements dan skills | TODO |
 | T10 | Evidence reservation dan screening | TODO |
