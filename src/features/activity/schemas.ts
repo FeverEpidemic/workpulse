@@ -50,6 +50,11 @@ export const activityUpdateSchema = z.object({
   ...activityEditableFields,
 }).strict();
 
+export const activityDeleteSchema = z.object({
+  activityId: z.uuid(),
+  expectedRevision: z.number().int().positive(),
+}).strict();
+
 const optionalFilterDate = z.string().optional().refine((value) => value === undefined || isExactActivityDate(value));
 
 export const activityListFilterSchema = z.object({
@@ -73,4 +78,5 @@ export const activityListFilterSchema = z.object({
 
 export type ActivityCreateInput = z.output<typeof activityCreateSchema>;
 export type ActivityUpdateInput = z.output<typeof activityUpdateSchema>;
+export type ActivityDeleteInput = z.output<typeof activityDeleteSchema>;
 export type ActivityListFilters = z.output<typeof activityListFilterSchema>;

@@ -4,7 +4,11 @@ import { RecordUnavailable } from "@/components/ui/record-unavailable";
 import type { ActivityContextOptions } from "@/domain/activity/activity-display";
 import { sanitizeActivityReturnTo } from "@/domain/routes/safe-return";
 import { ActivityDetailClient } from "@/features/activity/activity-detail";
-import { listActivityContextOptions } from "@/features/activity/activity-context-service";
+import {
+  activityContextIssueFromError,
+  listActivityContextOptions,
+  type ActivityContextIssue,
+} from "@/features/activity/activity-context-service";
 import { ActivityServiceError, createActivityService } from "@/features/activity/activity-service";
 import { ActivityPageIssue } from "@/features/activity/activity-page-issue";
 import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
@@ -43,7 +47,7 @@ export default async function ActivityDetailPage({ params, searchParams }: Activ
     ),
     listActivityContextOptions(context.client, profile.id).then(
       (options) => ({ status: "ok" as const, options }),
-      () => ({ status: "error" as const, options: emptyContextOptions }),
+      (error: unknown) => ({ status: "error" as const, error, options: emptyContextOptions }),
     ),
   ]);
 
@@ -63,14 +67,19 @@ export default async function ActivityDetailPage({ params, searchParams }: Activ
     );
   }
 
+  const contextIssue: ActivityContextIssue | undefined = contextResult.status === "error"
+    ? activityContextIssueFromError(contextResult.error)
+    : undefined;
+
   return (
     <ActivityDetailClient
       locale={locale}
       ownerId={profile.id}
       activity={activityResult.detail.activity}
       chatMessages={activityResult.detail.chatMessages}
+      achievement={activityResult.detail.achievement}
       options={contextResult.options}
-      contextOptionsAvailable={contextResult.status === "ok"}
+      contextIssue={contextIssue}
       returnTo={returnTo}
     />
   );

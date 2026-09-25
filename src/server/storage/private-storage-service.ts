@@ -49,7 +49,11 @@ export function createPrivateStorageService(
     if (
       !parts ||
       !isCanonicalStorageUuid(actor.id) ||
-      parts.ownerId !== actor.id
+      parts.ownerId !== actor.id ||
+      // Evidence must pass its domain lifecycle checks (ready, active owner and
+      // parent) and deletion must retain a durable cleanup receipt. This generic
+      // foundation service is not an alternate route around those checks.
+      parts.category === "evidence"
     ) {
       throw new PrivateStorageError("STORAGE_OBJECT_UNAVAILABLE");
     }

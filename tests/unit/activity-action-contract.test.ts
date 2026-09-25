@@ -45,7 +45,7 @@ describe("Activity form and action boundary", () => {
     expect(input.rawText).toBe("  first line\nsecond line\n  ");
   });
 
-  it("keeps optional structured fields for Form and nulls them for Chat edits", () => {
+  it("keeps optional structured fields for Form and preserves owned fields for Note or Chat edits", () => {
     const formInput = activityCreateInputFromForm(makeForm({
       operation_key: "bb781741-c3ab-4113-a873-ed0282e8311e",
       capture_mode: "form",
@@ -68,12 +68,16 @@ describe("Activity form and action boundary", () => {
       role: "hidden role",
       scope: "hidden scope",
       outcome: "hidden outcome",
-    }), "chat");
+    }), "chat", {
+      role: "Canonical role",
+      scope: "Canonical scope",
+      outcome: "Canonical outcome",
+    });
     expect(updateInput).toMatchObject({
       expectedRevision: 4,
-      role: null,
-      scope: null,
-      outcome: null,
+      role: "Canonical role",
+      scope: "Canonical scope",
+      outcome: "Canonical outcome",
       projectId: null,
       experienceId: null,
     });

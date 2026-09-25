@@ -107,7 +107,7 @@ select ok(
   not has_table_privilege('authenticated', 'public.education', 'INSERT')
   and not has_table_privilege('authenticated', 'public.certifications', 'INSERT')
   and not has_table_privilege('authenticated', 'public.skills', 'INSERT')
-  and has_table_privilege('authenticated', 'public.projects', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.projects', 'INSERT')
   and not has_table_privilege('authenticated', 'public.education', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.education', 'DELETE')
   and not has_table_privilege('authenticated', 'public.certifications', 'UPDATE')
@@ -116,7 +116,7 @@ select ok(
   and not has_table_privilege('authenticated', 'public.projects', 'DELETE')
   and not has_table_privilege('authenticated', 'public.skills', 'UPDATE')
   and not has_table_privilege('authenticated', 'public.skills', 'DELETE'),
-  'foundation updates and deletes remain RPC-only while project insert privilege is unchanged'
+  'foundation updates, deletes, and Project creation remain RPC-only'
 );
 
 select ok(
@@ -511,6 +511,8 @@ select throws_ok(
   'update RPC patches cannot alter revision or other server-owned fields'
 );
 
+reset role;
+
 select lives_ok(
   $$
     insert into public.projects (
@@ -542,6 +544,8 @@ select lives_ok(
   'account A can create a standalone project'
 );
 
+set local role authenticated;
+
 select throws_ok(
   $$delete from public.projects where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid$$,
   '42501',
@@ -563,14 +567,14 @@ select is(
 );
 
 select throws_ok(
-  $$select public.delete_project('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid, 1)$$,
+  $$select * from public.delete_project('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid, 1)$$,
   'P0001',
   'STALE_REVISION',
   'project deletion rejects a stale expected revision'
 );
 
 select is(
-  public.delete_project('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid, 2),
+  (select deleted_project_id from public.delete_project('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid, 2)),
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid,
   'project deletion succeeds with the current expected revision'
 );
@@ -703,20 +707,16 @@ select is(
 
 select throws_ok(
   $$
-    insert into public.projects (
-      id, user_id, experience_id, title, status
-    )
-    values (
-      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'::uuid,
-      '22222222-2222-4222-8222-222222222222'::uuid,
-      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'::uuid,
+    select * from public.create_project_idempotent(
+      'dddddddd-dddd-4ddd-8ddd-ddddddddddd1'::uuid,
       'Cross tenant parent',
-      'planned'
+      null, null, null, 'planned', null, null, null, null, false,
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'::uuid
     )
   $$,
-  '23503',
-  null,
-  'the composite FK rejects a project pointing to another account experience'
+  '22023',
+  'INVALID_PROJECT_INPUT',
+  'the Project create RPC rejects a cross-tenant Experience'
 );
 
 reset role;

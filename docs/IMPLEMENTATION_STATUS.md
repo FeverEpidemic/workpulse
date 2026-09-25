@@ -1,21 +1,234 @@
 # WorkPulse Implementation Status
 
-## Rencana remediasi review T07 — 20 September 2026
+## T10 — backend evidence, acceptance lokal — 26 September 2026
 
-Status authoritative saat ini: **PARTIAL; perbaikan belum diimplementasikan**. Review pasca-T07
-menemukan tiga gap: restored edit draft tidak membawa base revision sehingga dapat silent-overwrite,
-edit Note/Chat dapat menghapus structured fields existing, dan kegagalan context options tidak
-memiliki correlation ID yang diteruskan ke UI.
+Status authoritative T10: **DONE** — implementasi dan acceptance lokal selesai. Atas instruksi
+pengguna 26 September 2026, acceptance T10 dibatasi ke environment lokal dan tidak memakai layanan
+eksternal. T05/T09 **DONE**; T11/T12 TODO, Gate M2 terbuka. Rujukan R07/F05; UI S06/S08/S10
+tetap T11. [Plan T10](verification/T10-implementation-plan.md),
+[bukti dan perintah](verification/T10-evidence-backend.md), [decision 0016](decisions/0016-t10-evidence-backend.md).
 
-Rencana test-first, batas scope, keputusan teknis, matriks acceptance, file yang diperkirakan
-berubah, quality gates, dan Definition of Done ada di
-[T07 review remediation plan](verification/T07-review-remediation-plan.md). T01–T06 tetap `DONE`;
-T08 belum dimulai. Gate M2 tetap terbuka. T07 hanya kembali `DONE` setelah seluruh bukti remediasi
-lulus dan verification/status diperbarui dengan hasil aktual.
+Selesai: reservation/quota atomik, ownership/RLS, immutable upload dan validasi bytes/MIME/hash,
+ClamAV nyata, worker durable dengan lease/token/retry, expiry/orphan cleanup, deletion receipt,
+ready-only download 300 detik dan penutupan bypass storage generik. File utama: src/features/evidence/,
+src/app/api/evidence/, src/server/storage/, workers/, generated database types, tests, package scripts,
+.env.example, README dan runbook. Empat migration forward-only 20260925100000–20260925130000;
+19/19 parity. Database aktif tidak di-reset; rebuild dilakukan pada stack disposable.
+
+Hasil aktual: unit 176/176; integration 33/33 pada aktif dan disposable; pgTAP aktif 340/340,
+disposable 336/336 sebelum empat assertion tambahan; DB lint bersih; typecheck, ESLint, build dan
+worker sekali jalan lulus. Browser Achievement 3/3, Activity 1/1, Project 1/1 lulus; Evidence API
+1/1 lulus pada rerun terpisah setelah perbaikan fixture onboarding. Detail kegagalan awal dan
+perbaikannya ada pada bukti. Ulang disposable 26 September terhalang binding port Windows 55422;
+rebuild 19 migration dan suite integration sudah lulus 25 September.
+
+Tiga coder GPT-6 Luna Max mencapai usage limit saat implementasi; integrasi dan verifikasi
+dituntaskan agen utama. Astra Medium adalah setting orchestrator yang diminta, bukan klaim
+pergantian model task aktif. Perubahan T07–T09 yang sudah ada dipertahankan.
+
+Tidak ada resource, billing, migration, atau deployment eksternal yang dibuat. Render OAuth tidak
+diotorisasi. Project Supabase yang sudah ada tidak disentuh. Status DONE ini membuktikan kontrak dan
+operasi pada stack lokal nyata, bukan production readiness atau retention hosted. Sinkronisasi Notion
+untuk perubahan DONE ini tidak dilakukan karena pengguna melarang penggunaan layanan luar.
+Langkah berikutnya: T11 Evidence UI dan lifecycle pada environment lokal.
+[Plan T11 multi-agent](verification/T11-implementation-plan.md) siap dieksekusi oleh GPT-5.6 Sol
+dengan GPT-6 Luna sebagai Explorer dan Coder; status T11 tetap TODO sampai acceptance nyata lulus.
+Riwayat checkpoint sebelumnya di bawah dipertahankan.
+
+## Remediasi review T09 — acceptance lokal — 25 September 2026
+
+Status authoritative T09: **DONE**. Dependensi T08 tetap **DONE**; T10 tetap **TODO**; Gate M2
+masih terbuka sampai task M2 berikutnya selesai. Scope dan bukti terperinci ada di
+[rencana remediasi T09](verification/T09-review-remediation-plan.md) dan
+[verification T09](verification/T09-manual-achievements-skills.md), dengan keputusan di
+[decision 0015](decisions/0015-t09-review-remediation.md).
+
+Lingkup remediasi: retry mempertahankan lifecycle action/input; dated cursor mencakup row NULL-date;
+metrics helper unused dihapus sambil menjaga blank validation; existing Achievement redirect,
+sign-in resume, dan Activity/Achievement return diperbaiki. File utama mencakup
+`src/features/achievement/achievement-form.tsx`, `achievement-action-contract.ts`, `actions.ts`,
+`metrics-editor.tsx`, `achievement-service.ts`, `src/domain/achievement/transition.ts`,
+`metrics.ts`, `src/server/action-result.ts`, `src/app/(workspace)/achievements/new/page.tsx`,
+`src/domain/routes/safe-return.ts`, dan `src/i18n/messages.ts`. Regresi mencakup unit,
+Achievement/Project integration, dan browser Achievement/Auth/Activity/Project; E2E Achievement
+diperbarui agar menunggu navigasi sebelum memeriksa URL. Retry intent kini dikembalikan secara aman
+sebagai bagian hasil conflict server. Tidak ada schema/RPC change, migration, backfill, atau reset
+database. Perintah suite lengkap dicatat pada verification T09.
+
+| Check | Hasil aktual |
+| --- | --- |
+| Achievement/Project database integration | Exit 0; 5/5 dan 7/7 tests. |
+| Achievement browser E2E | Exit 0; 3/3 tests. |
+| Auth/Activity/Project browser E2E | Exit 0; masing-masing 1/1 test. |
+| Unit | Exit 0; 32 file / 159 tests dengan binary Vitest terpasang. |
+| TypeScript | Exit 0; `node node_modules/typescript/bin/tsc --noEmit --incremental false`. |
+| ESLint | Exit 0; `node node_modules/eslint/bin/eslint.js . --max-warnings 0`. |
+| Production build | Exit 0; `node node_modules/next/dist/bin/next build`. |
+| `git diff --check` | Exit 0; tracked diff bersih, hanya warning normal konversi LF/CRLF. File T09 baru/untracked dicek tanpa temuan baru; dua spasi pada baris tanggal dipertahankan sebagai hard-break Markdown. |
+
+Docker Desktop server 29.6.1 tersedia. Local Supabase melaporkan `imgproxy` dan `pooler` berhenti,
+namun keduanya tidak dibutuhkan oleh suites di atas. Build pertama di sandbox gagal menulis `.next`
+(`EPERM`); production build berhasil saat dijalankan dengan akses workspace. E2E mencatat warning
+non-blocking Node `NO_COLOR` dan Next.js `destination stream closed early`, tanpa test gagal.
+`pgTAP`, DB lint, migration parity, dan disposable rebuild tidak diulang karena remediasi tidak
+mengubah SQL; hasil sebelumnya tetap tercatat pada bukti historis T09. Gate M2 tidak ditutup dan
+T10 tidak dimulai. Catatan Docker belum tersedia di checkpoint 24 September tetap historis.
+
+### Checkpoint perencanaan awal (historis, sebelum eksekusi remediasi)
+
+Rencana remediasi awal hanya memeriksa kode dan memperbarui dokumen, belum mengubah implementasi atau
+menjalankan test aplikasi. Pada tahap tersebut lima defect alur aktif telah dicatat dan klaim metric
+blank-to-zero dikoreksi karena helper tidak memiliki pemanggil. Eksekusi dan hasil aktual dicatat
+setelah checkpoint ini.
+
+## Eksekusi T09 sebelum review — 24 September 2026
+
+Status historis T09: **DONE sebelum review; dibuka kembali menjadi PARTIAL di atas**.
+Hard gate T08 sudah **DONE** sebelum implementasi dimulai.
+Jalur manual Achievement/Skills, lifecycle, source provenance, optimistic revision, dan seam
+Activity/Project sudah diimplementasikan secara forward-only. Rincian acceptance dan bukti aktual ada
+di [verification T09](verification/T09-manual-achievements-skills.md), decision di
+[decision 0014](decisions/0014-t09-achievement-lifecycle.md), dan rencana sumber di
+[T09 implementation plan](verification/T09-implementation-plan.md).
+
+Migration `20260922100000_t09_achievements_skills.sql` dan patch forward-only
+`20260922110000_t09_achievement_null_patch.sql` diterapkan ke active local stack tanpa reset.
+Perubahan mencakup S07/S08, standalone/derived Achievement, draft/confirmed/dismissed/reopen,
+strict metrics, distinct confirmed skill counts, factual CV-bullet fallback, source retention,
+Activity/Project attach-move-detach, context propagation, dan deletion receipts. T09 tidak memulai
+AI, Evidence, import, Dashboard/Timeline, CV selection/invalidation, export, PDF, atau worker jobs.
+
+Automated local evidence lulus: unit 32 file/150 test, Achievement integration 3/3, Project 7/7,
+Activity 6/6, private Storage 1/1, pgTAP 312 assertions, DB lint, 15/15 migration match, production
+build, worker check, ESLint, TypeScript, Auth/UI E2E masing-masing 1/1, dan Achievement browser/Axe
+1/1 termasuk viewport 360px.
+Gate T09.8 juga lulus pada stack disposable terpisah: seluruh 15 migration dan seed diterapkan dari
+nol, pgTAP 312/312, DB lint, Achievement 3/3, Project 7/7, Activity 6/6, Storage 1/1, Achievement
+E2E 1/1, Activity browser regression 1/1, dan Project browser regression 1/1; Axe serta assertion
+viewport 360px tetap lulus. Resource disposable dihentikan dengan `--no-backup` dan folder temporary
+dihapus setelah bukti dicatat. Stack WorkPulse aktif diverifikasi tetap hidup dan tidak di-reset.
+Hosted/production checks dan T24 performance tetap di luar scope.
+
+## Eksekusi remediasi review T08 — 22 September 2026
+
+Status authoritative saat ini: **DONE**. Empat defect review ditutup: completed Project
+mempertahankan end date valid di service; replay create membaca receipt ledger sebelum dependency
+live; `update_project` memakai lock hierarchy Experience → Project → Activity ketika context
+berubah; dan candidate attach difilter di database sebelum keyset pagination.
+
+Rencana test-first dan Definition of Done tersedia di
+[T08 review remediation plan](verification/T08-review-remediation-plan.md). Eksekusi memakai
+migration forward-only baru dan tidak mengubah tiga migration T08 yang sudah diterapkan. Scope tetap
+T08: preservation partial date, stable idempotent replay, hierarchy lock Experience → Project →
+Activity, serta candidate pagination owner-scoped. Achievement, Evidence, AI, CV, dan T09+ tetap di
+luar scope.
+
+Migration `20260921090000_t08_review_remediation.sql` diterapkan incremental ke active local stack
+tanpa reset. Unit/static, active/disposable database, integration, browser, build, worker, dan
+diff checks lulus; rincian angka, file, serta limitation ada di
+[verification T08](verification/T08-projects-context.md) dan
+[decision 0013](decisions/0013-t08-review-remediation.md). Pada checkpoint T08 tersebut T09 masih
+`TODO` dan menjadi langkah berikutnya; status T09 terkini dicatat pada bagian authoritative di atas.
+
+## Eksekusi T08 sebelum review — 21 September 2026
+
+Status historis pada akhir implementasi awal: **DONE sebelum review; kemudian dibuka kembali untuk
+remediasi**. Dependensi T01–T07 dan remediasi review T07 sudah DONE.
+Setelah Docker Desktop aktif kembali, seluruh Project/Activity/Storage integration, Auth/UI/Activity/
+Project browser suites, active-stack database checks, dan clean disposable migration rebuild lulus.
+
+Scope yang selesai mencakup migration forward-only untuk Project create idempotent, revocation direct
+Project INSERT, owner-scoped update/relink/delete RPC, context propagation ke Activity, Project
+service/actions, cursor dan safe-return contract, route `/projects`, `/projects/new`, dan
+`/projects/[id]`, linked Activity attach/detach, restored-draft revision guard, dependency preview,
+dan bilingual responsive states. Achievement, Evidence, Dashboard/Timeline, AI, dan CV tetap di luar
+scope. Seam T09/T11/T20 dicatat pada decision dan verification T08.
+
+Migration yang diterapkan forward-only ke stack lokal tanpa reset database aktif:
+`20260920100000_t08_projects_context.sql`, `20260920101500_t08_project_patch_compatibility.sql`,
+dan `20260920102000_t08_project_create_lint.sql`. Tidak ada reset database aktif. Generated Supabase
+types diperbarui untuk RPC T08. Rincian file dan trace acceptance ada di
+[verification T08](verification/T08-projects-context.md) dan [decision 0012](decisions/0012-t08-project-context.md).
+
+### Bukti aktual T08
+
+| Check | Hasil aktual |
+| --- | --- |
+| `pnpm lint` | Exit 0; zero warnings setelah route/UI/test T08 ditambahkan. |
+| `pnpm typecheck -- --incremental false` | Exit 0. |
+| `pnpm test` | Exit 0; 31 file / 141 unit tests pada run terakhir. |
+| `pnpm test:integration:projects` | Exit 0; 4/4 terhadap active stack dan 4/4 pada disposable stack. |
+| `pnpm test:integration:activity` | Exit 0; 6/6 terhadap active stack dan 6/6 pada disposable stack. |
+| `pnpm test:integration:storage` | Exit 0; 1/1 terhadap active stack dan 1/1 pada disposable stack. |
+| `pnpm db:test` | Exit 0; 268/268 pgTAP assertions pada active stack dan 268/268 pada disposable rebuild. |
+| `pnpm db:lint` | Exit 0; tidak ada error severity `error` pada fungsi/migration yang diterapkan. |
+| `pnpm exec supabase migration list --local` | Exit 0; 12/12 migration local/remote cocok pada active stack. |
+| `pnpm db:types` | Exit 0; generated public types merefleksikan RPC Project; hanya warning MaxListeners dari CLI. |
+| `pnpm test:e2e:auth` | Exit 0; 1/1. |
+| `pnpm test:e2e:ui` | Exit 0; 1/1. |
+| `pnpm test:e2e:activity` | Exit 0; 1/1. |
+| `pnpm test:e2e:projects` | Exit 0; 1/1 dengan Axe dan mobile overflow assertion. |
+| `pnpm build` | Exit 0; production build dengan route `/projects`, `/projects/new`, dan `/projects/[id]`. |
+| `pnpm worker:check` | Exit 0; worker ready dan belum ada registered jobs. |
+| `git diff --check` | Exit 0; hanya warning line-ending LF/CRLF. |
+
+Clean rebuild memakai project ID/path/port disposable terpisah; migration dari nol, pgTAP, DB lint,
+dan tiga integration suite lulus. Resource Docker disposable dihentikan dengan `--no-backup`; stack
+WorkPulse aktif tetap berjalan dan tidak di-reset. Warning Next.js `destination stream closed early`
+pada sebagian navigasi Auth/UI tidak menyebabkan assertion gagal. Hosted/staging/production checks dan
+T24 performance tetap di luar scope. Pada checkpoint historis ini T09 menjadi langkah berikutnya;
+status T09 terkini dicatat pada bagian authoritative di atas.
+
+## Rencana T08 sebelum implementasi — 20 September 2026
+
+Status pada saat rencana ditulis adalah **TODO**; implementasi belum dimulai. Rencana eksekusi lengkap untuk
+Project dan context propagation tersedia di
+[T08 implementation plan](verification/T08-implementation-plan.md). Plan ditujukan untuk GPT-5.6
+Luna dengan reasoning `MAX` dan memecah pekerjaan menjadi T08.1-T08.9: baseline/decision, migration,
+domain/types, service/actions, S09, S10, linked work/delete, browser/accessibility, dan verification.
+
+Scope mengacu ke PRD R06, Flow F04/shared recovery, Wireframe S09-S10, Database Schema §§1-3/6,
+Design.md dengan resolusi konflik §1 rencana, serta kontrak T06-T07. Plan menetapkan create Project
+idempotent, owner/revision boundary, status `planned`/`active`/`completed`, partial dates, list cursor,
+Activity relink yang menurunkan Experience dari Project, propagation context atomik, dan delete yang
+mempertahankan Activity/Chat/Experience. Achievement, Evidence, Dashboard/Timeline, AI, dan CV tetap
+deferred ke task pemiliknya; seam T09/T11/T20 dicatat eksplisit.
+
+Perubahan pada sesi perencanaan hanya dokumen plan dan checkpoint status. Bagian ini bersifat historis;
+implementasi aktual dicatat pada bagian Eksekusi T08 di atas. Tidak ada aplikasi,
+migration, schema/RPC/RLS/grant, generated type, dependency, lockfile, worker, atau test result yang
+berubah/diklaim. Dirty changes remediasi T07 yang sudah ada harus dipertahankan saat eksekusi. Gate M2
+tetap terbuka sampai T08-T12 selesai.
+
+## Remediasi review T07 — 20 September 2026
+
+Status authoritative saat ini: **DONE**. Tiga gap review pasca-T07 sudah ditutup: restored edit
+draft kini terikat pada base revision dan memerlukan review/rebase eksplisit bila stale/unknown;
+edit Note/Chat mempertahankan structured fields canonical yang sudah ada; dan kegagalan context
+options memiliki safe code, localized message key, serta correlation ID yang diteruskan konsisten
+ke fatal/degraded UI.
+
+Implementasi hanya menyentuh session draft, Activity action/form/context/page boundaries, i18n, unit
+tests, dan Activity browser regression. Tidak ada migration, schema/RPC/RLS/grants, generated DB
+types, dependency, worker, atau scope T08 yang berubah. Decision record ada di
+[decision 0011](decisions/0011-t07-review-remediation.md); rencana dan bukti lengkap ada di
+[T07 review remediation plan](verification/T07-review-remediation-plan.md) dan
+[verification T07](verification/T07-activity-ui.md).
+
+Quality gates remediasi lulus: install frozen, lint, typecheck, 27 file/130 unit tests, Activity
+integration 6/6, Storage integration 1/1, production build, worker check, pgTAP 240/240, DB lint,
+local migration ledger 9/9, Auth/UI/Activity E2E masing-masing 1/1, Axe, responsive 360/1440,
+reduced motion, dan `git diff --check`. Supabase yang diuji hanya stack lokal; nilai credential tidak
+dicatat dalam artefak dan database aktif tidak di-reset. Warning Next.js `destination stream closed
+early` pada sebagian navigasi E2E tidak menyebabkan assertion gagal.
+
+Tidak dijalankan: `pnpm db:types`, clean disposable rebuild, hosted/staging/production checks, dan
+T24 performance; schema/RPC tidak berubah dan item tersebut berada di luar acceptance T07. T08 belum
+dimulai. Gate M2 tetap terbuka sampai T08–T12 selesai.
 
 ## Eksekusi T07 — 18 September 2026
 
-Status historis pada 18 September: **DONE sebelum review; kini dibuka kembali sebagai PARTIAL**.
+Status historis pada 18 September: **DONE sebelum review; kemudian dibuka kembali untuk remediasi**.
 T07 menghubungkan S05–S06 ke persistence T06: Quick log Note/Form/Chat,
 owner-scoped Activity list dan detail, URL filters/cursor, edit dengan optimistic revision dan
 conflict recovery, serta bilingual/responsive/accessibility states. Acceptance ditrace ke PRD R04,
@@ -175,10 +388,10 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T04 | Design system dan app frame | DONE |
 | T05 | Private storage foundation | DONE |
 | T06 | Activity persistence | DONE |
-| T07 | Capture dan activity UI | PARTIAL |
-| T08 | Projects dan context | TODO |
-| T09 | Manual achievements dan skills | TODO |
-| T10 | Evidence reservation dan screening | TODO |
+| T07 | Capture dan activity UI | DONE |
+| T08 | Projects dan context | DONE |
+| T09 | Manual achievements dan skills | DONE |
+| T10 | Evidence reservation dan screening | DONE |
 | T11 | Evidence UI dan lifecycle | TODO |
 | T12 | Dashboard dan timeline | TODO |
 | T13 | AI jobs dan consent | TODO |

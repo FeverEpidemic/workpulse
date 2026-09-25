@@ -19,10 +19,10 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
   },
   webServer: {
-    command: `pnpm build && pnpm start --port ${PORT}`,
+    command: `node_modules\\.bin\\next.CMD build && node_modules\\.bin\\next.CMD start --port ${PORT}`,
     url: `${BASE_URL}/api/health`,
     reuseExistingServer: false,
-    timeout: 300_000,
+    timeout: 60_000,
     env: {
       ...(process.env as Record<string, string>),
       WORKPULSE_SITE_URL: BASE_URL,

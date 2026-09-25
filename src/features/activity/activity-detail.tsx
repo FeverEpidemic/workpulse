@@ -4,13 +4,20 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { ActivityCaptureForm } from "@/features/activity/activity-capture-form";
+import { ActionFeedback } from "@/components/forms/action-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { ActivityContextOptions } from "@/domain/activity/activity-display";
 import { formatActivityDate, resolveActivityContext } from "@/domain/activity/activity-display";
 import type { ActivityRow, ChatMessageRow } from "@/domain/activity/contracts";
+import type { ActivityContextIssue } from "@/features/activity/activity-context-service";
+import { NamedDeleteDialog } from "@/components/ui/named-delete-dialog";
+import type { AchievementRow } from "@/domain/achievement/contracts";
+import { deleteActivityAction } from "@/features/activity/actions";
+import { IDLE_ACTION_STATE } from "@/server/action-result";
 import { t, type Locale } from "@/i18n/messages";
+import { useActionState } from "react";
 
 function modeKey(mode: ActivityRow["capture_mode"]): "activity.noteMode" | "activity.formMode" | "activity.chatMode" {
   return mode === "note" ? "activity.noteMode" : mode === "form" ? "activity.formMode" : "activity.chatMode";
@@ -21,21 +28,25 @@ export function ActivityDetailClient({
   ownerId,
   activity: initialActivity,
   chatMessages,
+  achievement,
   options,
-  contextOptionsAvailable,
+  contextIssue,
   returnTo,
 }: {
   locale: Locale;
   ownerId: string;
   activity: ActivityRow;
   chatMessages: ChatMessageRow[];
+  achievement?: AchievementRow | null;
   options: ActivityContextOptions;
-  contextOptionsAvailable: boolean;
+  contextIssue?: ActivityContextIssue;
   returnTo: string;
 }) {
   const [activity, setActivity] = useState(initialActivity);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deleteState, deleteAction] = useActionState(deleteActivityAction, IDLE_ACTION_STATE);
+  const linkedAchievement = achievement ?? null;
   const context = resolveActivityContext(activity, options);
 
   function saveRecord(record: ActivityRow) {
@@ -57,7 +68,7 @@ export function ActivityDetailClient({
             ownerId={ownerId}
             defaultOccurredOn={activity.occurred_on}
             options={options}
-            contextOptionsAvailable={contextOptionsAvailable}
+            contextIssue={contextIssue}
             returnTo={returnTo}
             activity={activity}
             onSaved={saveRecord}
@@ -78,12 +89,39 @@ export function ActivityDetailClient({
             <p>{t(locale, "activity.revision", { revision: activity.revision })}</p>
           </div>
           <Button onClick={() => { setSaved(false); setEditing(true); }}>{t(locale, "activity.edit")}</Button>
+          <NamedDeleteDialog
+            title={t(locale, "activity.deleteTitle")}
+            description={t(locale, "activity.deleteDescription")}
+            recordName={activity.raw_text.slice(0, 120)}
+            triggerLabel={t(locale, "common.delete")}
+            cancelLabel={t(locale, "common.cancel")}
+            confirmLabel={t(locale, "common.delete")}
+            formId={`delete-activity-${activity.id}`}
+            successful={deleteState.status === "success"}
+          >
+            <form id={`delete-activity-${activity.id}`} action={deleteAction} className="mt-4 space-y-3">
+              <input type="hidden" name="activity_id" value={activity.id} />
+              <input type="hidden" name="expected_revision" value={activity.revision} />
+              <input type="hidden" name="return_to" value={returnTo} />
+              <ul className="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <li>{t(locale, "activity.deleteChatRetained", { count: chatMessages.length })}</li>
+                <li>{t(locale, "activity.deleteAchievementRetained", { count: linkedAchievement ? 1 : 0 })}</li>
+                <li>{t(locale, "activity.deleteSourceRetained")}</li>
+              </ul>
+              <ActionFeedback state={deleteState} locale={locale} returnTo={returnTo} />
+            </form>
+          </NamedDeleteDialog>
         </div>
       </header>
 
       {saved ? <p className="ui-message ui-message--success" role="status">{t(locale, "activity.saved")}</p> : null}
-      {!contextOptionsAvailable ? (
-        <p className="ui-message ui-message--info" role="status">{t(locale, "activity.contextOptionsUnavailable")}</p>
+      {contextIssue ? (
+        <p className="ui-message ui-message--info" role="status" data-testid="activity-context-issue">
+          {t(locale, contextIssue.messageKey)}{" "}
+          <span data-testid="activity-context-reference">
+            {t(locale, "activity.referenceId", { id: contextIssue.correlationId })}
+          </span>
+        </p>
       ) : null}
 
       <Card className="activity-detail-card">
@@ -115,6 +153,30 @@ export function ActivityDetailClient({
             {activity.scope ? <p className="activity-detail-long-text"><strong>{t(locale, "activity.scope")}:</strong> {activity.scope}</p> : null}
             {activity.outcome ? <p className="activity-detail-long-text"><strong>{t(locale, "activity.outcome")}:</strong> {activity.outcome}</p> : null}
           </section>
+        ) : null}
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{t(locale, "activity.achievementSection")}</h2>
+            <p className="field-help">{t(locale, "activity.achievementSectionHelp")}</p>
+          </div>
+          {linkedAchievement ? (
+            <Link className="button-primary" href={`/achievements/${linkedAchievement.id}?${new URLSearchParams({ returnTo }).toString()}`}>
+              {t(locale, "activity.openAchievement")}
+            </Link>
+          ) : (
+            <Link className="button-primary" href={`/achievements/new?${new URLSearchParams({ activity: activity.id, returnTo }).toString()}`}>
+              {t(locale, "activity.createAchievement")}
+            </Link>
+          )}
+        </div>
+        {linkedAchievement ? (
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <span className="ui-badge">{t(locale, `achievement.${linkedAchievement.status}`)}</span>
+            {linkedAchievement.title ? <span>{linkedAchievement.title}</span> : <span>{t(locale, "achievement.untitledDraft")}</span>}
+          </div>
         ) : null}
       </Card>
 

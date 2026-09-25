@@ -7,7 +7,15 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ActionFeedback, FieldError, fieldErrorControlProps, fieldErrorId } from "@/components/forms/action-feedback";
 import { useCreateOperationKey } from "@/components/forms/operation-key";
-import { clearSessionDraftForForm, sessionDraftStorageKey, useSessionDraft } from "@/components/forms/session-draft";
+import {
+  clearSessionDraftForForm,
+  hasSessionDraft,
+  readSessionDraftMetadata,
+  sessionDraftStorageKey,
+  writeSessionDraftMetadata,
+  useSessionDraft,
+  type SessionDraftMetadataState,
+} from "@/components/forms/session-draft";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -15,6 +23,7 @@ import { Input, Select, Textarea } from "@/components/ui/field-control";
 import { clearUnsavedForm, useUnsavedForm } from "@/components/ui/unsaved-changes";
 import { formatActivityDate, projectExperienceId, resolveActivityContext, type ActivityContextOptions } from "@/domain/activity/activity-display";
 import type { ActivityCaptureMode, ActivityRow } from "@/domain/activity/contracts";
+import type { ActivityContextIssue } from "@/features/activity/activity-context-service";
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 import { createActivityAction, updateActivityAction } from "@/features/activity/actions";
@@ -70,7 +79,8 @@ export function ActivityCaptureForm({
   ownerId,
   defaultOccurredOn,
   options,
-  contextOptionsAvailable,
+  contextIssue,
+  initialProjectId,
   returnTo,
   activity,
   onSaved,
@@ -80,7 +90,8 @@ export function ActivityCaptureForm({
   ownerId: string;
   defaultOccurredOn: string;
   options: ActivityContextOptions;
-  contextOptionsAvailable: boolean;
+  contextIssue?: ActivityContextIssue;
+  initialProjectId?: string;
   returnTo: string;
   activity?: ActivityRow;
   onSaved?: (record: ActivityRow) => void;
@@ -98,12 +109,15 @@ export function ActivityCaptureForm({
   const router = useRouter();
   const [mode, setMode] = useState<ActivityCaptureMode>(activity?.capture_mode ?? "note");
   const [textLength, setTextLength] = useState(Array.from(activity?.raw_text ?? "").length);
-  const [selectedProjectId, setSelectedProjectId] = useState(activity?.project_id ?? "");
+  const [selectedProjectId, setSelectedProjectId] = useState(activity?.project_id ?? initialProjectId ?? "");
   const [experienceId, setExperienceId] = useState(activity?.experience_id ?? "");
   const [draftReady, setDraftReady] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [expectedRevisionOverride, setExpectedRevisionOverride] = useState<number | null>(null);
+  const [draftRevisionState, setDraftRevisionState] = useState<"none" | "same" | "mismatch" | "unknown">("none");
+  const activityDraftRestored = useRef(false);
+  const activityDraftMetadata = useRef<SessionDraftMetadataState>({ status: "missing" });
   const conflictHeadingRef = useRef<HTMLHeadingElement>(null);
   const focusedErrorId = useRef("");
   const handledSuccessId = useRef("");
@@ -134,9 +148,12 @@ export function ActivityCaptureForm({
     ["role", "scope", "outcome"].some((field) => Boolean(state.error.fieldErrors?.[field]));
   const stateCorrelationId = state.status === "error" ? state.error.correlationId :
     state.status === "success" ? state.correlationId : "";
-  const latestVersion = activity
-    ? latestConflictRecord(state, ownerId, activity.id, activity.capture_mode)
-    : null;
+  const restoredDraftMismatch = isEditing && (draftRevisionState === "mismatch" || draftRevisionState === "unknown");
+  const latestVersion = activity && restoredDraftMismatch
+    ? activity
+    : activity
+      ? latestConflictRecord(state, ownerId, activity.id, activity.capture_mode)
+      : null;
   const latestVersionRevision = latestVersion?.revision ?? 0;
 
   useEffect(() => {
@@ -166,6 +183,36 @@ export function ActivityCaptureForm({
       : savedExperienceId);
     setDraftReady(true);
 
+    if (activity && storageKey) {
+      try {
+        const restored = hasSessionDraft(sessionStorage, ownerId, formKey);
+        let metadata = readSessionDraftMetadata(sessionStorage, ownerId, formKey);
+        if (!restored && metadata.status !== "missing") {
+          clearSessionDraftForForm(ownerId, formKey);
+          metadata = { status: "missing" };
+        }
+        activityDraftRestored.current = restored;
+        activityDraftMetadata.current = metadata;
+        setDraftRevisionState(
+          !restored
+            ? "none"
+            : metadata.status !== "valid"
+              ? "unknown"
+              : metadata.metadata.baseRevision === activity.revision
+                ? "same"
+                : "mismatch",
+        );
+      } catch {
+        activityDraftRestored.current = true;
+        activityDraftMetadata.current = { status: "invalid" };
+        setDraftRevisionState("unknown");
+      }
+    } else if (activity) {
+      activityDraftRestored.current = false;
+      activityDraftMetadata.current = { status: "missing" };
+      setDraftRevisionState("none");
+    }
+
     if (!hasChanges && storageKey) {
       try {
         const rawDraft = sessionStorage.getItem(storageKey);
@@ -180,7 +227,7 @@ export function ActivityCaptureForm({
         // An unavailable or malformed tab draft does not block capture.
       }
     }
-  }, [activity?.experience_id, formRef, hasChanges, isEditing, markDirty, options.projects, stateCorrelationId, storageKey]);
+  }, [activity, formKey, formRef, hasChanges, initialProjectId, isEditing, markDirty, options.projects, ownerId, stateCorrelationId, storageKey]);
 
   useEffect(() => {
     if (state.status !== "error" || focusedErrorId.current === state.error.correlationId) return;
@@ -227,6 +274,19 @@ export function ActivityCaptureForm({
       : "");
   }
 
+  function ensureActivityDraftMetadata() {
+    if (!activity || !storageKey || activityDraftRestored.current || activityDraftMetadata.current.status !== "missing") return;
+    try {
+      writeSessionDraftMetadata(sessionStorage, ownerId, formKey, activity.revision);
+      activityDraftMetadata.current = {
+        status: "valid",
+        metadata: { schemaVersion: 1, baseRevision: activity.revision },
+      };
+    } catch {
+      // Browser storage failures must not block the explicit save action.
+    }
+  }
+
   function requestCancelEdit() {
     if (hasChanges) setCancelDialogOpen(true);
     else onCancel?.();
@@ -250,11 +310,24 @@ export function ActivityCaptureForm({
     if (!latestVersion || !formRef.current) return;
     const revisionControl = formRef.current.elements.namedItem("expected_revision");
     if (revisionControl instanceof HTMLInputElement) revisionControl.value = String(latestVersion.revision);
+    try {
+      writeSessionDraftMetadata(sessionStorage, ownerId, formKey, latestVersion.revision);
+      activityDraftMetadata.current = {
+        status: "valid",
+        metadata: { schemaVersion: 1, baseRevision: latestVersion.revision },
+      };
+    } catch {
+      // The server-side expected revision remains authoritative when storage is unavailable.
+    }
+    activityDraftRestored.current = true;
+    setDraftRevisionState("same");
     setExpectedRevisionOverride(latestVersion.revision);
     window.requestAnimationFrame(() => formRef.current?.requestSubmit());
   }
 
   const latestContext = latestVersion ? resolveActivityContext(latestVersion, options) : null;
+  const showEditableStructuredFields = !activity || activity.capture_mode === "form";
+  const hasStructuredFields = Boolean(activity?.role || activity?.scope || activity?.outcome);
 
   return (
     <>
@@ -264,12 +337,20 @@ export function ActivityCaptureForm({
         action={formAction}
         className="workspace-activity-form"
         aria-label={t(locale, "quickLog.title")}
+        onSubmitCapture={(event) => {
+          if (restoredDraftMismatch) {
+            event.preventDefault();
+            conflictHeadingRef.current?.focus({ preventScroll: true });
+          }
+        }}
         onInputCapture={(event) => {
+          ensureActivityDraftMetadata();
           persistInput(event);
           unsaved.onInputCapture(event);
           setHasChanges(true);
         }}
         onChangeCapture={(event) => {
+          ensureActivityDraftMetadata();
           persistChange(event);
           unsaved.onChangeCapture(event);
           setHasChanges(true);
@@ -368,8 +449,13 @@ export function ActivityCaptureForm({
 
         <fieldset className="activity-context-fields">
           <legend className="field-label">{t(locale, "quickLog.contextLabel")}</legend>
-          {!contextOptionsAvailable ? (
-            <p className="ui-message ui-message--info" role="status">{t(locale, "activity.contextOptionsUnavailable")}</p>
+          {contextIssue ? (
+            <p className="ui-message ui-message--info" role="status" data-testid="activity-context-issue">
+              {t(locale, contextIssue.messageKey)}{" "}
+              <span data-testid="activity-context-reference">
+                {t(locale, "activity.referenceId", { id: contextIssue.correlationId })}
+              </span>
+            </p>
           ) : options.projects.length === 0 && !activity?.project_id ? (
             <p className="field-help">{t(locale, "quickLog.noProjects")}</p>
           ) : null}
@@ -379,7 +465,7 @@ export function ActivityCaptureForm({
               className="mt-1"
               id={`${formId}-project`}
               name="project_id"
-              defaultValue={activity?.project_id ?? ""}
+              defaultValue={activity?.project_id ?? initialProjectId ?? ""}
               onChange={updateProject}
               {...fieldErrorControlProps(state, "project_id", projectErrorId)}
             >
@@ -422,29 +508,38 @@ export function ActivityCaptureForm({
           </label>
         </fieldset>
 
-        <details className="activity-details-disclosure" hidden={!activity && mode !== "form"} open={detailFieldError || undefined}>
-          <summary>{t(locale, "quickLog.addDetails")}</summary>
-          <div className="activity-details-fields">
-            <label className="field-label" htmlFor={`${formId}-role`}>
-              {t(locale, "quickLog.role")}
-              <Input className="mt-1" id={`${formId}-role`} name="role" maxLength={200} defaultValue={activity?.role ?? ""} {...fieldErrorControlProps(state, "role", roleErrorId)} />
-              <FieldError state={state} field="role" locale={locale} id={roleErrorId} />
-            </label>
-            <label className="field-label" htmlFor={`${formId}-scope`}>
-              {t(locale, "quickLog.scope")}
-              <Textarea className="mt-1 activity-optional-text" id={`${formId}-scope`} name="scope" maxLength={5000} defaultValue={activity?.scope ?? ""} {...fieldErrorControlProps(state, "scope", scopeErrorId)} />
-              <FieldError state={state} field="scope" locale={locale} id={scopeErrorId} />
-            </label>
-            <label className="field-label" htmlFor={`${formId}-outcome`}>
-              {t(locale, "quickLog.outcome")}
-              <Textarea className="mt-1 activity-optional-text" id={`${formId}-outcome`} name="outcome" maxLength={5000} defaultValue={activity?.outcome ?? ""} {...fieldErrorControlProps(state, "outcome", outcomeErrorId)} />
-              <FieldError state={state} field="outcome" locale={locale} id={outcomeErrorId} />
-            </label>
-          </div>
-        </details>
+        {showEditableStructuredFields ? (
+          <details className="activity-details-disclosure" hidden={!activity && mode !== "form"} open={detailFieldError || undefined}>
+            <summary>{t(locale, "quickLog.addDetails")}</summary>
+            <div className="activity-details-fields">
+              <label className="field-label" htmlFor={`${formId}-role`}>
+                {t(locale, "quickLog.role")}
+                <Input className="mt-1" id={`${formId}-role`} name="role" maxLength={200} defaultValue={activity?.role ?? ""} {...fieldErrorControlProps(state, "role", roleErrorId)} />
+                <FieldError state={state} field="role" locale={locale} id={roleErrorId} />
+              </label>
+              <label className="field-label" htmlFor={`${formId}-scope`}>
+                {t(locale, "quickLog.scope")}
+                <Textarea className="mt-1 activity-optional-text" id={`${formId}-scope`} name="scope" maxLength={5000} defaultValue={activity?.scope ?? ""} {...fieldErrorControlProps(state, "scope", scopeErrorId)} />
+                <FieldError state={state} field="scope" locale={locale} id={scopeErrorId} />
+              </label>
+              <label className="field-label" htmlFor={`${formId}-outcome`}>
+                {t(locale, "quickLog.outcome")}
+                <Textarea className="mt-1 activity-optional-text" id={`${formId}-outcome`} name="outcome" maxLength={5000} defaultValue={activity?.outcome ?? ""} {...fieldErrorControlProps(state, "outcome", outcomeErrorId)} />
+                <FieldError state={state} field="outcome" locale={locale} id={outcomeErrorId} />
+              </label>
+            </div>
+          </details>
+        ) : hasStructuredFields ? (
+          <section className="activity-detail-section" aria-labelledby={`${formId}-structured-readonly-heading`}>
+            <h2 id={`${formId}-structured-readonly-heading`} className="field-label">{t(locale, "activity.contextDetails")}</h2>
+            {activity?.role ? <p><strong>{t(locale, "activity.role")}:</strong> {activity.role}</p> : null}
+            {activity?.scope ? <p className="activity-detail-long-text"><strong>{t(locale, "activity.scope")}:</strong> {activity.scope}</p> : null}
+            {activity?.outcome ? <p className="activity-detail-long-text"><strong>{t(locale, "activity.outcome")}:</strong> {activity.outcome}</p> : null}
+          </section>
+        ) : null}
 
         <ActionFeedback state={state} locale={locale} returnTo={retryReturnTo} />
-        {latestVersion && latestContext ? (
+        {latestVersion ? (
           <section className="activity-conflict" aria-labelledby={`${formId}-conflict-title`} role="group">
             <h3
               id={`${formId}-conflict-title`}
@@ -452,9 +547,13 @@ export function ActivityCaptureForm({
               tabIndex={-1}
               className="text-base font-semibold"
             >
-              {t(locale, "activity.conflictTitle")}
+              {restoredDraftMismatch
+                ? t(locale, draftRevisionState === "unknown" ? "activity.restoredDraftUnknownTitle" : "activity.restoredDraftTitle")
+                : t(locale, "activity.conflictTitle")}
             </h3>
-            <p className="field-help">{t(locale, "activity.conflictDescription")}</p>
+            <p className="field-help">
+              {t(locale, restoredDraftMismatch ? "activity.restoredDraftDescription" : "activity.conflictDescription")}
+            </p>
             <div className="activity-latest-version">
               <div className="activity-latest-meta">
                 <strong>{t(locale, "activity.latestVersion")}</strong>
@@ -462,7 +561,7 @@ export function ActivityCaptureForm({
                 <time dateTime={latestVersion.occurred_on}>{formatActivityDate(latestVersion.occurred_on, locale)}</time>
               </div>
               <pre className="activity-latest-source">{latestVersion.raw_text}</pre>
-              {(latestContext.projectLabel || latestContext.experienceLabel || latestContext.projectUnavailable || latestContext.experienceUnavailable) ? (
+              {latestContext && (latestContext.projectLabel || latestContext.experienceLabel || latestContext.projectUnavailable || latestContext.experienceUnavailable) ? (
                 <div className="activity-list-context">
                   {latestContext.projectLabel ? <span>{t(locale, "activity.project")}: {latestContext.projectLabel}</span> : null}
                   {latestContext.experienceLabel ? <span>{t(locale, "activity.experience")}: {latestContext.experienceLabel}</span> : null}
@@ -491,7 +590,10 @@ export function ActivityCaptureForm({
           ) : (
             <Link className="button-secondary" href={returnTo}>{t(locale, "common.cancel")}</Link>
           )}
-          <SubmitButton pendingLabel={t(locale, "quickLog.saving")} disabled={!activity && !operationKey}>
+          <SubmitButton
+            pendingLabel={t(locale, "quickLog.saving")}
+            disabled={(!activity && !operationKey) || restoredDraftMismatch}
+          >
             {t(locale, activity ? "quickLog.saveChanges" : "quickLog.save")}
           </SubmitButton>
           {!activity && !operationKey ? (

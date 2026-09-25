@@ -9,6 +9,137 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      achievement_skills: {
+        Row: {
+          achievement_id: string
+          created_at: string
+          skill_id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          created_at?: string
+          skill_id: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          created_at?: string
+          skill_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_skills_user_achievement_fk"
+            columns: ["user_id", "achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "achievement_skills_user_skill_fk"
+            columns: ["user_id", "skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      achievements: {
+        Row: {
+          achieved_on: string | null
+          activity_id: string | null
+          contribution: string | null
+          created_at: string
+          cv_bullet: string | null
+          experience_id: string | null
+          id: string
+          metrics: Json
+          origin: string
+          outcome: string | null
+          project_id: string | null
+          revision: number
+          scope: string | null
+          source_activity_revision: number | null
+          source_excerpt: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achieved_on?: string | null
+          activity_id?: string | null
+          contribution?: string | null
+          created_at?: string
+          cv_bullet?: string | null
+          experience_id?: string | null
+          id?: string
+          metrics?: Json
+          origin?: string
+          outcome?: string | null
+          project_id?: string | null
+          revision?: number
+          scope?: string | null
+          source_activity_revision?: number | null
+          source_excerpt?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achieved_on?: string | null
+          activity_id?: string | null
+          contribution?: string | null
+          created_at?: string
+          cv_bullet?: string | null
+          experience_id?: string | null
+          id?: string
+          metrics?: Json
+          origin?: string
+          outcome?: string | null
+          project_id?: string | null
+          revision?: number
+          scope?: string | null
+          source_activity_revision?: number | null
+          source_excerpt?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievements_activity_fk"
+            columns: ["user_id", "activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "achievements_experience_fk"
+            columns: ["user_id", "experience_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "achievements_project_fk"
+            columns: ["user_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activities: {
         Row: {
           analysis_state: string
@@ -226,6 +357,110 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "education_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_files: {
+        Row: {
+          achievement_id: string | null
+          activity_id: string | null
+          actual_bytes: number | null
+          bytes: number
+          created_at: string
+          error_code: string | null
+          finalize_payload_hash: string | null
+          id: string
+          idempotency_key: string
+          mime_type: string
+          object_key: string
+          original_name: string
+          parent_revision: number
+          payload_hash: string
+          project_id: string | null
+          reserved_until: string | null
+          revision: number
+          scan_job_id: string | null
+          sha256: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          activity_id?: string | null
+          actual_bytes?: number | null
+          bytes: number
+          created_at?: string
+          error_code?: string | null
+          finalize_payload_hash?: string | null
+          id?: string
+          idempotency_key: string
+          mime_type: string
+          object_key: string
+          original_name: string
+          parent_revision: number
+          payload_hash: string
+          project_id?: string | null
+          reserved_until?: string | null
+          revision?: number
+          scan_job_id?: string | null
+          sha256?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          activity_id?: string | null
+          actual_bytes?: number | null
+          bytes?: number
+          created_at?: string
+          error_code?: string | null
+          finalize_payload_hash?: string | null
+          id?: string
+          idempotency_key?: string
+          mime_type?: string
+          object_key?: string
+          original_name?: string
+          parent_revision?: number
+          payload_hash?: string
+          project_id?: string | null
+          reserved_until?: string | null
+          revision?: number
+          scan_job_id?: string | null
+          sha256?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_files_achievement_fk"
+            columns: ["user_id", "achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_files_activity_fk"
+            columns: ["user_id", "activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_files_project_fk"
+            columns: ["user_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "evidence_files_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -467,6 +702,56 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_evidence_cleanup_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          bucket_id: string
+          created_at: string
+          error_code: string
+          evidence_bytes: number
+          evidence_id: string
+          evidence_mime_type: string
+          evidence_original_name: string
+          evidence_parent_id: string
+          evidence_parent_kind: string
+          evidence_sha256: string
+          finished_at: string
+          id: string
+          kind: string
+          last_error_code: string
+          lease_expires_at: string
+          next_attempt_at: string
+          object_key: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      claim_evidence_scan_jobs: {
+        Args: { p_limit?: number }
+        Returns: unknown[]
+        SetofOptions: {
+          from: "*"
+          to: "evidence_scan_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      complete_evidence_cleanup_job: {
+        Args: { p_attempt_token: string; p_job_id: string }
+        Returns: boolean
+      }
+      complete_evidence_scan_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code?: string
+          p_job_id: string
+          p_result: string
+        }
+        Returns: boolean
+      }
       complete_onboarding: {
         Args: {
           p_display_name: string
@@ -499,6 +784,19 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      create_achievement_idempotent: {
+        Args: {
+          p_activity_id: string
+          p_experience_id: string
+          p_operation_key: string
+          p_project_id: string
+        }
+        Returns: {
+          achievement_id: string
+          revision: number
+          user_id: string
+        }[]
       }
       create_activity_idempotent: {
         Args: {
@@ -620,6 +918,27 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_project_idempotent: {
+        Args: {
+          p_description: string
+          p_end_date: string
+          p_end_precision: string
+          p_experience_id: string
+          p_is_current: boolean
+          p_operation_key: string
+          p_outcome: string
+          p_start_date: string
+          p_start_precision: string
+          p_status: string
+          p_title: string
+          p_user_role: string
+        }
+        Returns: {
+          project_id: string
+          revision: number
+          user_id: string
+        }[]
+      }
       create_skill_idempotent: {
         Args: { p_name: string; p_operation_key: string }
         Returns: {
@@ -638,6 +957,21 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      delete_achievement: {
+        Args: { p_achievement_id: string; p_expected_revision: number }
+        Returns: {
+          deleted_achievement_id: string
+          retained_activity: boolean
+        }[]
+      }
+      delete_activity: {
+        Args: { p_activity_id: string; p_expected_revision: number }
+        Returns: {
+          deleted_activity_id: string
+          retained_achievement_count: number
+          retained_chat_count: number
+        }[]
+      }
       delete_certification: {
         Args: { p_certification_id: string; p_expected_revision: number }
         Returns: string
@@ -645,6 +979,33 @@ export type Database = {
       delete_education: {
         Args: { p_education_id: string; p_expected_revision: number }
         Returns: string
+      }
+      delete_evidence_file: {
+        Args: {
+          p_evidence_id: string
+          p_expected_revision: number
+          p_user_id: string
+        }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
       }
       delete_experience: {
         Args: { p_expected_revision: number; p_experience_id: string }
@@ -655,11 +1016,266 @@ export type Database = {
       }
       delete_project: {
         Args: { p_expected_revision: number; p_project_id: string }
-        Returns: string
+        Returns: {
+          deleted_project_id: string
+          released_achievement_count: number
+          released_activity_count: number
+        }[]
       }
       delete_skill: {
         Args: { p_expected_revision: number; p_skill_id: string }
         Returns: string
+      }
+      expire_evidence_uploads: { Args: { p_limit?: number }; Returns: number }
+      fail_evidence_cleanup_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+        }
+        Returns: boolean
+      }
+      fail_evidence_upload: {
+        Args: {
+          p_error_code: string
+          p_evidence_id: string
+          p_expected_revision: number
+          p_user_id: string
+        }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      finalize_evidence_upload: {
+        Args: {
+          p_actual_bytes: number
+          p_evidence_id: string
+          p_expected_revision: number
+          p_sha256: string
+          p_user_id: string
+          p_verified_content_type: string
+        }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      get_evidence_file: {
+        Args: { p_evidence_id: string; p_user_id: string }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      reconcile_orphan_evidence_objects: {
+        Args: { p_limit?: number; p_min_age_seconds?: number }
+        Returns: {
+          job_id: string
+          object_key: string
+          user_id: string
+        }[]
+      }
+      relink_achievement_project: {
+        Args: {
+          p_achievement_id: string
+          p_expected_revision: number
+          p_project_id: string
+        }
+        Returns: {
+          achieved_on: string | null
+          activity_id: string | null
+          contribution: string | null
+          created_at: string
+          cv_bullet: string | null
+          experience_id: string | null
+          id: string
+          metrics: Json
+          origin: string
+          outcome: string | null
+          project_id: string | null
+          revision: number
+          scope: string | null
+          source_activity_revision: number | null
+          source_excerpt: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "achievements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      relink_activity_project: {
+        Args: {
+          p_activity_id: string
+          p_expected_revision: number
+          p_project_id: string
+        }
+        Returns: {
+          analysis_state: string
+          capture_mode: string
+          created_at: string
+          experience_id: string | null
+          id: string
+          occurred_on: string
+          outcome: string | null
+          project_id: string | null
+          raw_text: string
+          revision: number
+          role: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "activities"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      requeue_failed_evidence_cleanup_job: {
+        Args: { p_job_id: string; p_next_attempt_at?: string }
+        Returns: boolean
+      }
+      reserve_evidence_upload: {
+        Args: {
+          p_content_type: string
+          p_expected_bytes: number
+          p_expected_revision: number
+          p_filename: string
+          p_idempotency_key: string
+          p_parent_id: string
+          p_parent_kind: string
+          p_user_id: string
+        }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      retry_evidence_cleanup_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+          p_next_attempt_at: string
+        }
+        Returns: boolean
+      }
+      retry_evidence_scan_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+          p_next_attempt_at: string
+        }
+        Returns: boolean
+      }
+      save_achievement: {
+        Args: {
+          p_achievement_id: string
+          p_action: string
+          p_changes: Json
+          p_expected_revision: number
+          p_skill_names: Json
+        }
+        Returns: {
+          achieved_on: string | null
+          activity_id: string | null
+          contribution: string | null
+          created_at: string
+          cv_bullet: string | null
+          experience_id: string | null
+          id: string
+          metrics: Json
+          origin: string
+          outcome: string | null
+          project_id: string | null
+          revision: number
+          scope: string | null
+          source_activity_revision: number | null
+          source_excerpt: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "achievements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       update_activity: {
         Args: {

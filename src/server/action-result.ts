@@ -14,6 +14,7 @@ export interface ActionError {
   fieldErrors?: Partial<Record<string, MessageKey>>;
   correlationId: string;
   latestRecord?: Record<string, unknown>;
+  retryAction?: string;
 }
 
 export type ActionState =

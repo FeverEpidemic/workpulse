@@ -32,6 +32,12 @@ export type ChatMessageRow = Omit<ChatMessageDatabaseRow, "role"> & {
   role: ChatMessageRole;
 };
 
+export interface ActivityDeleteReceipt {
+  readonly deletedActivityId: string;
+  readonly retainedAchievementCount: number;
+  readonly retainedChatCount: number;
+}
+
 export type ActivityListItem = Pick<
   ActivityRow,
   | "id"

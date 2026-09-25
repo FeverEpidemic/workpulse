@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ActivityFiltersForm } from "@/features/activity/activity-filters";
 import { ActivityList } from "@/features/activity/activity-list";
 import { ActivityPageIssue } from "@/features/activity/activity-page-issue";
-import { listActivityContextOptions } from "@/features/activity/activity-context-service";
+import { activityContextIssueFromError, listActivityContextOptions } from "@/features/activity/activity-context-service";
 import { ActivityServiceError, createActivityService, type ActivityListPage } from "@/features/activity/activity-service";
 import { activityFilterQuery, activityListHref, readActivityQuery } from "@/domain/routes/url-filters";
 import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
@@ -52,10 +52,16 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
   const [contextResult, activityResult] = await Promise.all([contextPromise, activityPromise]);
 
   if (contextResult.status === "error") {
+    const contextIssue = activityContextIssueFromError(contextResult.error);
     return (
       <section className="space-y-6">
         <ActivityHeader locale={locale} />
-        <ActivityPageIssue locale={locale} retryHref={returnTo} signInReturnTo={returnTo} />
+        <ActivityPageIssue
+          locale={locale}
+          messageKey={contextIssue.messageKey}
+          correlationId={contextIssue.correlationId}
+          retryHref={returnTo}
+        />
       </section>
     );
   }

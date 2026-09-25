@@ -1,14 +1,46 @@
+import { randomUUID } from "node:crypto";
+
 import * as z from "zod";
 
 import type { ActivityContextOptions } from "@/domain/activity/activity-display";
+import type { MessageKey } from "@/i18n/messages";
 import type { Database } from "@/server/supabase/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+export type ActivityContextServiceErrorCode = "UNAVAILABLE";
+
+export interface ActivityContextIssue {
+  readonly code: ActivityContextServiceErrorCode;
+  readonly messageKey: MessageKey;
+  readonly correlationId: string;
+}
 
 export class ActivityContextServiceError extends Error {
   constructor() {
     super("Activity context options are unavailable.");
     this.name = "ActivityContextServiceError";
   }
+
+  readonly code: ActivityContextServiceErrorCode = "UNAVAILABLE";
+  readonly messageKey: MessageKey = "activity.contextOptionsUnavailable";
+  readonly correlationId = randomUUID();
+}
+
+export function activityContextIssueFromError(error: unknown): ActivityContextIssue {
+  if (error instanceof ActivityContextServiceError) {
+    return {
+      code: error.code,
+      messageKey: error.messageKey,
+      correlationId: error.correlationId,
+    };
+  }
+
+  const fallback = new ActivityContextServiceError();
+  return {
+    code: fallback.code,
+    messageKey: fallback.messageKey,
+    correlationId: fallback.correlationId,
+  };
 }
 
 /** Read only the minimum context fields needed by Activity capture and labels. */
@@ -41,7 +73,8 @@ export async function listActivityContextOptions(
       experiences: experienceResult.data ?? [],
       projects: projectResult.data ?? [],
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof ActivityContextServiceError) throw error;
     throw new ActivityContextServiceError();
   }
 }

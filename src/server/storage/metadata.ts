@@ -13,6 +13,7 @@ export const PrivateStorageMetadataSchema = z
     objectKey: StorageObjectKeySchema,
     size: z.number().int().nonnegative(),
     contentType: z.enum(PRIVATE_STORAGE_MIME_TYPES),
+    customMetadata: z.unknown().optional(),
   })
   .strict();
 

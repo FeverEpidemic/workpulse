@@ -7,7 +7,7 @@ import { createPrivateStorageService, PrivateStorageError } from "@/server/stora
 
 const ownerA = "11111111-1111-4111-8111-111111111111";
 const ownerB = "22222222-2222-4222-8222-222222222222";
-const keyA = formatStorageObjectKey(ownerA, "evidence", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const keyA = formatStorageObjectKey(ownerA, "import", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 const validMetadata = {
   bucketId: PRIVATE_STORAGE_BUCKET,
   objectKey: keyA,
@@ -18,6 +18,7 @@ const validMetadata = {
 function createAdapter(overrides: Partial<StorageAdapter> = {}) {
   return {
     getObjectMetadata: vi.fn(async () => validMetadata),
+    uploadObject: vi.fn(async () => undefined),
     createSignedDownloadUrl: vi.fn(async () => "http://storage.local/signed/download"),
     removeObject: vi.fn(async () => undefined),
     ...overrides,
@@ -29,6 +30,16 @@ function errorCode(error: unknown) {
 }
 
 describe("private storage service", () => {
+  it("denies generic evidence signing and deletion before provider access", async () => {
+    const adapter = createAdapter();
+    const service = createPrivateStorageService(adapter, async () => ({ id: ownerA }));
+    const evidenceKey = formatStorageObjectKey(ownerA, "evidence", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    await expect(service.issueDownload(evidenceKey)).rejects.toMatchObject({ code: "STORAGE_OBJECT_UNAVAILABLE" });
+    await expect(service.deleteObject(evidenceKey)).rejects.toMatchObject({ code: "STORAGE_OBJECT_UNAVAILABLE" });
+    expect(adapter.getObjectMetadata).not.toHaveBeenCalled();
+    expect(adapter.createSignedDownloadUrl).not.toHaveBeenCalled();
+    expect(adapter.removeObject).not.toHaveBeenCalled();
+  });
   it("uses the session actor and requests a default 300 second download", async () => {
     const adapter = createAdapter();
     const service = createPrivateStorageService(adapter, async () => ({ id: ownerA }));

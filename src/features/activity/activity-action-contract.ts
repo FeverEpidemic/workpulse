@@ -1,6 +1,6 @@
 import type { MessageKey } from "@/i18n/messages";
 import { ActivityServiceError } from "@/features/activity/activity-service";
-import type { ActivityCaptureMode } from "@/domain/activity/contracts";
+import type { ActivityCaptureMode, ActivityRow } from "@/domain/activity/contracts";
 import type { ActionState, ErrorCode } from "@/server/action-result";
 
 function formText(formData: FormData, name: string): string {
@@ -32,19 +32,42 @@ export function activityCreateInputFromForm(formData: FormData) {
   };
 }
 
-export function activityUpdateInputFromForm(formData: FormData, captureMode: ActivityCaptureMode) {
+type ActivityStructuredFields = Pick<ActivityRow, "role" | "scope" | "outcome">;
+
+export function activityUpdateInputFromForm(
+  formData: FormData,
+  captureMode: ActivityCaptureMode,
+  currentActivity: ActivityStructuredFields,
+) {
   const rawExpectedRevision = formText(formData, "expected_revision");
   const expectedRevision = /^[1-9]\d*$/.test(rawExpectedRevision) ? Number(rawExpectedRevision) : 0;
+  const structuredFields = captureMode === "form"
+    ? {
+        role: nullableFormText(formData, "role", captureMode),
+        scope: nullableFormText(formData, "scope", captureMode),
+        outcome: nullableFormText(formData, "outcome", captureMode),
+      }
+    : {
+        role: currentActivity.role,
+        scope: currentActivity.scope,
+        outcome: currentActivity.outcome,
+      };
   return {
     activityId: formText(formData, "activity_id"),
     expectedRevision,
     rawText: rawTextareaText(formData),
     occurredOn: formText(formData, "occurred_on"),
-    role: nullableFormText(formData, "role", captureMode),
-    scope: nullableFormText(formData, "scope", captureMode),
-    outcome: nullableFormText(formData, "outcome", captureMode),
+    ...structuredFields,
     experienceId: formText(formData, "experience_id") || null,
     projectId: formText(formData, "project_id") || null,
+  };
+}
+
+export function activityDeleteInputFromForm(formData: FormData) {
+  const rawRevision = formText(formData, "expected_revision");
+  return {
+    activityId: formText(formData, "activity_id"),
+    expectedRevision: /^[1-9]\d*$/.test(rawRevision) ? Number(rawRevision) : 0,
   };
 }
 

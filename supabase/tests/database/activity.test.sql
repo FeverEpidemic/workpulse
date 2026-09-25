@@ -621,7 +621,7 @@ select ok(
 );
 
 select is(
-  public.delete_project('48888888-8888-4888-8888-888888888881'::uuid, 2),
+  (select deleted_project_id from public.delete_project('48888888-8888-4888-8888-888888888881'::uuid, 2)),
   '48888888-8888-4888-8888-888888888881'::uuid,
   'deleting a project keeps its Activity'
 );

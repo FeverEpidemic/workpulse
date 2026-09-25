@@ -109,7 +109,9 @@ describe("local private Storage integration", () => {
     const ownerUser = requireResult(ownerUserResult.data.user, ownerUserResult.error, "owner session lookup");
     expect(ownerUser.id).toBe(ownerId);
 
-    const objectKey = createStorageObjectKey(ownerId, "evidence");
+    // T10 evidence authorization is exercised by the evidence integration suite.
+    // This foundation test deliberately uses the independent import category.
+    const objectKey = createStorageObjectKey(ownerId, "import");
     const fixture = Buffer.from("%PDF-1.7\nWorkPulse storage test fixture\n%%EOF\n");
     const cleanupKeys: string[] = [];
 

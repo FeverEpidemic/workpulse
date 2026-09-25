@@ -1,11 +1,16 @@
 import Link from "next/link";
+import * as z from "zod";
 
 import { Card } from "@/components/ui/card";
 import { activityDateInTimeZone } from "@/domain/activity/activity-date";
 import type { ActivityContextOptions } from "@/domain/activity/activity-display";
 import { sanitizeActivityReturnTo } from "@/domain/routes/safe-return";
 import { ActivityCaptureForm } from "@/features/activity/activity-capture-form";
-import { listActivityContextOptions } from "@/features/activity/activity-context-service";
+import {
+  activityContextIssueFromError,
+  listActivityContextOptions,
+  type ActivityContextIssue,
+} from "@/features/activity/activity-context-service";
 import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
 import { t } from "@/i18n/messages";
 
@@ -18,20 +23,26 @@ const emptyContextOptions: ActivityContextOptions = { experiences: [], projects:
 export default async function NewActivityPage({ searchParams }: NewActivityPageProps) {
   const params = await searchParams;
   const returnTo = sanitizeActivityReturnTo(typeof params.returnTo === "string" ? params.returnTo : null);
+  const requestedProjectId = typeof params.project === "string" && z.uuid().safeParse(params.project).success ? params.project : null;
   const { context, profile, locale } = await requireCompletedWorkspace(
     `/activity/new?${new URLSearchParams({ returnTo }).toString()}`,
   );
   let options = emptyContextOptions;
-  let contextOptionsAvailable = false;
+  let contextIssue: ActivityContextIssue | undefined;
 
   if (context.client) {
     try {
       options = await listActivityContextOptions(context.client, profile.id);
-      contextOptionsAvailable = true;
-    } catch {
+    } catch (error) {
       // Manual capture stays usable without optional context selectors.
+      contextIssue = activityContextIssueFromError(error);
     }
+  } else {
+    contextIssue = activityContextIssueFromError(null);
   }
+  const initialProjectId = requestedProjectId && options.projects.some((project) => project.id === requestedProjectId)
+    ? requestedProjectId
+    : undefined;
 
   return (
     <section className="space-y-6">
@@ -46,7 +57,8 @@ export default async function NewActivityPage({ searchParams }: NewActivityPageP
           ownerId={profile.id}
           defaultOccurredOn={activityDateInTimeZone(new Date(), profile.timezone)}
           options={options}
-          contextOptionsAvailable={contextOptionsAvailable}
+          contextIssue={contextIssue}
+          initialProjectId={initialProjectId}
           returnTo={returnTo}
         />
       </Card>

@@ -512,10 +512,10 @@ select throws_ok(
 );
 
 select is(
-  public.delete_project(
+  (select deleted_project_id from public.delete_project(
     '55555555-5555-4555-8555-555555555551'::uuid,
     (select revision from public.projects where id = '55555555-5555-4555-8555-555555555551'::uuid)
-  ),
+  )),
   '55555555-5555-4555-8555-555555555551'::uuid,
   'the fixture project can be deleted through its owner revision-checked operation'
 );

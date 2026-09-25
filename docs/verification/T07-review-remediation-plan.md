@@ -2,9 +2,9 @@
 
 Tanggal: 20 September 2026.
 
-Status: **siap dieksekusi; belum diimplementasikan**. T07 dibuka kembali sebagai `PARTIAL` sampai
-seluruh Definition of Done di dokumen ini memiliki bukti aktual. T08 belum dimulai dan Gate M2
-tetap terbuka.
+Status: **DONE; remediasi diimplementasikan dan diverifikasi 20 September 2026**. Tiga temuan
+review sudah ditutup dengan bukti unit, integration, browser, accessibility, responsive, build,
+database, dan diff check. T08 belum dimulai dan Gate M2 tetap terbuka.
 
 ## Tujuan
 
@@ -354,6 +354,53 @@ Remediasi selesai hanya jika:
 9. Tidak ada migration, typegen, dependency, atau scope T08+ tanpa bukti kebutuhan dan keputusan baru.
 10. Decision/verification/status diperbarui; T07 baru kembali `DONE` dan T08 baru menjadi next task
     setelah semua butir di atas lulus.
+
+## Hasil eksekusi — 20 September 2026
+
+Seluruh tiga temuan ditutup:
+
+- Draft edit Activity sekarang menyimpan metadata `baseRevision` terpisah. Draft dengan revision
+  berbeda atau metadata legacy/invalid mempertahankan input lokal, memblokir save diam-diam, dan
+  menyediakan reload atau retry/rebase eksplisit.
+- Update Note/Chat mengambil `role`, `scope`, dan `outcome` dari row canonical milik pengguna di
+  server. Control editable yang tidak dapat disimpan dihilangkan; nilai existing tetap read-only.
+  Create Note/Chat dan Form semantics tetap sama.
+- Context options memiliki code aman, message key terlokalisasi, dan UUID correlation ID yang sama
+  dari service sampai fatal/degraded UI. Capture tetap dapat disimpan saat options unavailable.
+
+Perubahan kode dan test tercatat pada source Activity/session draft, route list/new/detail,
+`messages.ts`, `tests/unit/*`, dan `tests/e2e/activity-ui.spec.ts`. Decision record, verification,
+status, dan README juga diperbarui. Tidak ada migration, schema/RPC/RLS, generated types,
+dependency, worker, atau scope T08 yang berubah.
+
+### Quality gates aktual
+
+| Perintah | Hasil aktual |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | Exit 0; lockfile tidak berubah. |
+| `pnpm lint` | Exit 0; tanpa warning. |
+| `pnpm typecheck -- --incremental false` | Exit 0. |
+| `pnpm test` | Exit 0; 27 file / 130 unit tests. |
+| `pnpm test:integration:activity` | Exit 0; 6/6 terhadap Supabase lokal. |
+| `pnpm test:integration:storage` | Exit 0; 1/1 terhadap Supabase lokal. |
+| `pnpm build` | Exit 0; route Activity terbangun. |
+| `pnpm worker:check` | Exit 0; worker ready, tidak ada job T07 yang terdaftar. |
+| `pnpm db:test` | Exit 0; 240/240 pgTAP assertion. |
+| `pnpm db:lint` | Exit 0; `results:[]`. |
+| `pnpm exec supabase migration list --local` | Exit 0; 9/9 migration cocok dengan ledger lokal. |
+| `pnpm test:e2e:auth` | Exit 0; 1/1. |
+| `pnpm test:e2e:ui` | Exit 0; 1/1. |
+| `pnpm test:e2e:activity` | Exit 0; 1/1, termasuk Axe, responsive 360/1440, reduced motion, structured-field preservation, dan restored-draft recovery. |
+| `git diff --check` | Exit 0; hanya peringatan line-ending LF/CRLF. |
+
+Supabase yang digunakan hanya stack lokal; nilai credential tidak dicatat dalam artefak dan database
+aktif tidak di-reset. `pnpm db:types`, clean disposable rebuild, hosted/staging/production, dan T24 tidak
+dijalankan karena tidak relevan atau tidak diperlukan untuk perubahan TypeScript/UI tanpa perubahan
+schema. Beberapa navigasi E2E mencetak warning Next.js `destination stream closed early`, tetapi
+seluruh assertion tetap lulus.
+
+T07 kembali `DONE`. Langkah berikutnya adalah T08 Projects dan context; Gate M2 tetap terbuka sampai
+T08–T12 selesai.
 
 ## Prompt eksekusi siap salin
 

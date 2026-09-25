@@ -62,6 +62,9 @@ async function createActivityFixture(
     rawText: string;
     occurredOn: string;
     captureMode?: "note" | "form" | "chat";
+    role?: string | null;
+    scope?: string | null;
+    outcome?: string | null;
     experienceId?: string | null;
     projectId?: string | null;
   },
@@ -71,9 +74,9 @@ async function createActivityFixture(
     p_raw_text: input.rawText,
     p_occurred_on: input.occurredOn,
     p_capture_mode: input.captureMode ?? "note",
-    p_role: null,
-    p_scope: null,
-    p_outcome: null,
+    p_role: input.role ?? null,
+    p_scope: input.scope ?? null,
+    p_outcome: input.outcome ?? null,
     p_experience_id: input.experienceId ?? null,
     p_project_id: input.projectId ?? null,
   } as unknown as Database["public"]["Functions"]["create_activity_idempotent"]["Args"]);
@@ -151,17 +154,25 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     const experienceId = experienceResult.data?.id;
     if (experienceResult.error || !experienceId) throw new Error("Local Activity context setup failed.");
 
-    const projectResult = await admin.from("projects").insert({
-      user_id: owner.id,
-      experience_id: experienceId,
-      title: "Activity UI launch",
-      status: "active",
-    }).select("id").single();
-    const projectId = projectResult.data?.id;
-    if (projectResult.error || !projectId) throw new Error("Local Activity project setup failed.");
-
     const ownerSignIn = await ownerClient.auth.signInWithPassword({ email: owner.email, password: owner.password });
     if (ownerSignIn.error) throw new Error("Local Activity owner sign-in setup failed.");
+    const projectResult = await ownerClient.rpc("create_project_idempotent", {
+      p_operation_key: randomUUID(),
+      p_title: "Activity UI launch",
+      p_description: null,
+      p_user_role: null,
+      p_outcome: null,
+      p_status: "active",
+      p_start_date: null,
+      p_start_precision: null,
+      p_end_date: null,
+      p_end_precision: null,
+      p_is_current: false,
+      p_experience_id: experienceId,
+    } as unknown as Database["public"]["Functions"]["create_project_idempotent"]["Args"]);
+    const projectId = projectResult.data?.[0]?.project_id;
+    if (projectResult.error || !projectId) throw new Error("Local Activity project setup failed.");
+
     const otherSignIn = await otherClient.auth.signInWithPassword({ email: other.email, password: other.password });
     if (otherSignIn.error) throw new Error("Local Activity second-account setup failed.");
 
@@ -238,7 +249,7 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     await page.locator("#quick-log-note-form-experience").selectOption(experienceId);
     await expectNoWcagViolations(page, testInfo, "activity-form-mode");
     await page.getByRole("button", { name: "Save activity" }).click();
-    await expect(page.getByText("Structured delivery note", { exact: true })).toBeVisible();
+    await expect(page.locator(".activity-detail-card .activity-detail-source").first()).toHaveText("Structured delivery note");
     await expect(page.locator(".activity-detail-card")).toContainText("Platform lead");
     await expect(page.locator(".activity-detail-card")).toContainText("Release completed without rollback");
 
@@ -255,6 +266,25 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     await expect(page.getByText(/analyz/i)).toHaveCount(0);
     const chatId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
 
+    const chatStructuredUpdate = await ownerClient!.rpc("update_activity", {
+      p_activity_id: chatId,
+      p_expected_revision: 1,
+      p_changes: {
+        raw_text: chatMessage,
+        occurred_on: "2025-02-04",
+        role: "Chat role kept",
+        scope: "Chat scope kept",
+        outcome: "Chat outcome kept",
+        experience_id: null,
+        project_id: null,
+      },
+    });
+    if (chatStructuredUpdate.error) throw new Error("Local Chat structured-field fixture update failed.");
+    await page.reload();
+    await expect(page.locator(".activity-detail-card")).toContainText("Chat role kept");
+    await expect(page.locator(".activity-detail-card")).toContainText("Chat scope kept");
+    await expect(page.locator(".activity-detail-card")).toContainText("Chat outcome kept");
+
     await page.goto("/activity/new?returnTo=%2Factivity");
     const failedSource = "  \n   ";
     await page.getByLabel("Work note").fill(failedSource);
@@ -270,7 +300,7 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     }, draftKey)).toBe(failedSource);
     await page.getByLabel("Work note").fill("fixed after validation");
     await page.getByRole("button", { name: "Save activity" }).click();
-    await expect(page.getByText("fixed after validation", { exact: true })).toBeVisible();
+    await expect(page.locator(".activity-detail-card .activity-detail-source").first()).toHaveText("fixed after validation");
     await expect.poll(() => page.evaluate((key) => sessionStorage.getItem(key), draftKey)).toBeNull();
 
     const expiredSource = "  keep this note after the session ends\nwith the same whitespace  ";
@@ -321,7 +351,7 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     await page.goto(`/activity?from=${ACTIVITY_DATE}&to=${ACTIVITY_DATE}`);
     await page.locator("#activity-filter-project").selectOption(projectId);
     await page.getByRole("button", { name: "Apply filters" }).click();
-    await expect(new URL(page.url()).searchParams.get("project")).toBe(projectId);
+    await expect(page).toHaveURL((url) => url.searchParams.get("project") === projectId);
     await expect(page.locator(".activity-list-row")).toHaveCount(1);
     await page.locator(".activity-list-row").first().click();
     await expect(page).toHaveURL(new RegExp(`${noteId}`));
@@ -359,12 +389,87 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     await conflictTab.getByRole("button", { name: "Review and retry my changes" }).click();
     await expect(conflictTab.locator(".activity-detail-source").first()).toHaveText("second tab local revision");
 
+    const restoredDraftSource = "local draft from the earlier server revision";
+    await page.goto(noteDetailUrl);
+    await page.getByRole("button", { name: "Edit activity" }).click();
+    await page.locator("textarea[name='raw_text']").fill(restoredDraftSource);
+    const restoredDraftKey = await page.evaluate((activityId) =>
+      Object.keys(sessionStorage).find((key) => key.endsWith(`:activity-edit-${activityId}`)) ?? "", noteId);
+    expect(restoredDraftKey).toContain(`:activity-edit-${noteId}`);
+    await page.getByRole("link", { name: "Back to activity" }).click();
+    await page.getByRole("button", { name: "Continue without saving" }).click();
+    await expect(page).toHaveURL(/\/activity(?:\?|$)/);
+
+    const currentNoteBeforeServerEdit = await ownerClient!.from("activities").select("revision").eq("id", noteId).single();
+    if (currentNoteBeforeServerEdit.error || !currentNoteBeforeServerEdit.data) throw new Error("Local restored-draft revision lookup failed.");
+    const serverRevisionUpdate = await ownerClient!.rpc("update_activity", {
+      p_activity_id: noteId,
+      p_expected_revision: currentNoteBeforeServerEdit.data.revision,
+      p_changes: {
+        raw_text: "server version after local draft",
+        occurred_on: ACTIVITY_DATE,
+        role: null,
+        scope: null,
+        outcome: null,
+        experience_id: experienceId,
+        project_id: projectId,
+      },
+    });
+    if (serverRevisionUpdate.error) throw new Error("Local restored-draft server update failed.");
+
+    await page.goto(noteDetailUrl);
+    await page.getByRole("button", { name: "Edit activity" }).click();
+    await expect(page.getByRole("heading", { name: "This restored draft is based on an older version" })).toBeVisible();
+    await expect(page.locator("textarea[name='raw_text']")).toHaveValue(restoredDraftSource);
+    await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    await expect(page.locator(".activity-latest-source")).toHaveText("server version after local draft");
+    await page.getByRole("button", { name: "Review and retry my changes" }).click();
+    await expect(page.locator(".activity-detail-source").first()).toHaveText(restoredDraftSource);
+
+    const legacyDraftSource = "legacy draft without revision metadata";
+    await page.goto(noteDetailUrl);
+    await page.getByRole("button", { name: "Edit activity" }).click();
+    await page.locator("textarea[name='raw_text']").fill(legacyDraftSource);
+    const legacyDraftKey = await page.evaluate((activityId) =>
+      Object.keys(sessionStorage).find((key) => key.endsWith(`:activity-edit-${activityId}`)) ?? "", noteId);
+    await page.evaluate((key) => sessionStorage.removeItem(`${key}:metadata:v1`), legacyDraftKey);
+    await page.getByRole("link", { name: "Back to activity" }).click();
+    await page.getByRole("button", { name: "Continue without saving" }).click();
+    await expect(page).toHaveURL(/\/activity(?:\?|$)/);
+
+    const currentNoteBeforeLegacyServerEdit = await ownerClient!.from("activities").select("revision").eq("id", noteId).single();
+    if (currentNoteBeforeLegacyServerEdit.error || !currentNoteBeforeLegacyServerEdit.data) throw new Error("Local legacy-draft revision lookup failed.");
+    const legacyServerRevisionUpdate = await ownerClient!.rpc("update_activity", {
+      p_activity_id: noteId,
+      p_expected_revision: currentNoteBeforeLegacyServerEdit.data.revision,
+      p_changes: {
+        raw_text: "server version after legacy draft",
+        occurred_on: ACTIVITY_DATE,
+        role: null,
+        scope: null,
+        outcome: null,
+        experience_id: experienceId,
+        project_id: projectId,
+      },
+    });
+    if (legacyServerRevisionUpdate.error) throw new Error("Local legacy-draft server update failed.");
+
+    await page.goto(noteDetailUrl);
+    await page.getByRole("button", { name: "Edit activity" }).click();
+    await expect(page.getByRole("heading", { name: "This restored draft needs review" })).toBeVisible();
+    await expect(page.locator("textarea[name='raw_text']")).toHaveValue(legacyDraftSource);
+    await page.getByRole("button", { name: "Review and retry my changes" }).click();
+    await expect(page.locator(".activity-detail-source").first()).toHaveText(legacyDraftSource);
+
     const reloadConflictTab = await page.context().newPage();
     const chatDetailUrl = `/activity/${chatId}?returnTo=%2Factivity`;
     await page.goto(chatDetailUrl);
     await reloadConflictTab.goto(chatDetailUrl);
     await page.getByRole("button", { name: "Edit activity" }).click();
     await reloadConflictTab.getByRole("button", { name: "Edit activity" }).click();
+    await expect(page.locator("input[name='role'], textarea[name='scope'], textarea[name='outcome']")).toHaveCount(0);
+    await expect(reloadConflictTab.locator("input[name='role'], textarea[name='scope'], textarea[name='outcome']")).toHaveCount(0);
+    await expect(reloadConflictTab.locator(".activity-detail-section")).toContainText("Chat role kept");
     await page.locator("textarea[name='raw_text']").fill("latest Chat source from first tab");
     await reloadConflictTab.locator("textarea[name='raw_text']").fill("local Chat source draft");
     await page.getByRole("button", { name: "Save changes" }).click();
@@ -372,6 +477,9 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     await reloadConflictTab.getByRole("button", { name: "Save changes" }).click();
     await expect(reloadConflictTab.getByRole("heading", { name: "This activity changed in another tab" })).toBeVisible();
     await expect(reloadConflictTab.locator(".activity-latest-source")).toHaveText("latest Chat source from first tab");
+    await expect(reloadConflictTab.locator(".activity-detail-section")).toContainText("Chat role kept");
+    await expect(reloadConflictTab.locator(".activity-detail-section")).toContainText("Chat scope kept");
+    await expect(reloadConflictTab.locator(".activity-detail-section")).toContainText("Chat outcome kept");
     await reloadConflictTab.getByRole("button", { name: "Reload server" }).click();
     await expect(reloadConflictTab.getByRole("heading", { name: "Activity details" })).toBeVisible();
     await expect(reloadConflictTab.locator(".activity-detail-source").first()).toHaveText("latest Chat source from first tab");
@@ -379,6 +487,7 @@ test("Activity capture, list, detail, context, and revision recovery work agains
       "textContent",
       "  first Chat message\nwith original spacing  ",
     );
+    await expect(reloadConflictTab.locator(".activity-detail-card")).toContainText("Chat role kept");
 
     await page.goto(dateList);
     await page.emulateMedia({ reducedMotion: "reduce" });

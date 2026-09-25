@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { destinationForLifecycle } from "@/domain/auth/route-state";
-import { sanitizeActivityReturnTo, sanitizeReturnTo } from "@/domain/routes/safe-return";
+import { sanitizeAchievementReturnTo, sanitizeActivityReturnTo, sanitizeProjectDetailReturnTo, sanitizeProjectReturnTo, sanitizeReturnTo } from "@/domain/routes/safe-return";
 import { encodeActivityCursor } from "@/domain/activity/activity-cursor";
 
 describe("safe internal return routes", () => {
@@ -21,6 +21,49 @@ describe("safe internal return routes", () => {
       `/activity/new?returnTo=${encodeURIComponent(list)}`,
     );
     expect(sanitizeActivityReturnTo("/projects?status=active")).toBe("/activity");
+    const projectDetail = "/projects/70d2c57c-46e8-4cda-9b3b-c47f342099da?returnTo=" + encodeURIComponent("/projects?status=active");
+    expect(sanitizeActivityReturnTo(projectDetail)).toBe(projectDetail);
+    expect(sanitizeProjectDetailReturnTo(projectDetail)).toBe(projectDetail);
+    expect(sanitizeProjectReturnTo("/projects?status=completed&cursor=" + encodeURIComponent("bad"))).toBe("/projects");
+  });
+
+  it("preserves Achievement create context only when the source query is unambiguous", () => {
+    const id = "70d2c57c-46e8-4cda-9b3b-c47f342099da";
+    const activityCreate = `/achievements/new?${new URLSearchParams({ activity: id, returnTo: "/activity?from=2026-09-01" }).toString()}`;
+    const projectDetail = `/projects/${id}?returnTo=${encodeURIComponent("/projects?status=active")}`;
+    const projectCreate = `/achievements/new?${new URLSearchParams({ project: id, returnTo: projectDetail }).toString()}`;
+    expect(sanitizeReturnTo(activityCreate)).toBe(activityCreate);
+    expect(sanitizeReturnTo(projectCreate)).toBe(projectCreate);
+    expect(sanitizeReturnTo(`/achievements/new?activity=${id}&project=${id}`)).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/achievements/new?activity=${id}&activity=${id}`)).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/achievements/new?project=${id}&returnTo=${encodeURIComponent("https://attacker.example")}`)).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/achievements/new?activity=not-a-uuid`)).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/achievements/new?activity=${id}&unknown=1`)).toBe("/dashboard");
+  });
+
+  it("round-trips Achievement detail through Activity with an explicit nesting limit", () => {
+    const id = "70d2c57c-46e8-4cda-9b3b-c47f342099da";
+    const achievementDetail = `/achievements/${id}?returnTo=${encodeURIComponent("/achievements?status=confirmed")}`;
+    const activityDetail = `/activity/${id}?returnTo=${encodeURIComponent(achievementDetail)}`;
+    expect(sanitizeActivityReturnTo(achievementDetail)).toBe(achievementDetail);
+    expect(sanitizeReturnTo(activityDetail)).toBe(activityDetail);
+    expect(sanitizeAchievementReturnTo(activityDetail)).toBe(activityDetail);
+
+    let withinLimit = "/activity";
+    let overLimit = "/activity";
+    for (let index = 0; index < 4; index += 1) {
+      withinLimit = `${index % 2 ? "/activity" : "/achievements"}/${id}?returnTo=${encodeURIComponent(withinLimit)}`;
+      overLimit = `${index % 2 ? "/activity" : "/achievements"}/${id}?returnTo=${encodeURIComponent(overLimit)}`;
+    }
+    overLimit = `/activity/${id}?returnTo=${encodeURIComponent(overLimit)}`;
+    expect(sanitizeReturnTo(withinLimit)).toBe(withinLimit);
+    expect(sanitizeReturnTo(overLimit)).toBe("/dashboard");
+  });
+
+  it("rejects a return URL longer than 500 characters", () => {
+    const oversized = `/activity/new?returnTo=${"a".repeat(500)}`;
+    expect(oversized.length).toBeGreaterThan(500);
+    expect(sanitizeReturnTo(oversized)).toBe("/dashboard");
   });
 
   it.each([
@@ -31,12 +74,17 @@ describe("safe internal return routes", () => {
     "/%2f%2fattacker.example",
     "/projects/../sign-in",
     "/projects?q=%ZZ",
+    "/achievements/new?activity=70d2c57c-46e8-4cda-9b3b-c47f342099da&returnTo=%2Factivity%5C%5C%2Foutside",
+    "/achievements/new?activity=70d2c57c-46e8-4cda-9b3b-c47f342099da&other=1",
     "/unknown",
     "/activity?q=a&q=b",
     "/activity?from=2025-02-30",
     "/activity?project=not-a-uuid",
     "/activity?from=2025-02-01&to=2025-01-31",
     "/activity?cursor=broken",
+    "/achievements/new?activity=70d2c57c-46e8-4cda-9b3b-c47f342099da&returnTo=%2Factivity%3Ffrom%3D2025-01-01%250a",
+    "/achievements/new?activity=70d2c57c-46e8-4cda-9b3b-c47f342099da&activity=70d2c57c-46e8-4cda-9b3b-c47f342099da",
+    "/achievements/new?activity=70d2c57c-46e8-4cda-9b3b-c47f342099da&project=70d2c57c-46e8-4cda-9b3b-c47f342099da",
   ])("rejects unsafe return route %s", (value) => {
     expect(sanitizeReturnTo(value)).toBe("/dashboard");
   });

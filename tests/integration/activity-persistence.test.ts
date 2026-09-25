@@ -157,21 +157,37 @@ describe("local Activity persistence integration", () => {
     }).select("id").single();
     otherExperienceId = requireResult(otherExperienceResult.data, otherExperienceResult.error, "other account experience creation").id;
 
-    const ownerProjectResult = await ownerClient.from("projects").insert({
-      user_id: ownerId,
-      experience_id: ownerExperienceOneId,
-      title: "Activity project",
-      status: "active",
-    }).select("id").single();
-    ownerProjectId = requireResult(ownerProjectResult.data, ownerProjectResult.error, "owner project creation").id;
+    const ownerProjectResult = await ownerClient.rpc("create_project_idempotent", {
+      p_operation_key: randomUUID(),
+      p_title: "Activity project",
+      p_description: null,
+      p_user_role: null,
+      p_outcome: null,
+      p_status: "active",
+      p_start_date: null,
+      p_start_precision: null,
+      p_end_date: null,
+      p_end_precision: null,
+      p_is_current: false,
+      p_experience_id: ownerExperienceOneId,
+    } as unknown as Database["public"]["Functions"]["create_project_idempotent"]["Args"]);
+    ownerProjectId = requireResult(ownerProjectResult.data?.[0] ?? null, ownerProjectResult.error, "owner project creation").project_id;
 
-    const otherProjectResult = await otherClient.from("projects").insert({
-      user_id: otherId,
-      experience_id: otherExperienceId,
-      title: "Other project",
-      status: "planned",
-    }).select("id").single();
-    otherProjectId = requireResult(otherProjectResult.data, otherProjectResult.error, "other project creation").id;
+    const otherProjectResult = await otherClient.rpc("create_project_idempotent", {
+      p_operation_key: randomUUID(),
+      p_title: "Other project",
+      p_description: null,
+      p_user_role: null,
+      p_outcome: null,
+      p_status: "planned",
+      p_start_date: null,
+      p_start_precision: null,
+      p_end_date: null,
+      p_end_precision: null,
+      p_is_current: false,
+      p_experience_id: otherExperienceId,
+    } as unknown as Database["public"]["Functions"]["create_project_idempotent"]["Args"]);
+    otherProjectId = requireResult(otherProjectResult.data?.[0] ?? null, otherProjectResult.error, "other project creation").project_id;
   });
 
   afterAll(async () => {

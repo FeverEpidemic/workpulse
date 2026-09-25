@@ -18,6 +18,18 @@ export interface SessionDraftStorage {
 
 const legacyDraftPrefix = "workpulse:draft:";
 const versionedDraftPrefix = "workpulse:draft:v2:";
+const sessionDraftMetadataSuffix = ":metadata:v1";
+const sessionDraftMetadataSchemaVersion = 1 as const;
+
+export type SessionDraftMetadata = {
+  readonly schemaVersion: typeof sessionDraftMetadataSchemaVersion;
+  readonly baseRevision: number;
+};
+
+export type SessionDraftMetadataState =
+  | { readonly status: "missing" }
+  | { readonly status: "valid"; readonly metadata: SessionDraftMetadata }
+  | { readonly status: "invalid" };
 const protectedFieldNames = new Set([
   "id",
   "kind",
@@ -52,6 +64,86 @@ const persistedInputTypes = new Set([
 export function sessionDraftStorageKey(ownerId: string | null | undefined, formKey: string): string | null {
   if (!ownerId?.trim() || !formKey.trim()) return null;
   return `${versionedDraftPrefix}${encodeURIComponent(ownerId)}:${encodeURIComponent(formKey)}`;
+}
+
+export function sessionDraftMetadataStorageKey(ownerId: string | null | undefined, formKey: string): string | null {
+  const storageKey = sessionDraftStorageKey(ownerId, formKey);
+  return storageKey ? `${storageKey}${sessionDraftMetadataSuffix}` : null;
+}
+
+export function readSessionDraftMetadata(
+  storage: SessionDraftStorage,
+  ownerId: string | null | undefined,
+  formKey: string,
+): SessionDraftMetadataState {
+  const metadataKey = sessionDraftMetadataStorageKey(ownerId, formKey);
+  if (!metadataKey) return { status: "missing" };
+
+  const raw = storage.getItem(metadataKey);
+  if (!raw) return { status: "missing" };
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return { status: "invalid" };
+    const value = parsed as Record<string, unknown>;
+    const baseRevision = value.baseRevision;
+    if (
+      value.schemaVersion !== sessionDraftMetadataSchemaVersion ||
+      typeof baseRevision !== "number" ||
+      !Number.isSafeInteger(baseRevision) ||
+      baseRevision < 1
+    ) {
+      return { status: "invalid" };
+    }
+    return {
+      status: "valid",
+      metadata: { schemaVersion: sessionDraftMetadataSchemaVersion, baseRevision },
+    };
+  } catch {
+    return { status: "invalid" };
+  }
+}
+
+export function writeSessionDraftMetadata(
+  storage: SessionDraftStorage,
+  ownerId: string | null | undefined,
+  formKey: string,
+  baseRevision: number,
+): void {
+  const metadataKey = sessionDraftMetadataStorageKey(ownerId, formKey);
+  if (!metadataKey || !Number.isSafeInteger(baseRevision) || baseRevision < 1) return;
+  storage.setItem(metadataKey, JSON.stringify({
+    schemaVersion: sessionDraftMetadataSchemaVersion,
+    baseRevision,
+  } satisfies SessionDraftMetadata));
+}
+
+export function clearSessionDraftMetadata(
+  storage: SessionDraftStorage,
+  ownerId: string | null | undefined,
+  formKey: string,
+): void {
+  const metadataKey = sessionDraftMetadataStorageKey(ownerId, formKey);
+  if (metadataKey) storage.removeItem(metadataKey);
+}
+
+export function hasSessionDraft(
+  storage: SessionDraftStorage,
+  ownerId: string | null | undefined,
+  formKey: string,
+): boolean {
+  const storageKey = sessionDraftStorageKey(ownerId, formKey);
+  if (!storageKey) return false;
+
+  const raw = storage.getItem(storageKey);
+  if (!raw) return false;
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) && Object.keys(parsed).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function isPersistableDraftField(
@@ -100,6 +192,7 @@ export function removeSessionDraftForForm(
 ): void {
   const key = sessionDraftStorageKey(ownerId, formKey);
   if (key) storage.removeItem(key);
+  clearSessionDraftMetadata(storage, ownerId, formKey);
 }
 
 export function clearSessionDraftForForm(ownerId: string | null | undefined, formKey: string): void {
@@ -195,24 +288,18 @@ export function useSessionDraft(key: string, ownerId: string | null | undefined,
       restoreFormValues(form, JSON.parse(raw) as unknown);
     } catch {
       // Storage failures are non-fatal; never include field content in logs.
-      if (storageKey) {
-        try {
-          sessionStorage.removeItem(storageKey);
-        } catch {
-          // Ignore unavailable browser storage.
-        }
-      }
+      removeSessionDraftForForm(sessionStorage, ownerId, key);
     }
-  }, [storageKey]);
+  }, [key, ownerId, storageKey]);
 
   useEffect(() => {
     if (state.status !== "success" || !storageKey) return;
     try {
-      sessionStorage.removeItem(storageKey);
+      removeSessionDraftForForm(sessionStorage, ownerId, key);
     } catch {
       // Ignore unavailable browser storage after a successful save.
     }
-  }, [state, storageKey]);
+  }, [key, ownerId, state, storageKey]);
 
   useEffect(() => {
     const form = formRef.current;

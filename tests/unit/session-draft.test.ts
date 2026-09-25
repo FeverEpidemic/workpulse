@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   isPersistableDraftField,
+  hasSessionDraft,
+  readSessionDraftMetadata,
   removeLegacySessionDrafts,
   removeSessionDraftForForm,
   removeSessionDraftsForOwner,
   sessionDraftStorageKey,
+  sessionDraftMetadataStorageKey,
+  writeSessionDraftMetadata,
   type SessionDraftStorage,
 } from "@/components/forms/session-draft";
 
@@ -80,6 +84,7 @@ describe("owner-scoped session drafts", () => {
   it("clears only the selected owner's form draft", () => {
     const storage = new MemoryStorage();
     storage.setItem("workpulse:draft:v2:user-a:profile-settings", "profile draft");
+    storage.setItem("workpulse:draft:v2:user-a:profile-settings:metadata:v1", "profile metadata");
     storage.setItem("workpulse:draft:v2:user-a:foundation-skill-new", "skill draft");
     storage.setItem("workpulse:draft:v2:user-b:profile-settings", "other user draft");
 
@@ -89,6 +94,32 @@ describe("owner-scoped session drafts", () => {
       "workpulse:draft:v2:user-a:foundation-skill-new",
       "workpulse:draft:v2:user-b:profile-settings",
     ]);
+  });
+
+  it("stores activity base revision metadata separately from form values", () => {
+    const storage = new MemoryStorage();
+    const metadataKey = sessionDraftMetadataStorageKey("user-a", "activity-edit:one");
+
+    expect(metadataKey).toBe("workpulse:draft:v2:user-a:activity-edit%3Aone:metadata:v1");
+    expect(readSessionDraftMetadata(storage, "user-a", "activity-edit:one")).toEqual({ status: "missing" });
+
+    storage.setItem(sessionDraftStorageKey("user-a", "activity-edit:one")!, JSON.stringify({ raw_text: "local" }));
+    writeSessionDraftMetadata(storage, "user-a", "activity-edit:one", 4);
+
+    expect(hasSessionDraft(storage, "user-a", "activity-edit:one")).toBe(true);
+    expect(readSessionDraftMetadata(storage, "user-a", "activity-edit:one")).toEqual({
+      status: "valid",
+      metadata: { schemaVersion: 1, baseRevision: 4 },
+    });
+    expect(JSON.parse(storage.getItem(metadataKey!)!)).toEqual({ schemaVersion: 1, baseRevision: 4 });
+  });
+
+  it("treats malformed or legacy metadata as unknown without accepting private values", () => {
+    const storage = new MemoryStorage();
+    const metadataKey = sessionDraftMetadataStorageKey("user-a", "activity-edit");
+    storage.setItem(metadataKey!, JSON.stringify({ schemaVersion: 1, baseRevision: "latest private source" }));
+
+    expect(readSessionDraftMetadata(storage, "user-a", "activity-edit")).toEqual({ status: "invalid" });
   });
 
   it("persists only named, enabled, editable fields with safe control types", () => {

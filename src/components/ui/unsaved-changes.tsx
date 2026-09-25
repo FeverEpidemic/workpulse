@@ -79,6 +79,7 @@ export function UnsavedChangesProvider({
 
   const markDirty = useCallback((formId: string) => {
     setDirtyForms((current) => {
+      if (current.has(formId)) return current;
       const next = new Set(current);
       next.add(formId);
       return next;

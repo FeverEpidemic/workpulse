@@ -10,16 +10,19 @@ import * as z from "zod";
 
 import {
   ACTIVITY_LIST_PAGE_SIZE,
+  type ActivityDeleteReceipt,
   type ActivityCreateReceipt,
   type ActivityListItem,
   type ActivityRow,
   type ChatMessageRow,
 } from "@/domain/activity/contracts";
+import type { AchievementRow } from "@/domain/achievement/contracts";
 import { decodeActivityCursor, encodeActivityCursor } from "@/domain/activity/activity-cursor";
 import type { MessageKey } from "@/i18n/messages";
 import type { Database } from "@/server/supabase/database.types";
 import {
   activityCreateSchema,
+  activityDeleteSchema,
   activityListFilterSchema,
   activityUpdateSchema,
   type ActivityCreateInput,
@@ -122,6 +125,7 @@ export interface ActivityListPage {
 export interface ActivityDetail {
   activity: ActivityRow;
   chatMessages: ChatMessageRow[];
+  achievement: AchievementRow | null;
 }
 
 function validationError(error: z.ZodError): ActivityServiceError {
@@ -312,14 +316,62 @@ export function createActivityService(client: ActivityClient) {
         const activity = await readOwnActivity(actorId, parsedId.data);
         if (!activity) throw new ActivityServiceError("NOT_FOUND");
 
-        const { data, error } = await client
+        const [{ data: chatData, error: chatError }, { data: achievementData, error: achievementError }] = await Promise.all([
+          client
           .from("chat_messages")
           .select("*")
           .eq("user_id", actorId)
           .eq("activity_id", activity.id)
-          .order("sequence_no", { ascending: true });
-        if (error) throw new ActivityServiceError("UNAVAILABLE");
-        return { activity, chatMessages: (data ?? []) as ChatMessageRow[] };
+          .order("sequence_no", { ascending: true }),
+          client
+            .from("achievements")
+            .select("*")
+            .eq("user_id", actorId)
+            .eq("activity_id", activity.id)
+            .maybeSingle(),
+        ]);
+        if (chatError || achievementError) throw new ActivityServiceError("UNAVAILABLE");
+        const achievement = achievementData
+          ? {
+              ...achievementData,
+              status: achievementData.status as AchievementRow["status"],
+              origin: achievementData.origin as AchievementRow["origin"],
+              metrics: Array.isArray(achievementData.metrics) ? achievementData.metrics as unknown as AchievementRow["metrics"] : [],
+            }
+          : null;
+        return { activity, chatMessages: (chatData ?? []) as ChatMessageRow[], achievement };
+      });
+    },
+
+    async deleteActivity(input: unknown): Promise<ActivityDeleteReceipt> {
+      return withActivityErrorBoundary(async () => {
+        const parsed = activityDeleteSchema.safeParse(input);
+        if (!parsed.success) throw validationError(parsed.error);
+        const actorId = await requireActorId();
+        const { data, error } = await client.rpc("delete_activity", {
+          p_activity_id: parsed.data.activityId,
+          p_expected_revision: parsed.data.expectedRevision,
+        });
+        if (error) {
+          const mapped = mapDatabaseError(error);
+          if (mapped.code === "CONFLICT") {
+            const latestRecord = await readOwnActivity(actorId, parsed.data.activityId);
+            if (!latestRecord) throw new ActivityServiceError("NOT_FOUND");
+            throw new ActivityServiceError("CONFLICT", { latestRecord });
+          }
+          throw mapped;
+        }
+        const receipt = z.object({
+          deleted_activity_id: z.uuid(),
+          retained_achievement_count: z.number().int().nonnegative(),
+          retained_chat_count: z.number().int().nonnegative(),
+        }).strict().safeParse(data?.[0]);
+        if (!receipt.success || receipt.data.deleted_activity_id !== parsed.data.activityId) throw new ActivityServiceError("NOT_FOUND");
+        return {
+          deletedActivityId: receipt.data.deleted_activity_id,
+          retainedAchievementCount: receipt.data.retained_achievement_count,
+          retainedChatCount: receipt.data.retained_chat_count,
+        };
       });
     },
   };

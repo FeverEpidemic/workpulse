@@ -2,12 +2,27 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/server/supabase/database.types";
 import { PRIVATE_STORAGE_BUCKET } from "@/server/storage/constants";
-import { StorageAdapterUnavailableError, type StorageAdapter } from "@/server/storage/adapter";
+import {
+  StorageAdapterUnavailableError,
+  StorageObjectAlreadyExistsError,
+  type StorageAdapter,
+} from "@/server/storage/adapter";
 
 function isNotFound(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
   const details = error as { status?: unknown; statusCode?: unknown };
   return details.status === 404 || details.statusCode === 404 || details.statusCode === "404";
+}
+
+function isAlreadyExists(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const details = error as { status?: unknown; statusCode?: unknown; error?: unknown };
+  return (
+    details.status === 409 ||
+    details.statusCode === 409 ||
+    details.statusCode === "409" ||
+    details.error === "Duplicate"
+  );
 }
 
 export class SupabaseStorageAdapter implements StorageAdapter {
@@ -26,7 +41,24 @@ export class SupabaseStorageAdapter implements StorageAdapter {
       objectKey: data.name,
       size: data.size,
       contentType: data.contentType,
+      customMetadata: data.metadata,
     };
+  }
+
+  async uploadObject(
+    objectKey: string,
+    bytes: Uint8Array,
+    options: { contentType: string; metadata: Record<string, string> },
+  ): Promise<void> {
+    const { error } = await this.client.storage.from(PRIVATE_STORAGE_BUCKET).upload(objectKey, bytes, {
+      contentType: options.contentType,
+      cacheControl: "no-store",
+      upsert: false,
+      metadata: options.metadata,
+    });
+    if (!error) return;
+    if (isAlreadyExists(error)) throw new StorageObjectAlreadyExistsError();
+    throw new StorageAdapterUnavailableError();
   }
 
   async createSignedDownloadUrl(objectKey: string, expiresInSeconds: number): Promise<string> {

@@ -4,12 +4,13 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T06 done; T07 remediation planned.** Email/password auth, onboarding, profile
-settings, profile foundation editors, the design system, the authenticated application frame,
-and Activity capture/list/detail/edit are implemented. Post-review fixes for restored-draft
-revision safety, Note/Chat field preservation, and context-error correlation remain before T07
-returns to done. Gate M2 remains open; T08 has not started. Achievements, projects, timeline,
-and CV destinations remain placeholders until their feature tasks add persistence. See
+Status: **T09 done; T10 next.** T08 review remediation remains complete: completed Project dates are
+preserved, idempotent replay is ledger-first, cross-operation locks are ordered, and attach
+candidates use owner-scoped keyset pagination. Manual Achievements/Skills now cover standalone and
+Activity-derived records, explicit lifecycle review, source retention, skill labels, and Project
+attach/move/detach locally. Unit/static, active-stack and clean-disposable integration/database,
+production build, worker, Auth/UI, Achievement, Activity, and Project browser/Axe checks pass. Evidence,
+timeline, and CV destinations remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -45,12 +46,16 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm lint` | ESLint flat config, `--max-warnings 0` |
 | `pnpm typecheck` | `tsc --noEmit` (TypeScript strict, `noUncheckedIndexedAccess`) |
 | `pnpm test` | Vitest unit suite (`tests/unit`) |
+| `pnpm test:integration:projects` | Project create/update/relink/delete and context propagation against local Supabase |
+| `pnpm test:integration:achievements` | Achievement lifecycle, derived race, skill counts, relink, and source retention against local Supabase |
 | `pnpm test:integration:activity` | Activity persistence, ownership, idempotency, revision conflicts, and pagination against local Supabase |
 | `pnpm test:integration:storage` | Private Storage access, signed download, and expiry checks (`tests/integration/private-storage.test.ts`) |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
 | `pnpm test:e2e:ui` | Authenticated app-frame, theme, filter, keyboard, responsive, and Axe checks |
 | `pnpm test:e2e:activity` | Activity capture/list/detail/edit acceptance against local Supabase; fixtures are cleaned up |
+| `pnpm test:e2e:projects` | Project list/detail/create, linked Activity, delete retention, responsive, and Axe checks against local Supabase |
+| `pnpm test:e2e:achievements` | Manual Achievement lifecycle, Activity source handoff, responsive, and Axe checks against local Supabase |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -80,11 +85,21 @@ It is a liveness probe: it checks no dependency and exposes no configuration.
 pnpm worker:check
 ```
 
-Prints `{"status":"ready","service":"workpulse-worker","registeredJobs":[]}` and exits 0.
-The worker is a separate Node process (`workers/`, TypeScript executed through Node's
-built-in type stripping) so that background work never depends on the lifetime of a web
-request. The durable queue, leases and job handlers arrive with T13; the bootstrap is a
-readiness check, not a job runtime.
+Reports registered handlers and exits 0; this is a configuration check, not proof that
+database or scanner dependencies are healthy. T10 adds a separate durable evidence worker:
+
+```powershell
+pnpm worker:run     # separate foreground process; stop with Ctrl+C
+pnpm worker:once    # one bounded scan/cleanup/expiry sweep
+```
+
+The Node process uses built-in TypeScript stripping, loads `.env.local`, and runs
+independently from web requests. PostgreSQL owns claims, 120-second leases, attempt tokens,
+and retries. Configure the real ClamAV scanner with the server-only variables in `.env.example`.
+Missing/unavailable scanning never marks a file ready; `fake-clean` is explicitly restricted
+to development/tests and is not an integration substitute. See the
+[T10 scanner runbook](docs/verification/T10-scanner-runbook.md) for pinned local setup,
+real scanner checks, recovery, and the separate staging acceptance gate.
 
 ## Local database (Supabase)
 
@@ -141,6 +156,14 @@ pagination. Both integration scripts read the local Supabase URL and keys from t
 environment or `.env.local`; they remove their temporary accounts during cleanup. The Activity
 test uses `SUPABASE_SECRET_KEY` only for fixture setup/cleanup; assertions use authenticated
 user clients. Keep that key server/test-only and out of browser configuration and source control.
+
+The T08 Project integration and browser checks use the same local stack and temporary authenticated
+fixtures. Project mutations use the authenticated session and Project RPCs; direct client Project
+INSERT is intentionally revoked. The Project workflow supports standalone or Experience-linked
+Projects, three statuses, partial dates, revision conflicts, Activity context propagation, safe
+relink/detach, dependency-aware deletion, and paginated candidate loading. The Docker-dependent
+active and disposable checks are recorded in
+[`docs/verification/T08-projects-context.md`](docs/verification/T08-projects-context.md).
 
 Local signup and recovery emails are captured by Supabase's Mailpit at
 `http://127.0.0.1:54324`. The full auth/profile flow can be exercised with
