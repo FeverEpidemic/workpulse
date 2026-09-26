@@ -1,5 +1,34 @@
 # WorkPulse Implementation Status
 
+## T12 — Dashboard dan Timeline, acceptance lokal — 26 September 2026
+
+Status authoritative T12: **DONE** — implementasi dan acceptance lokal selesai setelah gate review
+Claude. Dependensi T07, T09, dan T11 tetap **DONE**. Rujukan R03/R08, F06 (F03 untuk missing
+evidence), S04/S11 dan deep link S12, Database Schema §1/§6.
+[Rencana](verification/T12-implementation-plan.md), [bukti aktual](verification/T12-dashboard-timeline.md),
+[decision 0018](decisions/0018-t12-dashboard-timeline.md).
+
+Selesai: empat fungsi baca `SECURITY INVOKER` (tanpa perubahan tabel) sebagai satu predikat untuk
+count dan list; filter URL `evidence=missing`, `skill`, `outcome=missing`, Timeline `type`/`project`,
+dan `record` pada S12, terdaftar di reader, safe-return, service, chip/Clear; Dashboard S04 (stat,
+check, recent `occurred_on`, current projects, skill distinct confirmed, empty jujur dengan Import
+CV disabled, loading, error/Retry); Timeline S11 dari record canonical (grup tahun, *Date not set*,
+*Present*, precision, overlap, filter, notice truncated) dengan deep link ke editor canonical; copy
+en/id dan CSS token.
+
+Migration forward-only `20260927090000_t12_dashboard_timeline.sql` diterapkan ke database lokal aktif
+tanpa reset; parity 21/21 dan generated types diperbarui. Gate review tidak menemukan P0–P2; lima P3
+UI/copy diperbaiki pada review (tombol Apply sekunder, label project tanpa tanggal, opsi project
+tidak tersedia, affordance link check, wrap chip skill). Checks akhir: unit 44 file/203 test, pgTAP
+7 file/386 assertion, integration Dashboard 4/4, Achievement 5/5, Project 7/7, Activity 6/6, E2E
+Dashboard/Timeline 1/1, UI 1/1, Auth 1/1, Activity 1/1, Achievement 3/3 (satu run awal flaky pada
+test konflik T09, lihat bukti), Project 1/1, worker check, typecheck, lint, DB lint, build, dan diff
+check lulus. Evidence integration/E2E tidak dijalankan karena ClamAV lokal tidak aktif; T12 tidak
+mengubah kode evidence. Follow-up P3 tercatat pada bukti.
+
+Tidak ada layanan, deployment, atau resource eksternal. Berikutnya: integration review **Gate M2**
+(T06–T12) sesuai §6 rencana, lalu T13 AI jobs dan consent.
+
 ## T11 — Evidence UI dan lifecycle, acceptance lokal — 26 September 2026
 
 Status authoritative T11: **DONE** — implementasi dan acceptance lokal selesai. Dependensi T05,
@@ -426,7 +455,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T09 | Manual achievements dan skills | DONE |
 | T10 | Evidence reservation dan screening | DONE |
 | T11 | Evidence UI dan lifecycle | DONE |
-| T12 | Dashboard dan timeline | TODO |
+| T12 | Dashboard dan timeline | DONE |
 | T13 | AI jobs dan consent | TODO |
 | T14 | Detection dan review | TODO |
 | T15 | Import staging | TODO |
