@@ -28,6 +28,8 @@ mengubah kode evidence. Follow-up P3 tercatat pada bukti.
 
 Tidak ada layanan, deployment, atau resource eksternal. Berikutnya: integration review **Gate M2**
 (T06–T12) sesuai §6 rencana, lalu T13 AI jobs dan consent.
+[Handoff Gate M2](verification/M2-gate-review-plan.md) sudah tersedia (26 September 2026); gate tetap
+**terbuka** sampai verdict Claude tercatat.
 
 ## T11 — Evidence UI dan lifecycle, acceptance lokal — 26 September 2026
 
