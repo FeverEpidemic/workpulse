@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { projectListHref, readProjectQuery } from "@/domain/routes/project-filters";
+import { projectListHref, readProjectQuery, type ProjectFilters } from "@/domain/routes/project-filters";
 import { ProjectList } from "@/features/project/project-list";
 import { ProjectPageIssue } from "@/features/project/project-page-issue";
 import { ProjectServiceError, createProjectService, type ProjectListPage } from "@/features/project/project-service";
@@ -19,7 +19,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   return (
     <section className="space-y-6">
       <ProjectsHeader locale={locale} returnTo={returnTo} />
-      <ProjectFilterNav locale={locale} activeStatus={query.filters.status} returnTo={returnTo} />
+      <ProjectFilterNav locale={locale} filters={query.filters} />
       {!query.isValid ? (
         <p className="ui-message ui-message--warning" role="alert">
           {query.errors.cursor ? t(locale, "project.invalidCursor") : t(locale, "project.invalidFilters")} {" "}
@@ -46,7 +46,7 @@ function ProjectsHeader({ locale, returnTo }: { locale: Locale; returnTo: string
   );
 }
 
-function ProjectFilterNav({ locale, activeStatus, returnTo: _returnTo }: { locale: Locale; activeStatus: string; returnTo: string }) {
+function ProjectFilterNav({ locale, filters }: { locale: Locale; filters: ProjectFilters }) {
   const tabs = [
     { value: "", label: t(locale, "project.all") },
     { value: "planned", label: t(locale, "project.planned") },
@@ -56,8 +56,8 @@ function ProjectFilterNav({ locale, activeStatus, returnTo: _returnTo }: { local
   return (
     <nav className="project-filter-tabs" aria-label={t(locale, "project.filters")}>
       {tabs.map((tab) => {
-        const href = tab.value ? `/projects?status=${tab.value}` : "/projects";
-        return <Link key={tab.value || "all"} className={activeStatus === tab.value ? "is-selected" : ""} href={href} aria-current={activeStatus === tab.value ? "page" : undefined}>{tab.label}</Link>;
+        const href = projectListHref({ ...filters, status: tab.value as ProjectFilters["status"] });
+        return <Link key={tab.value || "all"} className={filters.status === tab.value ? "is-selected" : ""} href={href} aria-current={filters.status === tab.value ? "page" : undefined}>{tab.label}</Link>;
       })}
     </nav>
   );
@@ -73,6 +73,7 @@ async function ProjectResults({ locale, client, query, returnTo }: {
   try {
     const page = await createProjectService(client).listProjects({
       status: query.filters.status || undefined,
+      outcomeMissing: query.filters.outcome === "missing" ? true : undefined,
       cursor: query.cursor || undefined,
     });
     result = { page };

@@ -22,14 +22,22 @@ export function ProjectList({
   hasCursor: boolean;
   locale: Locale;
 }) {
-  const hasFilters = Boolean(filters.status || hasCursor);
+  const hasFilters = Boolean(filters.status || filters.outcome || hasCursor);
+  const filterNotice = filters.outcome ? (
+    <p className="field-help" role="status">
+      {t(locale, "project.filterOutcomeMissing")} {" "}
+      <Link className="font-semibold underline underline-offset-4" href={projectListHref({ ...filters, outcome: "" })}>
+        {t(locale, "project.clearFilters")}
+      </Link>
+    </p>
+  ) : null;
   if (items.length === 0) {
     return hasFilters ? (
-      <EmptyState
+      <>{filterNotice}<EmptyState
         title={t(locale, "project.noMatchTitle")}
         description={t(locale, "project.noMatchDescription")}
-        action={{ href: "/projects", label: t(locale, "project.clearFilters") }}
-      />
+        action={{ href: projectListHref({ ...filters, outcome: "" }), label: t(locale, "project.clearFilters") }}
+      /></>
     ) : (
       <EmptyState
         title={t(locale, "project.emptyTitle")}
@@ -41,6 +49,7 @@ export function ProjectList({
 
   return (
     <section className="space-y-4" aria-labelledby="project-results-title">
+      {filterNotice}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="project-results-title" className="sr-only">{t(locale, "project.description")}</h2>
         <p className="field-help" role="status">{t(locale, "project.pageCount", { count: items.length })}</p>

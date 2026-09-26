@@ -5,6 +5,7 @@ import { PROJECT_STATUSES, type ProjectStatus } from "@/domain/project/contracts
 
 export interface ProjectFilters {
   status: ProjectStatus | "";
+  outcome: "missing" | "";
 }
 
 export interface ProjectQuery {
@@ -12,6 +13,7 @@ export interface ProjectQuery {
   cursor: string;
   errors: {
     status?: "invalid";
+    outcome?: "invalid";
     cursor?: "invalid";
     unknown?: boolean;
   };
@@ -26,12 +28,15 @@ function oneValue(params: Record<string, string | string[] | undefined>, key: st
 
 export function readProjectQuery(params: Record<string, string | string[] | undefined>): ProjectQuery {
   const statusValue = oneValue(params, "status");
+  const outcomeValue = oneValue(params, "outcome");
   const cursorValue = oneValue(params, "cursor");
-  const known = new Set(["status", "cursor"]);
+  const known = new Set(["status", "outcome", "cursor"]);
   const unknown = Object.keys(params).some((key) => !known.has(key));
   const status = PROJECT_STATUSES.includes(statusValue.value as ProjectStatus) ? statusValue.value as ProjectStatus : "";
+  const outcome = outcomeValue.value === "missing" ? "missing" : "";
   const errors: ProjectQuery["errors"] = {
     ...(statusValue.duplicate || (statusValue.present && statusValue.value !== "" && !PROJECT_STATUSES.includes(statusValue.value as ProjectStatus)) ? { status: "invalid" as const } : {}),
+    ...(outcomeValue.duplicate || (outcomeValue.present && outcomeValue.value !== "" && outcomeValue.value !== "missing") ? { outcome: "invalid" as const } : {}),
     ...(cursorValue.duplicate ? { cursor: "invalid" as const } : {}),
     ...(unknown ? { unknown: true } : {}),
   };
@@ -43,7 +48,7 @@ export function readProjectQuery(params: Record<string, string | string[] | unde
     }
   }
   return {
-    filters: { status },
+    filters: { status, outcome },
     cursor: cursorValue.present ? cursorValue.value : "",
     errors,
     isValid: Object.keys(errors).length === 0,
@@ -53,6 +58,7 @@ export function readProjectQuery(params: Record<string, string | string[] | unde
 export function projectFilterQuery(filters: ProjectFilters, cursor?: string): string {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
+  if (filters.outcome) params.set("outcome", filters.outcome);
   if (cursor) params.set("cursor", cursor);
   return params.toString();
 }

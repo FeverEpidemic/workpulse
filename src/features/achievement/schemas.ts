@@ -50,6 +50,8 @@ export const achievementDeleteSchema = z.object({
 export const achievementListFilterSchema = z.object({
   status: z.enum(ACHIEVEMENT_STATUSES).optional(),
   projectId: z.uuid().optional(),
+  skillId: z.uuid().optional(),
+  missingEvidence: z.literal(true).optional(),
   cursor: z.string().trim().min(1).max(256).optional(),
 }).strict();
 
@@ -58,4 +60,3 @@ export type AchievementChanges = z.infer<typeof achievementChangesSchema>;
 export type AchievementAction = z.infer<typeof achievementActionSchema>;
 export type AchievementSaveInput = z.infer<typeof achievementSaveSchema>;
 export type AchievementListFilters = z.infer<typeof achievementListFilterSchema>;
-
