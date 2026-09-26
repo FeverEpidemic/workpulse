@@ -1,13 +1,18 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import * as z from "zod";
 
 import { OnboardingForm } from "@/features/profile/onboarding-form";
 import { ProfileWorkspace } from "@/features/profile/profile-workspace";
 import { getRequestContext, getRequestLocale } from "@/server/auth/context";
 import { t } from "@/i18n/messages";
 
-export default async function ProfileSettingsPage() {
-  const [context, locale] = await Promise.all([getRequestContext(), getRequestLocale()]);
+type SearchParams = Record<string, string | string[] | undefined>;
+
+export default async function ProfileSettingsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const [context, locale, params] = await Promise.all([getRequestContext(), getRequestLocale(), searchParams]);
+  const recordParam = typeof params.record === "string" ? params.record : "";
+  const openRecordId = z.uuid().safeParse(recordParam).success ? recordParam : undefined;
   if (!context.user) redirect("/sign-in?returnTo=%2Fsettings%2Fprofile");
   if (!context.profile) redirect("/sign-in?notice=serviceUnavailable");
 
@@ -26,5 +31,5 @@ export default async function ProfileSettingsPage() {
     );
   }
 
-  return <ProfileWorkspace client={context.client!} profile={context.profile} userEmail={context.user.email ?? ""} locale={locale} />;
+  return <ProfileWorkspace client={context.client!} profile={context.profile} userEmail={context.user.email ?? ""} locale={locale} openRecordId={openRecordId} />;
 }

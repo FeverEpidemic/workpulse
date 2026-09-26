@@ -306,13 +306,14 @@ function DeleteRecordForm({ kind, record, releaseCount, releaseCountUnavailable,
   );
 }
 
-function RecordEditor({ kind, ownerId, record, releaseCount, releaseCountUnavailable, locale }: {
+function RecordEditor({ kind, ownerId, record, releaseCount, releaseCountUnavailable, locale, openRecordId }: {
   kind: FoundationKind;
   ownerId: string;
   record: FoundationRecord;
   releaseCount?: number;
   releaseCountUnavailable: boolean;
   locale: Locale;
+  openRecordId?: string;
 }) {
   const summary = kind === "experience"
     ? `${value(record, "role_title")} · ${value(record, "organization")}`
@@ -321,7 +322,7 @@ function RecordEditor({ kind, ownerId, record, releaseCount, releaseCountUnavail
       : value(record, "name");
 
   return (
-    <details className="border-t border-[var(--wp-border)] py-4">
+    <details id={`${kind}-${record.id}`} open={record.id === openRecordId || undefined} className="profile-record-anchor border-t border-[var(--wp-border)] py-4">
       <summary className="cursor-pointer text-sm font-semibold">{summary}</summary>
       <div className="mt-4 space-y-5">
         <FoundationForm kind={kind} ownerId={ownerId} record={record} locale={locale} />
@@ -338,7 +339,7 @@ function RecordEditor({ kind, ownerId, record, releaseCount, releaseCountUnavail
   );
 }
 
-function FoundationSection({ title, kind, ownerId, records, releaseCounts, releaseCountUnavailable, locale }: {
+function FoundationSection({ title, kind, ownerId, records, releaseCounts, releaseCountUnavailable, locale, openRecordId }: {
   title: string;
   kind: FoundationKind;
   ownerId: string;
@@ -346,6 +347,7 @@ function FoundationSection({ title, kind, ownerId, records, releaseCounts, relea
   releaseCounts?: Record<string, number>;
   releaseCountUnavailable: boolean;
   locale: Locale;
+  openRecordId?: string;
 }) {
   return (
     <Card className="space-y-4">
@@ -361,6 +363,7 @@ function FoundationSection({ title, kind, ownerId, records, releaseCounts, relea
             releaseCount={releaseCounts?.[record.id]}
             releaseCountUnavailable={releaseCountUnavailable}
             locale={locale}
+            openRecordId={openRecordId}
           />
         ))}
       </div>
@@ -374,7 +377,7 @@ function FoundationSection({ title, kind, ownerId, records, releaseCounts, relea
   );
 }
 
-export function FoundationEditors({ ownerId, experiences, education, certifications, skills, releaseCounts, releaseCountUnavailable, locale }: {
+export function FoundationEditors({ ownerId, experiences, education, certifications, skills, releaseCounts, releaseCountUnavailable, locale, openRecordId }: {
   ownerId: string;
   experiences: ExperienceRow[];
   education: EducationRow[];
@@ -383,11 +386,12 @@ export function FoundationEditors({ ownerId, experiences, education, certificati
   releaseCounts: Record<string, number>;
   releaseCountUnavailable: boolean;
   locale: Locale;
+  openRecordId?: string;
 }) {
   return (
     <div className="space-y-5">
-      <FoundationSection title={t(locale, "profile.experience")} kind="experience" ownerId={ownerId} records={experiences} releaseCounts={releaseCounts} releaseCountUnavailable={releaseCountUnavailable} locale={locale} />
-      <FoundationSection title={t(locale, "profile.education")} kind="education" ownerId={ownerId} records={education} releaseCountUnavailable={false} locale={locale} />
+      <FoundationSection title={t(locale, "profile.experience")} kind="experience" ownerId={ownerId} records={experiences} releaseCounts={releaseCounts} releaseCountUnavailable={releaseCountUnavailable} locale={locale} openRecordId={openRecordId} />
+      <FoundationSection title={t(locale, "profile.education")} kind="education" ownerId={ownerId} records={education} releaseCountUnavailable={false} locale={locale} openRecordId={openRecordId} />
       <FoundationSection title={t(locale, "profile.certifications")} kind="certification" ownerId={ownerId} records={certifications} releaseCountUnavailable={false} locale={locale} />
       <FoundationSection title={t(locale, "profile.skills")} kind="skill" ownerId={ownerId} records={skills} releaseCountUnavailable={false} locale={locale} />
       <p className="text-sm text-[var(--wp-muted)]">{t(locale, "profile.skillNote")}</p>
