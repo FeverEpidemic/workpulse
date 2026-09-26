@@ -18,6 +18,7 @@ import type { ProjectDetail as ProjectDetailData, ProjectRelinkCandidatePage } f
 import { achievementDateLabel, achievementStatusLabel } from "@/domain/achievement/achievement-display";
 import { listAchievementRelinkCandidatesAction, relinkAchievementAction } from "@/features/achievement/actions";
 import { deleteProjectAction, listRelinkCandidatesAction, relinkActivityProjectAction } from "@/features/project/actions";
+import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 
@@ -289,12 +290,14 @@ function DeleteProjectForm({
   project,
   dependencyCount,
   achievementCount,
+  evidenceCount,
   returnTo,
 }: {
   locale: Locale;
   project: ProjectDetailData["project"];
   dependencyCount: number;
   achievementCount: number;
+  evidenceCount: number | null;
   returnTo: string;
 }) {
   const [state, action] = useActionState(deleteProjectAction, IDLE_ACTION_STATE);
@@ -308,7 +311,7 @@ function DeleteProjectForm({
       cancelLabel={t(locale, "common.cancel")}
       confirmLabel={t(locale, "common.delete")}
       formId={formId}
-      disabled={dependencyCount < 0}
+      disabled={dependencyCount < 0 || evidenceCount === null}
       successful={state.status === "success"}
     >
       <form id={formId} action={action} className="mt-4 space-y-3">
@@ -318,6 +321,7 @@ function DeleteProjectForm({
         <ul className="space-y-2 text-sm text-[var(--color-text-secondary)]">
           <li>{t(locale, "project.deleteRetained", { count: dependencyCount })}</li>
           <li>{t(locale, "project.deleteAchievementsRetained", { count: achievementCount })}</li>
+          <li>{evidenceCount === null ? t(locale, "evidence.directDeleteCountUnavailable") : t(locale, "evidence.directDeleteCount", { count: evidenceCount })}</li>
           <li>{t(locale, "project.deleteLinkCleaned")}</li>
           <li>{t(locale, "project.deleteExperienceRetained")}</li>
         </ul>
@@ -343,6 +347,7 @@ export function ProjectDetail({
   returnTo: string;
 }) {
   const { project, experience, activities, achievements, dependencyCount } = detail;
+  const [evidenceCount, setEvidenceCount] = useState<number | null>(null);
   const detailReturnTo = `/projects/${project.id}?${new URLSearchParams({ returnTo }).toString()}`;
   const projectActivityReturn = detailReturnTo;
   return (
@@ -370,8 +375,18 @@ export function ProjectDetail({
           </Link>
           <AttachDialog key={`${project.revision}:${dependencyCount}:${candidates.items.at(0)?.id ?? "none"}:${candidates.nextCursor ?? "end"}`} locale={locale} projectId={project.id} candidatePage={candidates} returnTo={detailReturnTo} />
           <AchievementAttachDialog key={`${project.revision}:${achievements.length}:${achievementCandidates.items.at(0)?.achievement.id ?? "none"}:${achievementCandidates.nextCursor ?? "end"}`} locale={locale} projectId={project.id} candidatePage={achievementCandidates} returnTo={detailReturnTo} />
-          <DeleteProjectForm locale={locale} project={project} dependencyCount={dependencyCount} achievementCount={achievements.length} returnTo={returnTo} />
+          <DeleteProjectForm locale={locale} project={project} dependencyCount={dependencyCount} achievementCount={achievements.length} evidenceCount={evidenceCount} returnTo={returnTo} />
         </div>
+      </Card>
+
+      <Card>
+        <EvidenceAttachments
+          locale={locale}
+          parentKind="project"
+          parentId={project.id}
+          expectedParentRevision={project.revision}
+          onItemCountChange={setEvidenceCount}
+        />
       </Card>
 
       <Card>

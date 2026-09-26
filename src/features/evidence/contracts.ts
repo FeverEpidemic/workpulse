@@ -30,6 +30,14 @@ export const ReserveEvidenceInputSchema = z
 
 export type ReserveEvidenceInput = z.infer<typeof ReserveEvidenceInputSchema>;
 
+export const MoveEvidenceInputSchema = z.object({
+  targetAchievementId: CanonicalUuidSchema,
+  expectedRevision: z.number().int().positive(),
+  expectedTargetRevision: z.number().int().positive(),
+}).strict();
+
+export type MoveEvidenceInput = z.infer<typeof MoveEvidenceInputSchema>;
+
 export interface EvidenceRecord {
   id: string;
   userId: string;

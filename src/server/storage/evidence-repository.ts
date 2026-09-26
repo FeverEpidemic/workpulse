@@ -7,6 +7,8 @@ import {
   EvidenceParentKindSchema,
   EvidenceStatusSchema,
   type EvidenceRecord,
+  type EvidenceParentKind,
+  type MoveEvidenceInput,
   type ReserveEvidenceInput,
 } from "@/features/evidence/contracts";
 import { EvidenceRepositoryError, type EvidenceRepositoryErrorCode } from "@/features/evidence/evidence-errors";
@@ -19,6 +21,8 @@ export interface EvidenceRpcClient {
 export interface EvidenceRepository {
   reserve(userId: string, input: ReserveEvidenceInput & { filename: string }): Promise<EvidenceRecord>;
   get(userId: string, evidenceId: string): Promise<EvidenceRecord | null>;
+  list(userId: string, parentKind: EvidenceParentKind, parentId: string): Promise<EvidenceRecord[]>;
+  moveToAchievement(userId: string, evidenceId: string, input: MoveEvidenceInput): Promise<EvidenceRecord | null>;
   finalize(input: {
     userId: string;
     evidenceId: string;
@@ -69,6 +73,7 @@ const SafeDatabaseErrors = new Set([
   "EVIDENCE_MIME_MISMATCH",
   "INVALID_EVIDENCE_HASH",
   "EVIDENCE_STATE_CONFLICT",
+  "EVIDENCE_MOVE_STATE_CONFLICT",
 ]);
 
 function safeDatabaseToken(error: unknown): EvidenceRepositoryErrorCode | null {
@@ -152,6 +157,21 @@ export class SupabaseEvidenceRepository implements EvidenceRepository {
     return firstRow(result.data);
   }
 
+  private async callAll(functionName: string, args: Record<string, unknown>): Promise<unknown[]> {
+    let result: { data: unknown; error: unknown };
+    try {
+      result = await this.client.rpc(functionName, args);
+    } catch {
+      throw new EvidenceRepositoryError("PROVIDER_UNAVAILABLE");
+    }
+    if (result.error) {
+      const token = safeDatabaseToken(result.error);
+      throw new EvidenceRepositoryError(token ?? "PROVIDER_UNAVAILABLE");
+    }
+    if (!Array.isArray(result.data)) throw new EvidenceRepositoryError("PROVIDER_UNAVAILABLE");
+    return result.data;
+  }
+
   async reserve(userId: string, input: ReserveEvidenceInput & { filename: string }): Promise<EvidenceRecord> {
     const row = await this.call("reserve_evidence_upload", {
       p_user_id: userId,
@@ -171,6 +191,26 @@ export class SupabaseEvidenceRepository implements EvidenceRepository {
     const row = await this.call("get_evidence_file", {
       p_user_id: userId,
       p_evidence_id: evidenceId,
+    });
+    return row === null ? null : toEvidenceRecord(row);
+  }
+
+  async list(userId: string, parentKind: EvidenceParentKind, parentId: string): Promise<EvidenceRecord[]> {
+    const rows = await this.callAll("list_evidence_files", {
+      p_user_id: userId,
+      p_parent_kind: parentKind,
+      p_parent_id: parentId,
+    });
+    return rows.map(toEvidenceRecord);
+  }
+
+  async moveToAchievement(userId: string, evidenceId: string, input: MoveEvidenceInput): Promise<EvidenceRecord | null> {
+    const row = await this.call("move_activity_evidence_to_achievement", {
+      p_user_id: userId,
+      p_evidence_id: evidenceId,
+      p_target_achievement_id: input.targetAchievementId,
+      p_expected_revision: input.expectedRevision,
+      p_expected_target_revision: input.expectedTargetRevision,
     });
     return row === null ? null : toEvidenceRecord(row);
   }

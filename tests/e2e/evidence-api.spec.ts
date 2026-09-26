@@ -21,6 +21,15 @@ test("authenticated evidence HTTP endpoints enforce quarantine, ownership and CS
     await owner.auth.signInWithPassword({ email, password });
     const project = await owner.rpc("create_project_idempotent", { p_operation_key: randomUUID(), p_title: "Evidence HTTP parent", p_description: null, p_user_role: null, p_outcome: null, p_status: "active", p_start_date: null, p_start_precision: null, p_end_date: null, p_end_precision: null, p_is_current: false, p_experience_id: null });
     if (project.error || !project.data?.[0]) throw new Error("Evidence HTTP parent fixture failed");
+    const activity = await owner.rpc("create_activity_idempotent", {
+      p_operation_key: randomUUID(), p_raw_text: "Evidence HTTP move source", p_occurred_on: "2026-09-26", p_capture_mode: "note",
+      p_role: null, p_scope: null, p_outcome: null, p_experience_id: null, p_project_id: null,
+    });
+    if (activity.error || !activity.data?.[0]) throw new Error("Evidence HTTP Activity fixture failed");
+    const achievement = await owner.rpc("create_achievement_idempotent", {
+      p_operation_key: randomUUID(), p_activity_id: activity.data[0].activity_id, p_project_id: null, p_experience_id: null,
+    });
+    if (achievement.error || !achievement.data?.[0]) throw new Error("Evidence HTTP Achievement fixture failed");
     await page.goto("/sign-in");
     await page.getByLabel("Email address").fill(email); await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click(); await expect(page).toHaveURL(/\/dashboard$/);
@@ -41,6 +50,44 @@ test("authenticated evidence HTTP endpoints enforce quarantine, ownership and CS
     const removal = await context.request.delete(`/api/evidence/${file.id}`, { headers, data: { expectedRevision: ready.revision } }); expect(removal.status()).toBe(200);
     expect((await context.request.post(`/api/evidence/${file.id}/download`, { headers })).status()).toBe(404);
     await drain();
+
+    const moveInput = { ...input, parentKind: "activity", parentId: activity.data[0].activity_id, filename: "move.pdf", idempotencyKey: randomUUID() };
+    const moveReserved = await context.request.post("/api/evidence", { headers, data: moveInput });
+    expect(moveReserved.status()).toBe(200);
+    const moveFile = await moveReserved.json();
+    const moveUploaded = await context.request.put(`/api/evidence/${moveFile.id}/upload`, {
+      headers: { ...headers, "content-type": "application/pdf", "x-expected-revision": String(moveFile.revision) }, data: payload,
+    });
+    expect(moveUploaded.status()).toBe(200);
+    await drain();
+    const activityList = await context.request.get(`/api/evidence?parentKind=activity&parentId=${activity.data[0].activity_id}`);
+    const activityListBody = await activityList.json();
+    expect(activityList.status(), JSON.stringify(activityListBody)).toBe(200);
+    const activityItems = activityListBody.items;
+    expect(activityItems).toHaveLength(1);
+    expect(activityItems[0]).toMatchObject({ id: moveFile.id, status: "ready" });
+    expect(activityItems[0].objectKey).toBeUndefined();
+
+    const moved = await context.request.post(`/api/evidence/${moveFile.id}/move`, {
+      headers,
+      data: { targetAchievementId: achievement.data[0].achievement_id, expectedRevision: activityItems[0].revision, expectedTargetRevision: 1 },
+    });
+    expect(moved.status()).toBe(200);
+    const movedBody = await moved.json();
+    expect(movedBody).toMatchObject({ id: moveFile.id, status: "ready" });
+    expect((await (await context.request.get(`/api/evidence?parentKind=activity&parentId=${activity.data[0].activity_id}`)).json()).items).toEqual([]);
+    const achievementList = await context.request.get(`/api/evidence?parentKind=achievement&parentId=${achievement.data[0].achievement_id}`);
+    expect((await achievementList.json()).items).toMatchObject([{ id: moveFile.id, status: "ready" }]);
+    const movedSigned = await context.request.post(`/api/evidence/${moveFile.id}/download`, { headers });
+    expect(movedSigned.status()).toBe(200);
+    const movedSignedBody = await movedSigned.json();
+    const movedDownload = await context.request.get(movedSignedBody.url);
+    expect(await movedDownload.body()).toEqual(payload);
+    const movedRemoval = await context.request.delete(`/api/evidence/${moveFile.id}`, { headers, data: { expectedRevision: movedBody.revision } });
+    expect(movedRemoval.status()).toBe(200);
+    await drain();
+    expect((await context.request.get(`/api/evidence/${moveFile.id}`)).status()).toBe(404);
+    expect([400, 404]).toContain((await context.request.get(movedSignedBody.url)).status());
   } finally {
     await owner.auth.signOut();
     const removed = await admin.auth.admin.deleteUser(id); if (removed.error) throw new Error("Evidence HTTP fixture cleanup failed");

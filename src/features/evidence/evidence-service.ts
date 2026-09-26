@@ -1,4 +1,4 @@
-import { ReserveEvidenceInputSchema, EVIDENCE_DOWNLOAD_TTL_SECONDS, type EvidenceRecord } from "./contracts";
+import { MoveEvidenceInputSchema, ReserveEvidenceInputSchema, EVIDENCE_DOWNLOAD_TTL_SECONDS, type EvidenceParentKind, type EvidenceRecord } from "./contracts";
 import { EvidenceError, toEvidenceError } from "./evidence-errors";
 import { EvidenceFileValidationError, inspectEvidenceBytes, readBoundedBody, sha256Hex } from "./file-inspection";
 import type { EvidenceRepository } from "@/server/storage/evidence-repository";
@@ -43,6 +43,32 @@ export function createEvidenceService(options: {
     async get(id: string) {
       try { return await file(await actor(), id); }
       catch (error) { throw toEvidenceError(error); }
+    },
+    async list(parentKind: EvidenceParentKind, parentId: string) {
+      try {
+        const userId = await actor();
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(parentId)) throw new EvidenceError("VALIDATION");
+        const records = await repository.list(userId, parentKind, parentId);
+        return records.map((record) => {
+          if (record.userId !== userId || record.parentKind !== parentKind || record.parentId !== parentId) {
+            throw new EvidenceError("PROVIDER_UNAVAILABLE");
+          }
+          return record;
+        });
+      } catch (error) { throw toEvidenceError(error); }
+    },
+    async moveToAchievement(id: string, input: unknown) {
+      try {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)) throw new EvidenceError("EVIDENCE_NOT_FOUND");
+        const parsed = MoveEvidenceInputSchema.safeParse(input);
+        if (!parsed.success) throw new EvidenceError("VALIDATION");
+        const userId = await actor();
+        const moved = await repository.moveToAchievement(userId, id, parsed.data);
+        if (!moved || moved.userId !== userId || moved.parentKind !== "achievement" || moved.parentId !== parsed.data.targetAchievementId) {
+          throw new EvidenceError("EVIDENCE_NOT_FOUND");
+        }
+        return moved;
+      } catch (error) { throw toEvidenceError(error); }
     },
     async upload(id: string, expectedRevision: number, contentType: string, body: ReadableStream<Uint8Array> | null) {
       try {

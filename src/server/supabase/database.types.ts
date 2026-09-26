@@ -1116,6 +1116,58 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_evidence_files: {
+        Args: { p_parent_id: string; p_parent_kind: string; p_user_id: string }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
+      move_activity_evidence_to_achievement: {
+        Args: {
+          p_evidence_id: string
+          p_expected_revision: number
+          p_expected_target_revision: number
+          p_target_achievement_id: string
+          p_user_id: string
+        }
+        Returns: {
+          actual_bytes: number
+          content_type: string
+          created_at: string
+          expected_bytes: number
+          failure_code: string
+          filename: string
+          id: string
+          object_key: string
+          parent_id: string
+          parent_kind: string
+          parent_revision: number
+          reservation_expires_at: string
+          revision: number
+          scan_job_id: string
+          sha256: string
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       reconcile_orphan_evidence_objects: {
         Args: { p_limit?: number; p_min_age_seconds?: number }
         Returns: {

@@ -13,6 +13,7 @@ import { formatActivityDate } from "@/domain/activity/activity-display";
 import type { AchievementContextOptions, AchievementDetail as AchievementDetailData } from "@/domain/achievement/contracts";
 import { deleteAchievementAction, relinkAchievementAction } from "@/features/achievement/actions";
 import { AchievementForm } from "@/features/achievement/achievement-form";
+import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
 
@@ -56,6 +57,7 @@ export function AchievementDetail({
   returnTo: string;
 }) {
   const { achievement, activity, skills } = detail;
+  const [evidenceCount, setEvidenceCount] = useState<number | null>(null);
   const [deleteState, deleteAction] = useActionState(deleteAchievementAction, IDLE_ACTION_STATE);
   const sourceChanged = Boolean(activity && achievement.source_activity_revision && activity.revision !== achievement.source_activity_revision);
   const detailReturn = `/achievements/${achievement.id}?${new URLSearchParams({ returnTo }).toString()}`;
@@ -77,6 +79,7 @@ export function AchievementDetail({
             cancelLabel={t(locale, "common.cancel")}
             confirmLabel={t(locale, "common.delete")}
             formId={`delete-achievement-${achievement.id}`}
+            disabled={evidenceCount === null}
             successful={deleteState.status === "success"}
           >
             <form id={`delete-achievement-${achievement.id}`} action={deleteAction} className="mt-4 space-y-3">
@@ -84,6 +87,7 @@ export function AchievementDetail({
               <input type="hidden" name="expected_revision" value={achievement.revision} />
               <input type="hidden" name="return_to" value={returnTo} />
               <p className="text-sm text-[var(--color-text-secondary)]">{t(locale, "achievement.deleteRetained")}</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">{evidenceCount === null ? t(locale, "evidence.directDeleteCountUnavailable") : t(locale, "evidence.directDeleteCount", { count: evidenceCount })}</p>
               <ActionFeedback state={deleteState} locale={locale} returnTo={returnTo} />
             </form>
           </NamedDeleteDialog>
@@ -111,6 +115,16 @@ export function AchievementDetail({
           {skills.length ? <span>{t(locale, "achievement.skills")}: {skills.map((skill) => `${skill.name} (${skill.demonstratedCount})`).join(", ")}</span> : null}
         </div>
         {!achievement.activity_id ? <RelinkForm locale={locale} detail={detail} options={contextOptions} /> : null}
+      </Card>
+
+      <Card>
+        <EvidenceAttachments
+          locale={locale}
+          parentKind="achievement"
+          parentId={achievement.id}
+          expectedParentRevision={achievement.revision}
+          onItemCountChange={setEvidenceCount}
+        />
       </Card>
 
       <AchievementForm locale={locale} ownerId={ownerId} contextOptions={contextOptions} returnTo={returnTo} achievement={achievement} detail={detail} />
