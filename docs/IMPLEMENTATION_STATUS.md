@@ -24,6 +24,9 @@ Tidak ada layanan, deployment, billing, atau resource production eksternal dibua
 lokal sementara dihentikan/dihapus setelah test; Supabase lokal aktif dipertahankan. Berikutnya:
 T12 Dashboard dan Timeline, dengan `missing evidence` berarti Achievement confirmed tanpa direct
 `ready` evidence; Activity/Project/pending/failed/deleting tidak dihitung.
+[Handoff T12 single-agent](verification/T12-implementation-plan.md) sudah tersedia untuk GPT-6 Luna
+(26 September 2026). T12 tetap **TODO**; hanya dokumen rencana yang ditambahkan, tanpa perubahan kode
+atau hasil test.
 
 Sinkronisasi checkpoint T11 ke Notion sudah dicoba setelah status lokal diperbarui, tetapi konektor
 menolak external write karena detail implementasi privat memerlukan otorisasi eksplisit pengguna.
