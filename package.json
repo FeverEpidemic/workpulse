@@ -24,6 +24,7 @@
     "test:integration:activity": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/activity-persistence.test.ts",
     "test:integration:projects": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/project-context.test.ts",
     "test:integration:achievements": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/achievement-lifecycle.test.ts",
+    "test:integration:dashboard": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/dashboard-timeline.test.ts",
     "test:integration:storage": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/private-storage.test.ts",
     "test:integration:evidence": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/evidence-backend.test.ts tests/integration/evidence-scanner-real.test.ts tests/integration/evidence-pipeline.test.ts",
     "build": "next build",
