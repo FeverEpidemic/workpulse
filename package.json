@@ -19,6 +19,7 @@
     "test:e2e:ui": "playwright test --config playwright.ui.config.ts tests/e2e/app-frame.spec.ts",
     "test:e2e:activity": "playwright test --config playwright.activity.config.ts tests/e2e/activity-ui.spec.ts",
     "test:e2e:projects": "playwright test --config playwright.projects.config.ts tests/e2e/projects-ui.spec.ts",
+    "test:e2e:dashboard": "playwright test --config playwright.dashboard.config.ts tests/e2e/dashboard-timeline.spec.ts",
     "test:e2e:achievements": "playwright test --config playwright.achievements.config.ts tests/e2e/achievements-ui.spec.ts",
     "test:e2e:evidence": "playwright test --config playwright.evidence.config.ts",
     "test:integration:activity": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/activity-persistence.test.ts",
