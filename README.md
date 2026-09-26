@@ -4,13 +4,15 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T09 done; T10 next.** T08 review remediation remains complete: completed Project dates are
-preserved, idempotent replay is ledger-first, cross-operation locks are ordered, and attach
-candidates use owner-scoped keyset pagination. Manual Achievements/Skills now cover standalone and
-Activity-derived records, explicit lifecycle review, source retention, skill labels, and Project
-attach/move/detach locally. Unit/static, active-stack and clean-disposable integration/database,
-production build, worker, Auth/UI, Achievement, Activity, and Project browser/Axe checks pass. Evidence,
-timeline, and CV destinations remain deferred to their feature tasks. See
+Status: **T01–T11 done locally; T12 (Dashboard and Timeline) next; Gate M2 open.** Auth/profile,
+app frame, Activity capture, Projects and context, manual Achievements/Skills, and Evidence are
+implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
+checks, real ClamAV screening through the durable worker (T10), and the attachment UI on Activity,
+Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
+named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
+Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
+production build checks pass locally; nothing is deployed. Dashboard, timeline, AI, import, and CV
+remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -50,12 +52,14 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:achievements` | Achievement lifecycle, derived race, skill counts, relink, and source retention against local Supabase |
 | `pnpm test:integration:activity` | Activity persistence, ownership, idempotency, revision conflicts, and pagination against local Supabase |
 | `pnpm test:integration:storage` | Private Storage access, signed download, and expiry checks (`tests/integration/private-storage.test.ts`) |
+| `pnpm test:integration:evidence` | Evidence reservation/quota, real scanner + Storage, and worker pipeline against local Supabase (scanner setup: [T10 runbook](docs/verification/T10-scanner-runbook.md)) |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
 | `pnpm test:e2e:ui` | Authenticated app-frame, theme, filter, keyboard, responsive, and Axe checks |
 | `pnpm test:e2e:activity` | Activity capture/list/detail/edit acceptance against local Supabase; fixtures are cleaned up |
 | `pnpm test:e2e:projects` | Project list/detail/create, linked Activity, delete retention, responsive, and Axe checks against local Supabase |
 | `pnpm test:e2e:achievements` | Manual Achievement lifecycle, Activity source handoff, responsive, and Axe checks against local Supabase |
+| `pnpm test:e2e:evidence` | Evidence API and attachment UI, plus Activity/Project/Achievement regression specs, against local Supabase |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -164,6 +168,15 @@ Projects, three statuses, partial dates, revision conflicts, Activity context pr
 relink/detach, dependency-aware deletion, and paginated candidate loading. The Docker-dependent
 active and disposable checks are recorded in
 [`docs/verification/T08-projects-context.md`](docs/verification/T08-projects-context.md).
+
+The T10/T11 Evidence checks use the same local stack plus a local ClamAV container described in the
+[T10 scanner runbook](docs/verification/T10-scanner-runbook.md). Evidence stays in private buckets,
+downloads use owner-authorized signed URLs of at most five minutes, and a file becomes `ready` only
+after real screening. The T11 lifecycle integration test (collection list, move, parent-delete
+counts) runs with
+`pnpm exec vitest run --config vitest.integration.config.ts --configLoader native tests/integration/evidence-lifecycle.test.ts`.
+Results are recorded in
+[`docs/verification/T11-evidence-ui-lifecycle.md`](docs/verification/T11-evidence-ui-lifecycle.md).
 
 Local signup and recovery emails are captured by Supabase's Mailpit at
 `http://127.0.0.1:54324`. The full auth/profile flow can be exercised with
