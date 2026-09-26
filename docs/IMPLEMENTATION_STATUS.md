@@ -30,9 +30,10 @@ Tidak ada resource, billing, migration, atau deployment eksternal yang dibuat. R
 diotorisasi. Project Supabase yang sudah ada tidak disentuh. Status DONE ini membuktikan kontrak dan
 operasi pada stack lokal nyata, bukan production readiness atau retention hosted. Sinkronisasi Notion
 untuk perubahan DONE ini tidak dilakukan karena pengguna melarang penggunaan layanan luar.
-Langkah berikutnya: T11 Evidence UI dan lifecycle pada environment lokal.
-[Plan T11 multi-agent](verification/T11-implementation-plan.md) siap dieksekusi oleh GPT-5.6 Sol
-dengan GPT-6 Luna sebagai Explorer dan Coder; status T11 tetap TODO sampai acceptance nyata lulus.
+Pada checkpoint T10, langkah berikutnya adalah T11 Evidence UI dan lifecycle pada environment lokal
+dan statusnya masih TODO. [Handoff T11 single-agent](verification/T11-implementation-plan.md)
+menggantikan plan multi-agent: satu GPT-6 Luna mengerjakan fase berurutan dan Claude melakukan gate
+review setelah Fase 5; checkpoint setelah Fase 2 bersifat opsional.
 Riwayat checkpoint sebelumnya di bawah dipertahankan.
 
 ## Remediasi review T09 — acceptance lokal — 25 September 2026
