@@ -3,7 +3,21 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 
 const wcagAaTags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"];
 
+// Axe samples computed colors, so a mid-flight transition (e.g. after a theme switch) yields
+// intermediate colors that are not design tokens. Settle finite animations; skip infinite ones.
+async function waitForFiniteAnimations(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    for (let round = 0; round < 5; round += 1) {
+      const pending = document.getAnimations().filter((animation) =>
+        animation.playState === "running" && Number.isFinite(animation.effect?.getComputedTiming().endTime ?? Infinity));
+      if (pending.length === 0) return;
+      await Promise.all(pending.map((animation) => animation.finished.catch(() => undefined)));
+    }
+  });
+}
+
 export async function expectNoWcagViolations(page: Page, testInfo: TestInfo, label: string): Promise<void> {
+  await waitForFiniteAnimations(page);
   const results = await new AxeBuilder({ page }).withTags(wcagAaTags).analyze();
   await testInfo.attach(`axe-${label}.json`, {
     body: JSON.stringify(results.violations, null, 2),

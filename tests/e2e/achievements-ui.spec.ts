@@ -253,8 +253,8 @@ test("Achievement conflict retry preserves each valid lifecycle action", async (
         await expectNoWcagViolations(page, testInfo, "achievement-conflict-mobile-light");
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.getByRole("button", { name: "Switch to dark theme", exact: true }).click();
-        await expect.poll(() => page.locator(".button-primary").first().evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(143, 175, 135)");
-        await expect.poll(() => page.locator(".button-primary").first().evaluate((element) => getComputedStyle(element).color)).toBe("rgb(17, 22, 19)");
+        await expect.poll(() => retry.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(143, 175, 135)");
+        await expect.poll(() => retry.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(17, 22, 19)");
         await expectNoWcagViolations(page, testInfo, "achievement-conflict-desktop-dark");
         await page.getByRole("button", { name: "Switch to light theme", exact: true }).click();
       }
