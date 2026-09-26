@@ -420,6 +420,8 @@ test("Dashboard and Timeline browser acceptance, accessibility, filters, and own
     const undatedGroup = page.locator(".timeline-year-group").filter({ has: page.getByRole("heading", { name: "Date not set", exact: true }) });
     await expect(undatedGroup.getByRole("link", { name: "Certificate", exact: true })).toBeVisible();
     await expect(undatedGroup.getByRole("link", { name: "Migration", exact: true })).toBeVisible();
+    const undatedProject = undatedGroup.locator(".timeline-event").filter({ has: page.getByRole("link", { name: "Migration", exact: true }) });
+    await expect(undatedProject.locator(".timeline-event-date")).toHaveText("Date not set");
     const partialYearProject = page.locator(".timeline-event").filter({ has: page.getByRole("link", { name: "Thesis prototype", exact: true }) });
     await expect(partialYearProject).toContainText("Started 2023");
     await expect(partialYearProject).not.toContainText("Jan 2023");
@@ -464,6 +466,8 @@ test("Dashboard and Timeline browser acceptance, accessibility, filters, and own
     await expect(page.getByText("T12 Foreign Project", { exact: true })).toBeVisible();
     await page.goto(`/timeline?project=${fixture.ids.projects.p1}`);
     await expect(page.getByText("No events match these filters.", { exact: true })).toBeVisible();
+    await expect(page.locator("#timeline-project-filter")).toHaveValue(fixture.ids.projects.p1);
+    await expect(page.locator("#timeline-project-filter option:checked")).toHaveText("Unavailable project");
     await expect(page.getByText("Platform revamp", { exact: true })).toHaveCount(0);
     await expect(page.getByText("C1 Project result", { exact: true })).toHaveCount(0);
 

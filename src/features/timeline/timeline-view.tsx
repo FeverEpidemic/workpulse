@@ -18,6 +18,7 @@ function eventDateLabel(event: TimelineEvent, locale: Locale): string {
   const notSet = t(locale, "timeline.dateNotSet");
   const present = t(locale, "timeline.present");
   if (event.type === "achievement" && event.anchor) return formatActivityDate(event.anchor.date, locale);
+  if (event.type === "project" && !event.start) return notSet;
 
   const range = formatProjectDateRange({
     start_date: event.start?.date ?? null,

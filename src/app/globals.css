@@ -1630,6 +1630,8 @@ a.dashboard-stat-card:hover,
   min-height: var(--touch-target-min);
   padding-block: var(--space-2);
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
   overflow-wrap: anywhere;
 }
 
@@ -1667,7 +1669,13 @@ a.dashboard-stat-card:hover,
 }
 
 .dashboard-skill-list {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.dashboard-skill-list > li {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dashboard-skill-chip {

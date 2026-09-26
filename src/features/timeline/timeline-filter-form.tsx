@@ -23,6 +23,8 @@ export function TimelineFilterForm({
   const router = useRouter();
   const [type, setType] = useState<TimelineEventType | "">(filters.type);
   const [project, setProject] = useState(filters.project);
+  // Keep a filtered-but-unlisted project visible so the select never shows "All projects" while a filter is active.
+  const unlistedProject = Boolean(filters.project) && !projectOptions.some((option) => option.id === filters.project);
 
   useEffect(() => {
     const syncWithAddress = () => {
@@ -61,10 +63,11 @@ export function TimelineFilterForm({
         {t(locale, "timeline.project")}
         <select id="timeline-project-filter" className="field-input mt-1" name="project" value={project} onChange={(event) => setProject(event.currentTarget.value)}>
           <option value="">{t(locale, "timeline.allProjects")}</option>
+          {unlistedProject ? <option value={filters.project}>{t(locale, "timeline.projectUnavailable")}</option> : null}
           {projectOptions.map((option) => <option key={option.id} value={option.id}>{option.title}</option>)}
         </select>
       </label>
-      <button className="button-primary timeline-apply" type="submit">{t(locale, "timeline.apply")}</button>
+      <button className="button-secondary timeline-apply" type="submit">{t(locale, "timeline.apply")}</button>
       {clearVisible ? <Link className="button-secondary timeline-clear" href={timelineListHref({ type: "", project: "" })}>{t(locale, "timeline.clear")}</Link> : null}
     </form>
   );
