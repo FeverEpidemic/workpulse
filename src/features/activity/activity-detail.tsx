@@ -15,6 +15,7 @@ import type { ActivityContextIssue } from "@/features/activity/activity-context-
 import { NamedDeleteDialog } from "@/components/ui/named-delete-dialog";
 import type { AchievementRow } from "@/domain/achievement/contracts";
 import { deleteActivityAction } from "@/features/activity/actions";
+import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
 import { t, type Locale } from "@/i18n/messages";
 import { useActionState } from "react";
@@ -44,7 +45,13 @@ export function ActivityDetailClient({
 }) {
   const [activity, setActivity] = useState(initialActivity);
   const [editing, setEditing] = useState(false);
+  // A router refresh (for example after an evidence revision conflict) can deliver a newer
+  // canonical Activity. Adopt it unless the user is editing, so local input is never replaced.
+  if (!editing && initialActivity.id === activity.id && initialActivity.revision > activity.revision) {
+    setActivity(initialActivity);
+  }
   const [saved, setSaved] = useState(false);
+  const [evidenceCount, setEvidenceCount] = useState<number | null>(null);
   const [deleteState, deleteAction] = useActionState(deleteActivityAction, IDLE_ACTION_STATE);
   const linkedAchievement = achievement ?? null;
   const context = resolveActivityContext(activity, options);
@@ -97,6 +104,7 @@ export function ActivityDetailClient({
             cancelLabel={t(locale, "common.cancel")}
             confirmLabel={t(locale, "common.delete")}
             formId={`delete-activity-${activity.id}`}
+            disabled={evidenceCount === null}
             successful={deleteState.status === "success"}
           >
             <form id={`delete-activity-${activity.id}`} action={deleteAction} className="mt-4 space-y-3">
@@ -106,6 +114,7 @@ export function ActivityDetailClient({
               <ul className="space-y-2 text-sm text-[var(--color-text-secondary)]">
                 <li>{t(locale, "activity.deleteChatRetained", { count: chatMessages.length })}</li>
                 <li>{t(locale, "activity.deleteAchievementRetained", { count: linkedAchievement ? 1 : 0 })}</li>
+                <li>{evidenceCount === null ? t(locale, "evidence.directDeleteCountUnavailable") : t(locale, "evidence.directDeleteCount", { count: evidenceCount })}</li>
                 <li>{t(locale, "activity.deleteSourceRetained")}</li>
               </ul>
               <ActionFeedback state={deleteState} locale={locale} returnTo={returnTo} />
@@ -154,6 +163,21 @@ export function ActivityDetailClient({
             {activity.outcome ? <p className="activity-detail-long-text"><strong>{t(locale, "activity.outcome")}:</strong> {activity.outcome}</p> : null}
           </section>
         ) : null}
+      </Card>
+
+      <Card>
+        <EvidenceAttachments
+          locale={locale}
+          parentKind="activity"
+          parentId={activity.id}
+          expectedParentRevision={activity.revision}
+          moveTarget={linkedAchievement?.activity_id === activity.id ? {
+            id: linkedAchievement.id,
+            revision: linkedAchievement.revision,
+            label: linkedAchievement.title ?? t(locale, "achievement.untitledDraft"),
+          } : null}
+          onItemCountChange={setEvidenceCount}
+        />
       </Card>
 
       <Card>

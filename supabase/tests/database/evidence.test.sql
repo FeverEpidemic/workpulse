@@ -53,5 +53,25 @@ values ('workpulse-private','b1000000-0000-4000-8000-000000000001/evidence/b1000
 create temp table t10_orphan as select * from reconcile_orphan_evidence_objects(3600,100);
 select ok(exists(select 1 from t10_orphan where object_key='b1000000-0000-4000-8000-000000000001/evidence/b1000000-0000-4000-8000-000000000098'),'Aged orphan queues durable deletion');
 select is((select count(*) from reconcile_orphan_evidence_objects(3600,100) where object_key='b1000000-0000-4000-8000-000000000001/evidence/b1000000-0000-4000-8000-000000000098'),0::bigint,'Repeated reconciliation does not duplicate active receipt');
+
+insert into public.activities (id,user_id,raw_text,occurred_on,capture_mode)
+values ('b1000000-0000-4000-8000-000000000031','b1000000-0000-4000-8000-000000000002','T11 source Activity','2026-09-25','note');
+insert into public.achievements (id,user_id,activity_id,origin,source_excerpt,source_activity_revision)
+values ('b1000000-0000-4000-8000-000000000041','b1000000-0000-4000-8000-000000000002','b1000000-0000-4000-8000-000000000031','activity','T11 source Activity',1);
+create temp table t11_activity_file as
+select * from reserve_evidence_upload('b1000000-0000-4000-8000-000000000002','activity','b1000000-0000-4000-8000-000000000031','activity.pdf','application/pdf',20,'b1000000-0000-4000-8000-000000000051',1);
+create temp table t11_achievement_file as
+select * from reserve_evidence_upload('b1000000-0000-4000-8000-000000000002','achievement','b1000000-0000-4000-8000-000000000041','achievement.pdf','application/pdf',20,'b1000000-0000-4000-8000-000000000052',1);
+select is((select count(*) from list_evidence_files('b1000000-0000-4000-8000-000000000002','activity','b1000000-0000-4000-8000-000000000031')),1::bigint,'T11 list returns the exact direct Activity children');
+select is((select count(*) from list_evidence_files('b1000000-0000-4000-8000-000000000001','activity','b1000000-0000-4000-8000-000000000031')),0::bigint,'T11 list hides a foreign owner parent');
+select is((select count(*) from list_evidence_files('b1000000-0000-4000-8000-000000000002','achievement','b1000000-0000-4000-8000-000000000041')),1::bigint,'T11 list returns the exact direct Achievement children');
+update public.evidence_files set status='deleting',reserved_until=null,error_code='PARENT_DELETED' where id=(select id from t11_activity_file);
+select is((select count(*) from list_evidence_files('b1000000-0000-4000-8000-000000000002','activity','b1000000-0000-4000-8000-000000000031')),1::bigint,'T11 list includes direct evidence in deleting state');
+delete from public.activities where id='b1000000-0000-4000-8000-000000000031';
+select is((select count(*) from public.evidence_files where id=(select id from t11_activity_file)),0::bigint,'Activity deletion removes canonical evidence');
+select ok(exists(select 1 from internal.storage_jobs where evidence_id=(select id from t11_activity_file) and status='queued'),'Activity deletion preserves an evidence cleanup receipt');
+delete from public.achievements where id='b1000000-0000-4000-8000-000000000041';
+select is((select count(*) from public.evidence_files where id=(select id from t11_achievement_file)),0::bigint,'Achievement deletion removes canonical evidence');
+select ok(exists(select 1 from internal.storage_jobs where evidence_id=(select id from t11_achievement_file) and status='queued'),'Achievement deletion preserves an evidence cleanup receipt');
 select * from finish();
 rollback;

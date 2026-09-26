@@ -1,5 +1,34 @@
 # WorkPulse Implementation Status
 
+## T11 — Evidence UI dan lifecycle, acceptance lokal — 26 September 2026
+
+Status authoritative T11: **DONE** — implementasi dan acceptance lokal selesai. Dependensi T05,
+T09, dan T10 tetap **DONE**; T12 menjadi task berikutnya dan Gate M2 tetap terbuka. Rujukan R07,
+F05, S06/S08/S10, Database Schema §4/§6. [Rencana](verification/T11-implementation-plan.md) dan
+[bukti aktual](verification/T11-evidence-ui-lifecycle.md).
+
+Selesai: collection list owner-scoped untuk direct evidence, move atomik `ready` Activity → derived
+Achievement yang sama, reusable attachment control pada tiga detail screen, upload/scanning/polling,
+retry reservation baru, authorized download, named remove, direct evidence count pada parent delete,
+id/en, keyboard/focus/ARIA, 360/1440 px light/dark, serta unit/PostgreSQL/Storage/ClamAV/browser
+acceptance. Project evidence tidak diwariskan atau dihitung sebagai direct Achievement evidence.
+
+Migration forward-only `20260926100000_t11_evidence_lifecycle.sql` diterapkan ke database lokal
+aktif tanpa reset; parity 20/20 dan generated types diperbarui. Checks akhir: unit 38 file/181 test,
+pgTAP 6 file/348 assertion, T11 PostgreSQL 5/5, evidence backend 7/7, real scanner/Storage 7/7,
+Evidence UI 1/1, authenticated Evidence API 1/1, Activity rerun 1/1, Achievement 3/3, Project 1/1,
+worker check, typecheck, lint, DB lint, production build, dan diff check lulus. Rincian kegagalan
+awal, rerun, warning, serta batas acceptance tercatat pada bukti T11.
+
+Tidak ada layanan, deployment, billing, atau resource production eksternal dibuat. Container ClamAV
+lokal sementara dihentikan/dihapus setelah test; Supabase lokal aktif dipertahankan. Berikutnya:
+T12 Dashboard dan Timeline, dengan `missing evidence` berarti Achievement confirmed tanpa direct
+`ready` evidence; Activity/Project/pending/failed/deleting tidak dihitung.
+
+Sinkronisasi checkpoint T11 ke Notion sudah dicoba setelah status lokal diperbarui, tetapi konektor
+menolak external write karena detail implementasi privat memerlukan otorisasi eksplisit pengguna.
+Tidak ada konten Notion yang berubah; status lokal ini tetap authoritative.
+
 ## T10 — backend evidence, acceptance lokal — 26 September 2026
 
 Status authoritative T10: **DONE** — implementasi dan acceptance lokal selesai. Atas instruksi
@@ -393,7 +422,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T08 | Projects dan context | DONE |
 | T09 | Manual achievements dan skills | DONE |
 | T10 | Evidence reservation dan screening | DONE |
-| T11 | Evidence UI dan lifecycle | TODO |
+| T11 | Evidence UI dan lifecycle | DONE |
 | T12 | Dashboard dan timeline | TODO |
 | T13 | AI jobs dan consent | TODO |
 | T14 | Detection dan review | TODO |

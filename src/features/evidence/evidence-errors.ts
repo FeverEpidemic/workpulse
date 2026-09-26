@@ -56,6 +56,7 @@ export type EvidenceRepositoryErrorCode =
   | "EVIDENCE_MIME_MISMATCH"
   | "INVALID_EVIDENCE_HASH"
   | "EVIDENCE_STATE_CONFLICT"
+  | "EVIDENCE_MOVE_STATE_CONFLICT"
   | "EVIDENCE_STORAGE_CONFLICT"
   | "PROVIDER_UNAVAILABLE";
 
@@ -83,6 +84,7 @@ export function toEvidenceError(error: unknown): EvidenceError {
       return new EvidenceError("IDEMPOTENCY_CONFLICT");
     case "STALE_REVISION":
     case "EVIDENCE_STATE_CONFLICT":
+    case "EVIDENCE_MOVE_STATE_CONFLICT":
       return new EvidenceError("CONFLICT");
     case "INVALID_EVIDENCE_SIZE":
       return new EvidenceError("FILE_SIZE_MISMATCH");
