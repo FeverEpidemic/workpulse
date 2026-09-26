@@ -6,7 +6,9 @@ Panduan ini berlaku untuk seluruh workspace WorkPulse. Gunakan instruksi penggun
 
 WorkPulse MVP v0.1 adalah workspace karier privat: pengguna mencatat aktivitas, meninjau dan mengonfirmasi pencapaian, memilih data ke satu master CV, lalu mengunduh PDF. Jalur manual harus tetap berfungsi tanpa AI.
 
-Saat panduan ini dibuat, workspace masih berisi dokumen perencanaan: belum ada aplikasi, manifest dependensi, lockfile, atau repository Git. Jangan menganggap struktur target, integrasi, maupun perintah build sudah tersedia. Periksa kondisi aktual setiap sesi; gunakan `IMPLEMENTATION_STATUS.md` sebagai checkpoint, bukan sebagai pengganti pemeriksaan kode.
+Workspace sudah berisi aplikasi Next.js, worker, schema Supabase, dan test suite di repository Git (`origin` GitHub, branch utama `main`). Per 26 September 2026, T01–T11 berstatus DONE secara lokal dan T12 (Dashboard dan Timeline) adalah task berikutnya; Gate M2 masih terbuka. Status ini hanya snapshot: periksa kondisi aktual setiap sesi dan gunakan `docs/IMPLEMENTATION_STATUS.md` sebagai checkpoint, bukan sebagai pengganti pemeriksaan kode. Keberhasilan lokal bukan bukti integrasi production.
+
+Dokumen proyek berada di `docs/`. `AGENTS.md` dan `Design.md` di root disalin juga ke `docs/`; jaga kedua salinan tetap identik saat mengubahnya.
 
 ## Acuan dan urutan membaca
 
@@ -42,7 +44,7 @@ Keputusan konflik yang sudah tercatat di §1 rencana menjadi acuan v0.1. Jika ad
 
 ## Arsitektur dan struktur target
 
-Baseline di bawah adalah rencana, bukan dependensi yang sudah terpasang. Pada T01, verifikasi kompatibilitas melalui dokumentasi resmi, pilih versi yang kompatibel, pin dependensi dan simpan satu lockfile sesuai package manager yang dipilih. Setelah bootstrap, ikuti manifest, lockfile, dan pola kode yang nyata.
+Bootstrap T01 sudah memilih dan mem-pin stack (lihat `docs/decisions/0001-foundation-stack.md`): Node.js 24.18 (`>=24.18.0 <25`), pnpm 11.19 dengan satu lockfile `pnpm-lock.yaml`, Next.js 16 + React 19, TypeScript 6 strict, Tailwind CSS 4, Zod 4, Supabase JS/SSR, lucide-react sebagai satu-satunya keluarga ikon, Vitest, Playwright + axe-core, dan Supabase CLI sebagai devDependency. Ikuti `package.json`, lockfile, keputusan di `docs/decisions/`, dan pola kode yang nyata; jangan menambah package manager atau lockfile lain. Perubahan versi dependensi memerlukan alasan dan verifikasi ulang.
 
 - Next.js App Router dengan TypeScript strict.
 - Supabase PostgreSQL, Auth, dan private Storage; schema melalui SQL migrations versioned.
@@ -68,7 +70,7 @@ docs/decisions/             keputusan teknis dan alasan
 docs/verification/          bukti acceptance
 ```
 
-Buat direktori/abstraksi ketika diperlukan task, bukan sebagai scaffolding spekulatif. Pisahkan aturan domain dari UI dan adapter. Simpan secret hanya pada konfigurasi server; `.env.example` berisi nama variabel dan placeholder, tanpa credential.
+Struktur di atas sebagian besar sudah ada (termasuk `src/components/{ui,forms,layout}`, `src/server/{auth,storage,supabase,locale,theme}`, dan `src/features/{activity,achievement,project,evidence,profile,auth}`); `tests/pdf/` dan domain CV/import/AI belum dibuat. Buat direktori/abstraksi ketika diperlukan task, bukan sebagai scaffolding spekulatif. Pisahkan aturan domain dari UI dan adapter. Simpan secret hanya pada konfigurasi server; `.env.example` berisi nama variabel dan placeholder, tanpa credential.
 
 ## Invariant data dan keamanan
 
@@ -128,12 +130,18 @@ Targetkan WCAG 2.2 AA: keyboard navigation, label yang jelas, focus management/r
 3. Terapkan perubahan terkecil yang lengkap. Pertahankan pekerjaan pengguna dan hindari refactor atau perubahan dokumen sumber di luar kebutuhan task.
 4. Jalankan checks yang relevan dan catat hasil aktual. Selesaikan pekerjaan lokal yang independen bila integrasi belum tersedia.
 5. Setelah task implementasi, perbarui `IMPLEMENTATION_STATUS.md`: task/tanggal/status, dependensi, scope selesai, file berubah, migration/keputusan, acceptance beserta bukti, perintah dan hasil, checks belum dijalankan beserta alasan, blocker, dan langkah berikutnya.
-6. Gunakan TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE sesuai status file. DONE membutuhkan bukti acceptance; scaffold atau mock bukan integrasi selesai. Jangan menandai T01 selesai hanya karena dokumen panduan dibuat.
+6. Gunakan TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE sesuai status file. DONE membutuhkan bukti acceptance; scaffold atau mock bukan integrasi selesai. Simpan rencana task di `docs/verification/Txx-implementation-plan.md` dan bukti acceptance di `docs/verification/`.
 7. Pada gate M1–M5, baca ulang acceptance terkait dan lakukan integration review sebelum lanjut. Deployment mengikuti environment dan otorisasi pengguna yang berlaku; keberhasilan lokal bukan bukti production live.
 
 ## Verifikasi
 
-Belum ada perintah aplikasi yang dapat dijalankan saat panduan ini dibuat. T01 harus menyediakan scripts `lint`, `typecheck`, `test`, dan `build`, serta dokumentasi menjalankan web/worker/database. Setelah tersedia, gunakan perintah dari manifest dan package manager lockfile; jangan mengklaim perintah asumsi sudah lulus.
+Gunakan scripts dari `package.json` melalui pnpm; `README.md` mendokumentasikan setup web/worker/database. Jangan mengklaim perintah sudah lulus tanpa menjalankannya.
+
+- Gate dasar: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, dan `pnpm worker:check`.
+- Database lokal (Docker + Supabase CLI): `pnpm db:start`, `pnpm db:test` (pgTAP di `supabase/tests/`), `pnpm db:lint`, dan `pnpm db:types` setelah migration. Migration bersifat forward-only; jangan `db:reset` database lokal aktif tanpa persetujuan pengguna.
+- Integration per domain: `pnpm test:integration:{activity,projects,achievements,storage,evidence}` terhadap Supabase lokal dengan `.env.local`.
+- E2E per domain: `pnpm test:e2e`, `pnpm test:e2e:{auth,ui,activity,projects,achievements,evidence}`; masing-masing memakai config `playwright.*.config.ts` sendiri dan membersihkan fixture akun test.
+- Scanner nyata untuk evidence mengikuti `docs/verification/T10-scanner-runbook.md`.
 
 - Unit: date intervals, metrics, normalization, confirmation, dan CV freshness.
 - Integration dengan PostgreSQL nyata: RLS dua akun, composite FK, atomic commit, revision locking, quota races, dan export/source mutation races.
