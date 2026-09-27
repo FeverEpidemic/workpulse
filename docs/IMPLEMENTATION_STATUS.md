@@ -1,5 +1,35 @@
 # WorkPulse Implementation Status
 
+## Gate M2 — integration review Capture dan penggunaan manual — 27 September 2026
+
+Verdict authoritative Gate M2: **PASSED** (acceptance lokal), ditetapkan Claude setelah verifikasi ulang
+independen. T06–T12 tetap **DONE**. Rujukan: kalimat Gate M2 di `IMPLEMENTATION_PLAN.md` §5, R03–R08,
+F02–F06, S04–S12. [Laporan gate](verification/M2-gate-review.md),
+[handoff](verification/M2-gate-review-plan.md), receipt [Fase 0](verification/M2-gate-phase0-baseline.md)–[5](verification/M2-gate-phase5-regression.md).
+
+Bukti baru: `tests/e2e/m2-manual-journey.spec.ts` (`pnpm test:e2e:m2`, port 3006). Satu graduate tanpa
+CV/employment menjalankan note → project → derived achievement confirm tanpa metrics/evidence → evidence
+privat `ready` lewat ClamAV nyata (download byte identik, URL ≤ 300 detik) → Dashboard → Timeline → deep
+link canonical, sebagian keyboard-only, tanpa AI, dengan isolasi akun B dan Axe/360 dark.
+`tests/integration/m2-cross-domain.test.ts` (`pnpm test:integration:m2`) berisi 8 skenario sebelum/sesudah
+(delete activity/project/experience, relink, reopen, move/delete evidence, isolasi dua akun) dan mengasersi
+count Dashboard = row filter link di setiap snapshot.
+
+Temuan: satu **P1 (F1)**, yaitu create Achievement kedua di tab yang sama ditolak `IDEMPOTENCY_KEY_REUSED`
+setelah create derived. Sudah diperbaiki di `107b32c` dengan key create di-scope per sumber, plus regresi di
+`achievements-ui.spec.ts`. Tidak ada P0/P2. Follow-up P3 (F1-a, G1 script `evidence-lifecycle`, G4, C1–C3,
+N1–N2, dan P3 bawaan T12) tercatat di laporan §4. Juga di-commit atas persetujuan pengguna:
+`845375c` (Axe menunggu animasi finite; flaky T12 tidak muncul lagi).
+
+Checks akhir (Fase 5 dan verifikasi ulang Fase 7): lint, typecheck, unit 44/203, pgTAP 7/386, DB lint,
+parity 21/21 (tanpa migration baru, tanpa reset), integration activity 6, projects 7, achievements 5,
+storage 1, evidence 14 (ClamAV 1.5.4/28135), evidence-lifecycle 5, dashboard 4, m2 8; E2E auth 1, ui 1,
+activity 1, projects 1, achievements 4, dashboard 1, evidence 8, m2 1; worker check, build, diff check.
+`SUPABASE_SECRET_KEY` hanya di env proses. Container ClamAV dihentikan/dihapus setelah Fase 7.
+
+Batas: hanya lokal (Supabase Docker, Storage, ClamAV, worker sekali jalan). Tidak ada deployment atau
+layanan eksternal. Berikutnya: **T13 Durable AI jobs dan consent**.
+
 ## T12 — Dashboard dan Timeline, acceptance lokal — 26 September 2026
 
 Status authoritative T12: **DONE** — implementasi dan acceptance lokal selesai setelah gate review

@@ -12,7 +12,27 @@
 
 ## Verdict
 
-**Belum ditetapkan pada Fase 6.** Diisi Claude pada Fase 7 setelah verifikasi ulang independen.
+**Gate M2: PASSED** — ditetapkan Claude pada 27 September 2026 (Fase 7), untuk acceptance lokal.
+
+Dasar keputusan: kedelapan kriteria §1 PASS (tabel §2), dan tidak ada temuan P0–P2 yang terbuka.
+Satu-satunya P1 (F1) diperbaiki dengan test regresi. Verifikasi ulang independen pada `02f86ec`:
+
+| Command | Exit | Hasil |
+| --- | --- | --- |
+| Diff `107b32c` dibaca ulang | — | Perubahan satu baris logika di `achievement-form.tsx` (scope key create per sumber), tanpa perubahan kontrak/schema |
+| `pnpm lint` / `pnpm typecheck` | 0 / 0 | bersih |
+| `pnpm test` | 0 | 203/203 |
+| `pnpm worker:check` | 0 | `ready` |
+| `pnpm test:integration:m2` | 0 | 8/8 |
+| `pnpm test:e2e:achievements` (suite yang disentuh fix) | 0 | 4/4 |
+| `pnpm test:e2e:m2` (ClamAV nyata) | 0 | 1/1 |
+| `pnpm build` | 0 | berhasil |
+| `git diff --check` | 0 | bersih |
+
+Setelah verifikasi, container `workpulse-t10-clamav` dihentikan dan dihapus (`docker stop` + `docker rm -v`).
+Stack Supabase tetap aktif. Verdict ini hanya berlaku untuk environment lokal (§8), bukan kesiapan
+production. Langkah berikutnya adalah **T13 Durable AI jobs dan consent**. Follow-up P3 pada §4 tidak
+memblokir T13.
 
 ## 1. Ringkasan
 
