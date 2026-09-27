@@ -213,6 +213,87 @@ export type Database = {
           },
         ]
       }
+      ai_jobs: {
+        Row: {
+          activity_id: string
+          attempt_count: number
+          attempt_token: string | null
+          consent_version: string
+          created_at: string
+          error_code: string | null
+          finished_at: string | null
+          id: string
+          idempotency_key: string
+          input_revision: number
+          kind: string
+          lease_expires_at: string | null
+          payload_hash: string
+          result: Json | null
+          revision: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          attempt_count?: number
+          attempt_token?: string | null
+          consent_version: string
+          created_at?: string
+          error_code?: string | null
+          finished_at?: string | null
+          id?: string
+          idempotency_key: string
+          input_revision: number
+          kind: string
+          lease_expires_at?: string | null
+          payload_hash: string
+          result?: Json | null
+          revision?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          attempt_count?: number
+          attempt_token?: string | null
+          consent_version?: string
+          created_at?: string
+          error_code?: string | null
+          finished_at?: string | null
+          id?: string
+          idempotency_key?: string
+          input_revision?: number
+          kind?: string
+          lease_expires_at?: string | null
+          payload_hash?: string
+          result?: Json | null
+          revision?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_user_activity_fkey"
+            columns: ["user_id", "activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certifications: {
         Row: {
           created_at: string
@@ -702,6 +783,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_ai_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          id: string
+          input_revision: number
+          kind: string
+          user_id: string
+        }[]
+      }
       claim_evidence_cleanup_jobs: {
         Args: { p_limit?: number }
         Returns: {
@@ -738,6 +830,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      complete_ai_job: {
+        Args: { p_attempt_token: string; p_job_id: string; p_result: Json }
+        Returns: string
       }
       complete_evidence_cleanup_job: {
         Args: { p_attempt_token: string; p_job_id: string }
@@ -1026,7 +1122,16 @@ export type Database = {
         Args: { p_expected_revision: number; p_skill_id: string }
         Returns: string
       }
+      expire_ai_job_leases: { Args: never; Returns: number }
       expire_evidence_uploads: { Args: { p_limit?: number }; Returns: number }
+      fail_ai_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+        }
+        Returns: boolean
+      }
       fail_evidence_cleanup_job: {
         Args: {
           p_attempt_token: string
@@ -1148,6 +1253,17 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_ai_job_input: {
+        Args: { p_attempt_token: string; p_job_id: string }
+        Returns: {
+          input_revision: number
+          locale: string
+          outcome: string
+          raw_text: string
+          role: string
+          scope: string
         }[]
       }
       get_dashboard_summary: {
@@ -1315,6 +1431,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      request_ai_analysis: {
+        Args: { p_activity_id: string; p_expected_revision: number }
+        Returns: {
+          attempt_count: number
+          error_code: string
+          input_revision: number
+          job_id: string
+          status: string
+        }[]
+      }
       requeue_failed_evidence_cleanup_job: {
         Args: { p_job_id: string; p_next_attempt_at?: string }
         Returns: boolean
@@ -1349,6 +1475,16 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      retry_ai_job: {
+        Args: { p_job_id: string }
+        Returns: {
+          attempt_count: number
+          error_code: string
+          input_revision: number
+          job_id: string
+          status: string
         }[]
       }
       retry_evidence_cleanup_job: {
@@ -1404,6 +1540,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      set_ai_consent: {
+        Args: { p_consented: boolean; p_expected_revision: number }
+        Returns: {
+          ai_consent_at: string
+          ai_consent_version: string
+          revision: number
+        }[]
       }
       update_activity: {
         Args: {
