@@ -22,6 +22,7 @@
     "test:e2e:dashboard": "playwright test --config playwright.dashboard.config.ts tests/e2e/dashboard-timeline.spec.ts",
     "test:e2e:achievements": "playwright test --config playwright.achievements.config.ts tests/e2e/achievements-ui.spec.ts",
     "test:e2e:evidence": "playwright test --config playwright.evidence.config.ts",
+    "test:e2e:m2": "playwright test --config playwright.m2.config.ts tests/e2e/m2-manual-journey.spec.ts",
     "test:integration:activity": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/activity-persistence.test.ts",
     "test:integration:projects": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/project-context.test.ts",
     "test:integration:achievements": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/achievement-lifecycle.test.ts",
