@@ -3,13 +3,22 @@ import * as z from "zod";
 import { decodeAchievementCursor } from "@/domain/achievement/achievement-cursor";
 import { ACHIEVEMENT_STATUSES, type AchievementStatus } from "@/domain/achievement/contracts";
 
-export const achievementFilterKeys = ["status", "project"] as const;
+export const achievementFilterKeys = ["status", "project", "evidence", "skill"] as const;
 export type AchievementFilterKey = (typeof achievementFilterKeys)[number];
 
 export interface AchievementFilters {
   status: AchievementStatus | "";
   project: string;
+  evidence: "missing" | "";
+  skill: string;
 }
+
+export const EMPTY_ACHIEVEMENT_FILTERS: AchievementFilters = {
+  status: "",
+  project: "",
+  evidence: "",
+  skill: "",
+};
 
 export interface AchievementQueryState {
   filters: AchievementFilters;
@@ -40,12 +49,18 @@ export function readAchievementQuery(input: SearchInput): AchievementQueryState 
   const params = paramsFor(input);
   const statusValue = singleValue(params, "status");
   const projectValue = singleValue(params, "project");
+  const evidenceValue = singleValue(params, "evidence");
+  const skillValue = singleValue(params, "skill");
   const cursorValue = singleValue(params, "cursor");
   const errors: AchievementQueryState["errors"] = {};
   const status = statusValue.value.trim();
   const project = projectValue.value.trim();
+  const evidence = evidenceValue.value.trim();
+  const skill = skillValue.value.trim();
   if (statusValue.duplicate || (status && !ACHIEVEMENT_STATUSES.includes(status as AchievementStatus))) errors.status = "invalid";
   if (projectValue.duplicate || (project && !z.uuid().safeParse(project).success)) errors.project = "invalid";
+  if (evidenceValue.duplicate || (evidence && evidence !== "missing")) errors.evidence = "invalid";
+  if (skillValue.duplicate || (skill && !z.uuid().safeParse(skill).success)) errors.skill = "invalid";
   let cursor = cursorValue.value;
   if (cursorValue.duplicate) {
     errors.cursor = "invalid";
@@ -57,6 +72,8 @@ export function readAchievementQuery(input: SearchInput): AchievementQueryState 
     filters: {
       status: errors.status ? "" : (status as AchievementStatus | ""),
       project: errors.project ? "" : project,
+      evidence: errors.evidence ? "" : (evidence as "missing" | ""),
+      skill: errors.skill ? "" : skill,
     },
     cursor,
     errors,
@@ -68,8 +85,9 @@ export function achievementListHref(filters: AchievementFilters, cursor?: string
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.project) params.set("project", filters.project);
+  if (filters.evidence) params.set("evidence", filters.evidence);
+  if (filters.skill) params.set("skill", filters.skill);
   if (cursor) params.set("cursor", cursor);
   const query = params.toString();
   return query ? `/achievements?${query}` : "/achievements";
 }
-

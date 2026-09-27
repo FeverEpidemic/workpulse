@@ -1063,6 +1063,63 @@ export type Database = {
           user_id: string
         }[]
       }
+      filter_achievements: {
+        Args: { p_missing_ready_evidence?: boolean; p_skill_id?: string }
+        Returns: {
+          achieved_on: string | null
+          activity_id: string | null
+          contribution: string | null
+          created_at: string
+          cv_bullet: string | null
+          experience_id: string | null
+          id: string
+          metrics: Json
+          origin: string
+          outcome: string | null
+          project_id: string | null
+          revision: number
+          scope: string | null
+          source_activity_revision: number | null
+          source_excerpt: string | null
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "achievements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      filter_projects: {
+        Args: { p_outcome_missing?: boolean }
+        Returns: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          end_precision: string | null
+          experience_id: string | null
+          id: string
+          is_current: boolean
+          outcome: string | null
+          revision: number
+          start_date: string | null
+          start_precision: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          user_role: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       finalize_evidence_upload: {
         Args: {
           p_actual_bytes: number
@@ -1093,6 +1150,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_dashboard_summary: {
+        Args: never
+        Returns: {
+          active_project_count: number
+          completed_missing_outcome_count: number
+          confirmed_achievement_count: number
+          demonstrated_skill_count: number
+          has_career_records: boolean
+          missing_evidence_count: number
+        }[]
+      }
       get_evidence_file: {
         Args: { p_evidence_id: string; p_user_id: string }
         Returns: {
@@ -1114,6 +1182,14 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      list_demonstrated_skills: {
+        Args: { p_limit?: number }
+        Returns: {
+          confirmed_achievement_count: number
+          name: string
+          skill_id: string
         }[]
       }
       list_evidence_files: {

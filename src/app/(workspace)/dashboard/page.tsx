@@ -1,24 +1,35 @@
-import { redirect } from "next/navigation";
-
-import { Card } from "@/components/ui/card";
 import { OnboardingDraftCleanup } from "@/features/profile/onboarding-draft-cleanup";
-import { getRequestContext, getRequestLocale } from "@/server/auth/context";
-import { t } from "@/i18n/messages";
+import { DashboardIssue } from "@/features/dashboard/dashboard-issue";
+import { DashboardHeader, DashboardView } from "@/features/dashboard/dashboard-view";
+import { DashboardServiceError, createDashboardService } from "@/features/dashboard/dashboard-service";
+import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
 
 export default async function DashboardPage() {
-  const [context, locale] = await Promise.all([getRequestContext(), getRequestLocale()]);
-  if (!context.user) redirect("/sign-in?returnTo=%2Fdashboard");
-  if (!context.profile) redirect("/sign-in?notice=serviceUnavailable");
-  if (!context.profile.onboarding_completed_at) redirect("/onboarding/import");
+  const { context, profile, locale } = await requireCompletedWorkspace("/dashboard");
+  let dashboard;
+  let issue: DashboardServiceError | null = null;
+  try {
+    dashboard = await createDashboardService(context.client!).getDashboard();
+  } catch (error) {
+    issue = error instanceof DashboardServiceError ? error : new DashboardServiceError("UNAVAILABLE");
+  }
 
   return (
-    <section className="space-y-6" aria-labelledby="dashboard-title">
-      <OnboardingDraftCleanup ownerId={context.profile.id} />
-      <Card className="max-w-3xl space-y-3" aria-labelledby="dashboard-title">
-        <p className="text-sm font-semibold text-[var(--color-action-primary)]">{context.profile.display_name}</p>
-        <h1 id="dashboard-title" className="text-3xl font-semibold tracking-tight">{t(locale, "dashboard.title")}</h1>
-        <p className="text-[var(--color-text-secondary)]">{t(locale, "dashboard.description")}</p>
-      </Card>
+    <section className="dashboard-page-shell" aria-labelledby="dashboard-title">
+      <OnboardingDraftCleanup ownerId={profile.id} />
+      {dashboard ? <DashboardView data={dashboard} displayName={profile.display_name} locale={locale} /> : (
+        <div className="dashboard-page">
+          <DashboardHeader displayName={profile.display_name} locale={locale} />
+          <DashboardIssue
+            locale={locale}
+            titleKey="dashboard.unavailableTitle"
+            messageKey={issue?.messageKey ?? "error.unavailable"}
+            correlationId={issue?.correlationId}
+            retryHref="/dashboard"
+            signInReturnTo={issue?.code === "UNAUTHENTICATED" ? "/dashboard" : undefined}
+          />
+        </div>
+      )}
     </section>
   );
 }

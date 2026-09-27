@@ -19,11 +19,13 @@ export async function ProfileWorkspace({
   profile,
   userEmail,
   locale,
+  openRecordId,
 }: {
   client: ServerClient;
   profile: ProfileRow;
   userEmail: string;
   locale: Locale;
+  openRecordId?: string;
 }) {
   const [experienceResult, educationResult, certificationResult, skillResult, projectResult] = await Promise.all([
     client.from("experiences").select("*").eq("user_id", profile.id).order("start_date", { ascending: false, nullsFirst: false }),
@@ -70,6 +72,7 @@ export async function ProfileWorkspace({
             education={(educationResult.data ?? []) as EducationRow[]}
             certifications={(certificationResult.data ?? []) as CertificationRow[]}
             skills={(skillResult.data ?? []) as SkillRow[]}
+            openRecordId={openRecordId}
             releaseCounts={releaseCounts}
             releaseCountUnavailable={releaseCountUnavailable}
             locale={locale}

@@ -6,7 +6,7 @@ Panduan ini berlaku untuk seluruh workspace WorkPulse. Gunakan instruksi penggun
 
 WorkPulse MVP v0.1 adalah workspace karier privat: pengguna mencatat aktivitas, meninjau dan mengonfirmasi pencapaian, memilih data ke satu master CV, lalu mengunduh PDF. Jalur manual harus tetap berfungsi tanpa AI.
 
-Workspace sudah berisi aplikasi Next.js, worker, schema Supabase, dan test suite di repository Git (`origin` GitHub, branch utama `main`). Per 26 September 2026, T01–T11 berstatus DONE secara lokal dan T12 (Dashboard dan Timeline) adalah task berikutnya; Gate M2 masih terbuka. Status ini hanya snapshot: periksa kondisi aktual setiap sesi dan gunakan `docs/IMPLEMENTATION_STATUS.md` sebagai checkpoint, bukan sebagai pengganti pemeriksaan kode. Keberhasilan lokal bukan bukti integrasi production.
+Workspace sudah berisi aplikasi Next.js, worker, schema Supabase, dan test suite di repository Git (`origin` GitHub, branch utama `main`). Per 27 September 2026, T01–T12 berstatus DONE secara lokal dan Gate M2 berstatus PASSED (acceptance lokal, `docs/verification/M2-gate-review.md`); langkah berikutnya adalah T13 (AI jobs dan consent). Status ini hanya snapshot: periksa kondisi aktual setiap sesi dan gunakan `docs/IMPLEMENTATION_STATUS.md` sebagai checkpoint, bukan sebagai pengganti pemeriksaan kode. Keberhasilan lokal bukan bukti integrasi production.
 
 Dokumen proyek berada di `docs/`. `AGENTS.md` dan `Design.md` di root disalin juga ke `docs/`; jaga kedua salinan tetap identik saat mengubahnya.
 

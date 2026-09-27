@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { achievementListHref, readAchievementQuery } from "@/domain/routes/achievement-filters";
+import { achievementListHref, readAchievementQuery, type AchievementFilters } from "@/domain/routes/achievement-filters";
 import type { AchievementListPage } from "@/domain/achievement/contracts";
 import { AchievementList } from "@/features/achievement/achievement-list";
 import { AchievementPageIssue } from "@/features/achievement/achievement-page-issue";
@@ -13,7 +13,7 @@ type AchievementsPageProps = { searchParams: Promise<Record<string, string | str
 export default async function AchievementsPage({ searchParams }: AchievementsPageProps) {
   const query = readAchievementQuery(await searchParams);
   const returnTo = achievementListHref(query.filters, query.errors.cursor ? undefined : query.cursor || undefined);
-  const { context, locale } = await requireCompletedWorkspace(returnTo);
+  const { context, locale, user } = await requireCompletedWorkspace(returnTo);
   return (
     <section className="space-y-6">
       <header className="workspace-page-header flex flex-wrap items-end justify-between gap-4">
@@ -22,22 +22,35 @@ export default async function AchievementsPage({ searchParams }: AchievementsPag
       </header>
       {!query.isValid ? (
         <p className="ui-message ui-message--warning" role="alert">{query.errors.cursor ? t(locale, "achievement.invalidCursor") : t(locale, "achievement.invalidFilters")} <Link className="font-semibold underline underline-offset-4" href="/achievements">{t(locale, "achievement.clearFilters")}</Link></p>
-      ) : !context.client ? <AchievementPageIssue locale={locale} retryHref={returnTo} signInReturnTo={returnTo} /> : <AchievementResults locale={locale} client={context.client} query={query} returnTo={returnTo} />}
+      ) : !context.client ? <AchievementPageIssue locale={locale} retryHref={returnTo} signInReturnTo={returnTo} /> : <AchievementResults locale={locale} client={context.client} actorId={user.id} query={query} returnTo={returnTo} />}
     </section>
   );
 }
 
-function StatusNav({ locale, active, project }: { locale: Locale; active: string; project: string }) {
+function StatusNav({ locale, filters }: { locale: Locale; filters: AchievementFilters }) {
   const tabs = [{ value: "", label: t(locale, "achievement.all") }, { value: "draft", label: t(locale, "achievement.draft") }, { value: "confirmed", label: t(locale, "achievement.confirmed") }, { value: "dismissed", label: t(locale, "achievement.dismissed") }];
-  return <nav className="project-filter-tabs" aria-label={t(locale, "achievement.filters")}>{tabs.map((tab) => { const href = achievementListHref({ status: tab.value as "" | "draft" | "confirmed" | "dismissed", project }, null); return <Link key={tab.value || "all"} className={active === tab.value ? "is-selected" : ""} href={href} aria-current={active === tab.value ? "page" : undefined}>{tab.label}</Link>; })}</nav>;
+  return <nav className="project-filter-tabs" aria-label={t(locale, "achievement.filters")}>{tabs.map((tab) => { const href = achievementListHref({ ...filters, status: tab.value as AchievementFilters["status"] }, null); return <Link key={tab.value || "all"} className={filters.status === tab.value ? "is-selected" : ""} href={href} aria-current={filters.status === tab.value ? "page" : undefined}>{tab.label}</Link>; })}</nav>;
 }
 
-async function AchievementResults({ locale, client, query, returnTo }: { locale: Locale; client: NonNullable<Awaited<ReturnType<typeof requireCompletedWorkspace>>["context"]["client"]>; query: ReturnType<typeof readAchievementQuery>; returnTo: string }) {
-  let result: { page?: AchievementListPage; projects?: { id: string; title: string }[]; error?: unknown };
+async function AchievementResults({ locale, client, actorId, query, returnTo }: { locale: Locale; client: NonNullable<Awaited<ReturnType<typeof requireCompletedWorkspace>>["context"]["client"]>; actorId: string; query: ReturnType<typeof readAchievementQuery>; returnTo: string }) {
+  let result: { page?: AchievementListPage; projects?: { id: string; title: string }[]; skillName?: string | null; error?: unknown };
   try {
     const service = createAchievementService(client);
-    const [page, options] = await Promise.all([service.listAchievements({ status: query.filters.status || undefined, projectId: query.filters.project || undefined, cursor: query.cursor || undefined }), service.listContextOptions()]);
-    result = { page, projects: options.projects };
+    const [page, options, skillResult] = await Promise.all([
+      service.listAchievements({
+        status: query.filters.status || undefined,
+        projectId: query.filters.project || undefined,
+        skillId: query.filters.skill || undefined,
+        missingEvidence: query.filters.evidence === "missing" ? true : undefined,
+        cursor: query.cursor || undefined,
+      }),
+      service.listContextOptions(),
+      query.filters.skill
+        ? client.from("skills").select("id, name").eq("user_id", actorId).eq("id", query.filters.skill).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+    if (skillResult.error) throw new AchievementServiceError("UNAVAILABLE");
+    result = { page, projects: options.projects, skillName: skillResult.data?.name ?? null };
   } catch (error) {
     result = { error };
   }
@@ -45,5 +58,6 @@ async function AchievementResults({ locale, client, query, returnTo }: { locale:
     const error = result.error instanceof AchievementServiceError ? result.error : null;
     return <AchievementPageIssue locale={locale} messageKey={error?.messageKey} correlationId={error?.correlationId} retryHref={returnTo} signInReturnTo={error?.code === "UNAUTHENTICATED" ? returnTo : undefined} />;
   }
-  return <><StatusNav locale={locale} active={query.filters.status} project={query.filters.project} /><form method="get" action="/achievements" className="workspace-filter-form"><label className="field-label" htmlFor="achievement-filter-project">{t(locale, "achievement.project")}<select id="achievement-filter-project" name="project" defaultValue={query.filters.project} className="field-input"><option value="">{t(locale, "achievement.projectPlaceholder")}</option>{(result.projects ?? []).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label><input type="hidden" name="status" value={query.filters.status} /><button className="button-secondary" type="submit">{t(locale, "activity.applyFilters")}</button></form><AchievementList items={result.page?.items ?? []} filters={query.filters} returnTo={returnTo} nextCursor={result.page?.nextCursor ?? null} hasCursor={Boolean(query.cursor)} locale={locale} /></>;
+  const clearHref = achievementListHref({ ...query.filters, evidence: "", skill: "" });
+  return <><StatusNav locale={locale} filters={query.filters} />{query.filters.evidence || query.filters.skill ? <p className="field-help" role="status">{query.filters.evidence ? <span>{t(locale, "achievement.filterMissingEvidence")}</span> : null}{query.filters.evidence && query.filters.skill ? " · " : null}{query.filters.skill ? <span>{t(locale, "achievement.filterSkill", { name: result.skillName ?? t(locale, "achievement.skillGeneric") })}</span> : null} <Link className="font-semibold underline underline-offset-4" href={clearHref}>{t(locale, "achievement.clearFilters")}</Link></p> : null}<form method="get" action="/achievements" className="workspace-filter-form"><label className="field-label" htmlFor="achievement-filter-project">{t(locale, "achievement.project")}<select id="achievement-filter-project" name="project" defaultValue={query.filters.project} className="field-input"><option value="">{t(locale, "achievement.projectPlaceholder")}</option>{(result.projects ?? []).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label><input type="hidden" name="status" value={query.filters.status} />{query.filters.evidence ? <input type="hidden" name="evidence" value={query.filters.evidence} /> : null}{query.filters.skill ? <input type="hidden" name="skill" value={query.filters.skill} /> : null}<button className="button-secondary" type="submit">{t(locale, "activity.applyFilters")}</button></form><AchievementList items={result.page?.items ?? []} filters={query.filters} returnTo={returnTo} nextCursor={result.page?.nextCursor ?? null} hasCursor={Boolean(query.cursor)} locale={locale} /></>;
 }

@@ -382,12 +382,10 @@ export function createProjectService(client: ProjectClient) {
         if (!parsed.success) throw validationError(parsed.error);
         const actorId = await requireActorId();
         const value: ProjectListFilters = parsed.data;
-        let query = client
-          .from("projects")
-          .select("*")
-          .eq("user_id", actorId)
-          .order("updated_at", { ascending: false })
-          .order("id", { ascending: false });
+        let query = value.outcomeMissing
+          ? client.rpc("filter_projects", { p_outcome_missing: true }).select("*").eq("user_id", actorId)
+          : client.from("projects").select("*").eq("user_id", actorId);
+        query = query.order("updated_at", { ascending: false }).order("id", { ascending: false });
         if (value.status) query = query.eq("status", value.status);
         if (value.cursor) {
           let cursor: ProjectCursor;

@@ -11,7 +11,7 @@ const cursor = encodeProjectCursor({
 describe("Project list filters", () => {
   it("accepts only the status and cursor query contract", () => {
     expect(readProjectQuery({ status: "active", cursor })).toEqual({
-      filters: { status: "active" },
+      filters: { status: "active", outcome: "" },
       cursor,
       errors: {},
       isValid: true,
@@ -22,7 +22,14 @@ describe("Project list filters", () => {
   });
 
   it("serializes a stable list URL and drops the cursor when the filter changes", () => {
-    expect(projectListHref({ status: "active" }, cursor)).toBe(`/projects?status=active&cursor=${cursor}`);
-    expect(projectListHref({ status: "completed" })).toBe("/projects?status=completed");
+    expect(projectListHref({ status: "active", outcome: "" }, cursor)).toBe(`/projects?status=active&cursor=${cursor}`);
+    expect(projectListHref({ status: "completed", outcome: "missing" })).toBe("/projects?status=completed&outcome=missing");
+  });
+
+  it("accepts only the missing outcome value and marks duplicate or invalid filters", () => {
+    expect(readProjectQuery({ outcome: "missing" }).filters.outcome).toBe("missing");
+    expect(readProjectQuery({ outcome: "x" }).errors.outcome).toBe("invalid");
+    expect(readProjectQuery({ outcome: ["missing", "missing"] }).errors.outcome).toBe("invalid");
+    expect(readProjectQuery({ outcome: "missing", unknown: "1" }).errors.unknown).toBe(true);
   });
 });

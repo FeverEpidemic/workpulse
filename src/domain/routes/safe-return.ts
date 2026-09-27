@@ -23,9 +23,10 @@ const APP_PATHS = [
 
 const QUERY_KEYS: Record<string, ReadonlySet<string>> = {
   "/activity": new Set(["from", "to", "project", "cursor"]),
-  "/achievements": new Set(["status", "project", "cursor"]),
-  "/projects": new Set(["status", "cursor"]),
-  "/settings/profile": new Set(["mode"]),
+  "/achievements": new Set(["status", "project", "evidence", "skill", "cursor"]),
+  "/projects": new Set(["status", "outcome", "cursor"]),
+  "/timeline": new Set(["type", "project"]),
+  "/settings/profile": new Set(["mode", "record"]),
 };
 
 type RouteKind =
@@ -124,6 +125,7 @@ function canonicalizeReturnTo(value: string | null | undefined, nestedLayers = 0
       return null;
     }
     if (key === "mode" && queryValue !== "onboarding") return null;
+    if (key === "record" && !z.uuid().safeParse(queryValue).success) return null;
     if ((key === "activity" || key === "project") && kind === "achievement-create") {
       sourceCount += 1;
       if (!z.uuid().safeParse(queryValue).success) return null;
@@ -156,6 +158,8 @@ function canonicalizeReturnTo(value: string | null | undefined, nestedLayers = 0
   if (url.pathname === "/projects") {
     const status = safeQuery.get("status");
     if (status && !["planned", "active", "completed"].includes(status)) return null;
+    const outcome = safeQuery.get("outcome");
+    if (outcome && outcome !== "missing") return null;
     const cursor = safeQuery.get("cursor");
     if (cursor) {
       try { decodeProjectCursor(cursor); } catch { return null; }
@@ -167,10 +171,21 @@ function canonicalizeReturnTo(value: string | null | undefined, nestedLayers = 0
     if (status && !["draft", "confirmed", "dismissed"].includes(status)) return null;
     const project = safeQuery.get("project");
     if (project && !z.uuid().safeParse(project).success) return null;
+    const evidence = safeQuery.get("evidence");
+    if (evidence && evidence !== "missing") return null;
+    const skill = safeQuery.get("skill");
+    if (skill && !z.uuid().safeParse(skill).success) return null;
     const cursor = safeQuery.get("cursor");
     if (cursor) {
       try { decodeAchievementCursor(cursor); } catch { return null; }
     }
+  }
+
+  if (url.pathname === "/timeline") {
+    const type = safeQuery.get("type");
+    if (type && !["experience", "education", "project", "achievement"].includes(type)) return null;
+    const project = safeQuery.get("project");
+    if (project && !z.uuid().safeParse(project).success) return null;
   }
 
   const query = safeQuery.toString();

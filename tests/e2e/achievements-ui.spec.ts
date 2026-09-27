@@ -196,6 +196,48 @@ test("Achievement create links resume after sign-in with source context and safe
   }
 });
 
+test("a second Achievement create in the same tab uses a fresh operation key and keeps its Project context", async ({ page }) => {
+  // Gate M2 finding F1: after creating a derived Achievement, creating another Achievement from a
+  // Project in the same browser tab must not replay the previous create key.
+  test.setTimeout(240_000);
+  const values = config();
+  const admin = client(values.url, values.secretKey);
+  const publicClient = client(values.url, values.publicKey);
+  const user = await createUser(admin);
+  try {
+    const signInResult = await publicClient.auth.signInWithPassword({ email: user.email, password: user.password });
+    if (signInResult.error) throw new Error("Local Achievement create-key fixture sign-in failed.");
+    const activityId = await createActivity(publicClient, "Create-key derived source");
+    const projectId = await createProject(publicClient, "Create-key Project source");
+    await signIn(page, user);
+
+    await page.goto(`/activity/${activityId}`);
+    await page.getByRole("link", { name: "Create Achievement", exact: true }).click();
+    await expect(page).toHaveURL(/\/achievements\/new\?/);
+    await page.waitForLoadState("networkidle");
+    const firstKey = await page.locator('#achievement-create-form input[name="operation_key"]').inputValue();
+    expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+    await page.getByRole("button", { name: "New Achievement", exact: true }).click();
+    await expect(page).toHaveURL(/\/achievements\/[0-9a-f-]{36}\?/i);
+
+    await page.goto(`/projects/${projectId}`);
+    await page.getByRole("link", { name: "Create Achievement", exact: true }).click();
+    await expect(page).toHaveURL(/\/achievements\/new\?/);
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator('#achievement-create-form input[name="project_id"]')).toHaveValue(projectId);
+    const secondKey = await page.locator('#achievement-create-form input[name="operation_key"]').inputValue();
+    expect(secondKey, "a completed create must not leave its key for the next create").not.toBe(firstKey);
+    await page.getByRole("button", { name: "New Achievement", exact: true }).click();
+    await expect(page).toHaveURL(/\/achievements\/[0-9a-f-]{36}\?/i);
+    await expect(page.locator(".achievement-detail-context")).toContainText("Project: Create-key Project source");
+    const linked = await publicClient.from("achievements").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("project_id", projectId);
+    expect(linked.count).toBe(1);
+  } finally {
+    await publicClient.auth.signOut();
+    await admin.auth.admin.deleteUser(user.id);
+  }
+});
+
 test("Achievement conflict retry preserves each valid lifecycle action", async ({ page }, testInfo: TestInfo) => {
   test.setTimeout(360_000);
   const values = config();
@@ -253,8 +295,8 @@ test("Achievement conflict retry preserves each valid lifecycle action", async (
         await expectNoWcagViolations(page, testInfo, "achievement-conflict-mobile-light");
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.getByRole("button", { name: "Switch to dark theme", exact: true }).click();
-        await expect.poll(() => page.locator(".button-primary").first().evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(143, 175, 135)");
-        await expect.poll(() => page.locator(".button-primary").first().evaluate((element) => getComputedStyle(element).color)).toBe("rgb(17, 22, 19)");
+        await expect.poll(() => retry.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(143, 175, 135)");
+        await expect.poll(() => retry.evaluate((element) => getComputedStyle(element).color)).toBe("rgb(17, 22, 19)");
         await expectNoWcagViolations(page, testInfo, "achievement-conflict-desktop-dark");
         await page.getByRole("button", { name: "Switch to light theme", exact: true }).click();
       }

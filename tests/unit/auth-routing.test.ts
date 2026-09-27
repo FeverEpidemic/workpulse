@@ -27,6 +27,19 @@ describe("safe internal return routes", () => {
     expect(sanitizeProjectReturnTo("/projects?status=completed&cursor=" + encodeURIComponent("bad"))).toBe("/projects");
   });
 
+  it("allows only valid T12 filters and profile record links", () => {
+    const id = "70d2c57c-46e8-4cda-9b3b-c47f342099da";
+    expect(sanitizeReturnTo(`/achievements?status=confirmed&evidence=missing&skill=${id}`)).toBe(
+      `/achievements?status=confirmed&evidence=missing&skill=${id}`,
+    );
+    expect(sanitizeReturnTo("/achievements?status=confirmed&evidence=all")).toBe("/dashboard");
+    expect(sanitizeReturnTo("/projects?status=completed&outcome=missing")).toBe("/projects?status=completed&outcome=missing");
+    expect(sanitizeReturnTo(`/timeline?type=project&project=${id}`)).toBe(`/timeline?type=project&project=${id}`);
+    expect(sanitizeReturnTo("/timeline?type=streak")).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/settings/profile?record=${id}`)).toBe(`/settings/profile?record=${id}`);
+    expect(sanitizeReturnTo("/settings/profile?record=not-a-uuid")).toBe("/dashboard");
+  });
+
   it("preserves Achievement create context only when the source query is unambiguous", () => {
     const id = "70d2c57c-46e8-4cda-9b3b-c47f342099da";
     const activityCreate = `/achievements/new?${new URLSearchParams({ activity: id, returnTo: "/activity?from=2026-09-01" }).toString()}`;

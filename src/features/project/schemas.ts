@@ -94,6 +94,7 @@ export const projectUpdateSchema = z.object({
 
 export const projectListFilterSchema = z.object({
   status: z.enum(PROJECT_STATUSES).optional(),
+  outcomeMissing: z.literal(true).optional(),
   cursor: z.string().optional().refine((value) => {
     if (value === undefined) return true;
     try {

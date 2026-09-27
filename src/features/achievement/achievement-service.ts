@@ -324,8 +324,13 @@ export function createAchievementService(client: AchievementClient) {
         const parsed = achievementListFilterSchema.safeParse(filters);
         if (!parsed.success) throw validationError(parsed.error);
         const actorId = await requireActorId();
-        let query = client.from("achievements").select("*").eq("user_id", actorId)
-          .order("achieved_on", { ascending: false, nullsFirst: false })
+        let query = parsed.data.skillId || parsed.data.missingEvidence
+          ? client.rpc("filter_achievements", {
+            p_skill_id: parsed.data.skillId,
+            p_missing_ready_evidence: parsed.data.missingEvidence ?? false,
+          }).select("*").eq("user_id", actorId)
+          : client.from("achievements").select("*").eq("user_id", actorId);
+        query = query.order("achieved_on", { ascending: false, nullsFirst: false })
           .order("id", { ascending: false });
         if (parsed.data.status) query = query.eq("status", parsed.data.status);
         if (parsed.data.projectId) query = query.eq("project_id", parsed.data.projectId);

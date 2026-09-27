@@ -22,7 +22,7 @@ export function AchievementList({
   hasCursor: boolean;
   locale: Locale;
 }) {
-  const hasFilters = Boolean(filters.status || filters.project || hasCursor);
+  const hasFilters = Boolean(filters.status || filters.project || filters.evidence || filters.skill || hasCursor);
   if (items.length === 0) {
     return hasFilters ? (
       <EmptyState title={t(locale, "achievement.noMatchTitle")} description={t(locale, "achievement.noMatchDescription")} action={{ href: "/achievements", label: t(locale, "achievement.clearFilters") }} />

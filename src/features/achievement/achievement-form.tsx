@@ -51,7 +51,12 @@ export function AchievementForm({
   const [state, formAction, isPending] = useActionState(isEditing ? saveAchievementAction : createAchievementAction, IDLE_ACTION_STATE);
   const { formRef, onInputCapture, onChangeCapture } = useSessionDraft(formKey, ownerId, state);
   const unsaved = useUnsavedForm(formId, state);
-  const operationKey = useCreateOperationKey(ownerId, isEditing ? null : "achievement-create", state);
+  // Scope the create key to its source. A derived create can finish through the create page's
+  // server redirect to the existing Achievement, so its success state never reaches this form to
+  // rotate the key; a shared slot would then replay that key for an unrelated create.
+  const createKeyScope = activityId ? `achievement-create:activity:${activityId}`
+    : initialProjectId ? `achievement-create:project:${initialProjectId}` : "achievement-create";
+  const operationKey = useCreateOperationKey(ownerId, isEditing ? null : createKeyScope, state);
   const router = useRouter();
   const [projectId, setProjectId] = useState(initialProjectId || achievement?.project_id || "");
   const [experienceId, setExperienceId] = useState(initialExperienceId || achievement?.experience_id || "");
