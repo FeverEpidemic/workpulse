@@ -53,8 +53,8 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:activity` | Activity persistence, ownership, idempotency, revision conflicts, and pagination against local Supabase |
 | `pnpm test:integration:storage` | Private Storage access, signed download, and expiry checks (`tests/integration/private-storage.test.ts`) |
 | `pnpm test:integration:evidence` | Evidence reservation/quota, real scanner + Storage, and worker pipeline against local Supabase (scanner setup: [T10 runbook](docs/verification/T10-scanner-runbook.md)) |
-| `pnpm test:integration:ai` | AI jobs, consent, lease/stale/attempt guards, worker process log hygiene, and the OpenAI adapter against a local stub (no network) |
-| `pnpm test:ai:live` | Opt-in live OpenAI smoke with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
+| `pnpm test:integration:ai` | AI jobs, consent, lease/stale/attempt guards, worker process log hygiene, and the OpenAI-compatible adapter (Chat Completions and Responses) against a local stub (no network) |
+| `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
 | `pnpm test:e2e:ui` | Authenticated app-frame, theme, filter, keyboard, responsive, and Axe checks |
@@ -111,7 +111,8 @@ real scanner checks, recovery, and the separate staging acceptance gate.
 T13 adds the `ai-detect` handler to the same loop. PostgreSQL owns AI claims, 120-second
 leases, attempt tokens and the three-attempt limit; consent, account state and the activity
 revision are rechecked before text is released and before a result is stored. Provider
-settings live in `.env.ai.local` (see `.env.example`); the default mode is `unavailable`, and
+settings (OpenAI-compatible base URL, key, model, API style) live in `.env.ai.local` (see
+`.env.example`); the default mode is `unavailable`, and
 the worker prints only counts and error codes, never note text, provider output or keys.
 
 ## Local database (Supabase)

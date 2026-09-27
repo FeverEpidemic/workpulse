@@ -7,10 +7,19 @@ import type { AIProvider, AIProviderResult } from "./provider.ts";
 export const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const MAX_OUTPUT_TOKENS = 4_000;
 
+export const OPENAI_API_STYLES = ["chat_completions", "responses"] as const;
+export type OpenAIApiStyle = (typeof OPENAI_API_STYLES)[number];
+export const STRUCTURED_OUTPUT_MODES = ["json_schema", "json_object"] as const;
+export type StructuredOutputMode = (typeof STRUCTURED_OUTPUT_MODES)[number];
+
 export interface OpenAIProviderOptions {
   apiKey: string;
   model: string;
   baseUrl?: string;
+  /** Chat Completions is the widest OpenAI-compatible surface; Responses is OpenAI's newer API. */
+  api?: OpenAIApiStyle;
+  /** json_schema = strict Structured Outputs; json_object = JSON mode with the schema in the prompt. */
+  structuredOutput?: StructuredOutputMode;
   reasoningEffort?: "none" | "low" | "medium";
   fetch?: typeof fetch;
 }
@@ -32,6 +41,23 @@ function isAbort(error: unknown): boolean {
   return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
 }
 
+/** Some compatible models wrap JSON mode output in a Markdown fence; accept only that exact wrapper. */
+function parseJsonText(text: string): { ok: true; value: unknown } | { ok: false } {
+  const fenced = text.trim().match(/^```(?:json)?\s*\n([\s\S]*)\n```$/);
+  try {
+    return { ok: true, value: JSON.parse(fenced ? fenced[1]! : text) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+function okResult(output: unknown, model: unknown, inputTokens: unknown, outputTokens: unknown): AIProviderResult {
+  const usage = typeof inputTokens === "number" && typeof outputTokens === "number"
+    ? { inputTokens, outputTokens }
+    : undefined;
+  return { status: "ok", output, model: typeof model === "string" ? model : "unknown", ...(usage ? { usage } : {}) };
+}
+
 /** Extracts the structured output from a Responses API body without echoing it anywhere. */
 export function readResponsesOutput(body: unknown): AIProviderResult {
   if (!isObject(body)) return { status: "error", code: "AI_OUTPUT_INVALID" };
@@ -47,57 +73,102 @@ export function readResponsesOutput(body: unknown): AIProviderResult {
       if (!isObject(content)) continue;
       if (content.type === "refusal") return { status: "error", code: "AI_REFUSED" };
       if (content.type === "output_text" && typeof content.text === "string") {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(content.text);
-        } catch {
-          return { status: "error", code: "AI_OUTPUT_INVALID" };
-        }
-        const usage = isObject(body.usage)
-          && typeof body.usage.input_tokens === "number"
-          && typeof body.usage.output_tokens === "number"
-          ? { inputTokens: body.usage.input_tokens, outputTokens: body.usage.output_tokens }
-          : undefined;
-        return {
-          status: "ok",
-          output: parsed,
-          model: typeof body.model === "string" ? body.model : "unknown",
-          ...(usage ? { usage } : {}),
-        };
+        const parsed = parseJsonText(content.text);
+        if (!parsed.ok) return { status: "error", code: "AI_OUTPUT_INVALID" };
+        const usage = isObject(body.usage) ? body.usage : {};
+        return okResult(parsed.value, body.model, usage.input_tokens, usage.output_tokens);
       }
     }
   }
   return { status: "error", code: "AI_OUTPUT_INVALID" };
 }
 
+/** Extracts the structured output from a Chat Completions body without echoing it anywhere. */
+export function readChatCompletionOutput(body: unknown): AIProviderResult {
+  if (!isObject(body) || !Array.isArray(body.choices)) return { status: "error", code: "AI_OUTPUT_INVALID" };
+  const choice = body.choices[0];
+  if (!isObject(choice) || !isObject(choice.message)) return { status: "error", code: "AI_OUTPUT_INVALID" };
+  if (choice.finish_reason === "content_filter") return { status: "error", code: "AI_REFUSED" };
+  if (typeof choice.message.refusal === "string" && choice.message.refusal.trim() !== "") {
+    return { status: "error", code: "AI_REFUSED" };
+  }
+  if (choice.finish_reason === "length") return { status: "error", code: "AI_OUTPUT_INVALID" };
+  if (typeof choice.message.content !== "string") return { status: "error", code: "AI_OUTPUT_INVALID" };
+  const parsed = parseJsonText(choice.message.content);
+  if (!parsed.ok) return { status: "error", code: "AI_OUTPUT_INVALID" };
+  const usage = isObject(body.usage) ? body.usage : {};
+  return okResult(parsed.value, body.model, usage.prompt_tokens, usage.completion_tokens);
+}
+
+function instructionsFor(mode: StructuredOutputMode): string {
+  if (mode === "json_schema") return DETECT_INSTRUCTIONS;
+  return `${DETECT_INSTRUCTIONS}\n\nRespond with exactly one JSON object and nothing else (no Markdown). `
+    + `It must validate against this JSON Schema:\n${JSON.stringify(detectResultJsonSchema)}`;
+}
+
 /**
- * OpenAI Responses API adapter using fetch directly (no SDK). Requests use strict
- * Structured Outputs and store=false. The API key only ever appears in the
- * Authorization header; errors carry codes, never bodies or input text.
+ * OpenAI and OpenAI-compatible adapter using fetch directly (no SDK). The base URL selects
+ * the processor; the API key only ever appears in the Authorization header, and errors
+ * carry stable codes, never response bodies or input text. store=false is sent where the
+ * official OpenAI API defines it; other processors apply their own retention policy.
  */
 export class OpenAIProvider implements AIProvider {
   readonly kind = "openai" as const;
   private readonly options: OpenAIProviderOptions;
-  private readonly endpoint: string;
+  private readonly baseUrl: string;
+  private readonly api: OpenAIApiStyle;
+  private readonly structuredOutput: StructuredOutputMode;
   private readonly fetchImpl: typeof fetch;
 
   constructor(options: OpenAIProviderOptions) {
     this.options = options;
-    this.endpoint = `${(options.baseUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, "")}/responses`;
+    this.baseUrl = (options.baseUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.api = options.api ?? "chat_completions";
+    this.structuredOutput = options.structuredOutput ?? "json_schema";
     this.fetchImpl = options.fetch ?? fetch;
   }
 
+  private get isOfficialOpenAI(): boolean {
+    try {
+      return new URL(this.baseUrl).hostname === "api.openai.com";
+    } catch {
+      return false;
+    }
+  }
+
+  get endpoint(): string {
+    return `${this.baseUrl}/${this.api === "responses" ? "responses" : "chat/completions"}`;
+  }
+
   requestBody(input: DetectInput): JsonObject {
+    const instructions = instructionsFor(this.structuredOutput);
+    const userContent = JSON.stringify(input);
+    if (this.api === "responses") {
+      return {
+        model: this.options.model,
+        instructions,
+        input: userContent,
+        reasoning: { effort: this.options.reasoningEffort ?? "low" },
+        text: {
+          format: this.structuredOutput === "json_schema"
+            ? { type: "json_schema", name: "detect_v1", strict: true, schema: detectResultJsonSchema }
+            : { type: "json_object" },
+        },
+        store: false,
+        max_output_tokens: MAX_OUTPUT_TOKENS,
+      };
+    }
     return {
       model: this.options.model,
-      instructions: DETECT_INSTRUCTIONS,
-      input: JSON.stringify(input),
-      reasoning: { effort: this.options.reasoningEffort ?? "low" },
-      text: {
-        format: { type: "json_schema", name: "detect_v1", strict: true, schema: detectResultJsonSchema },
-      },
-      store: false,
-      max_output_tokens: MAX_OUTPUT_TOKENS,
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: userContent },
+      ],
+      response_format: this.structuredOutput === "json_schema"
+        ? { type: "json_schema", json_schema: { name: "detect_v1", strict: true, schema: detectResultJsonSchema } }
+        : { type: "json_object" },
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
+      ...(this.isOfficialOpenAI ? { store: false } : {}),
     };
   }
 
@@ -128,6 +199,6 @@ export class OpenAIProvider implements AIProvider {
     } catch (error) {
       return { status: "error", code: isAbort(error) || signal.aborted ? "AI_PROVIDER_TIMEOUT" : "AI_OUTPUT_INVALID" };
     }
-    return readResponsesOutput(body);
+    return this.api === "responses" ? readResponsesOutput(body) : readChatCompletionOutput(body);
   }
 }

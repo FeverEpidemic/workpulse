@@ -293,8 +293,8 @@ describe("T13 durable AI jobs and consent against local PostgreSQL", () => {
     expect((await activityRow(ownerA, activity.activityId)).analysis_state).toBe("failed");
   });
 
-  it("9. the real OpenAI adapter maps stub responses through the worker", async () => {
-    const provider = new OpenAIProvider({ apiKey: FAKE_KEY, model: "gpt-6-luna", baseUrl: stub.baseUrl });
+  it.each(["chat_completions", "responses"] as const)("9. the real OpenAI-compatible adapter (%s) maps stub responses through the worker", async (api) => {
+    const provider = new OpenAIProvider({ apiKey: FAKE_KEY, model: "gpt-6-luna", baseUrl: stub.baseUrl, api });
     const cases: Array<[Parameters<OpenAIStub["setMode"]>[0], string, number?]> = [
       ["valid", "succeeded"],
       ["rate_limited", "AI_RATE_LIMITED"],
@@ -303,18 +303,28 @@ describe("T13 durable AI jobs and consent against local PostgreSQL", () => {
     ];
     for (const [mode, expected, timeoutMs] of cases) {
       stub.setMode(mode, "WP-PRIVATE-SENTINEL-stub");
-      const activity = await note(ownerA, `Stub case ${mode}: shipped 1 release`);
+      const activity = await note(ownerA, `Stub case ${api} ${mode}: shipped 1 release`);
       const receipt = await ownerA.jobs.requestAnalysis({ activityId: activity.activityId, expectedRevision: 1 });
       await drain(provider, timeoutMs);
       const job = await jobRow(receipt.jobId);
       if (expected === "succeeded") expect(job.status).toBe("succeeded");
       else expect(job).toMatchObject({ status: "failed", error_code: expected });
     }
+    stub.setMode("valid");
     const last = stub.requests.at(-1)!;
-    expect(last.path).toBe("/v1/responses");
     expect(last.authorization).toBe(`Bearer ${FAKE_KEY}`);
-    expect(last.body).toMatchObject({ store: false, model: "gpt-6-luna" });
-    expect(Object.keys(JSON.parse(String(last.body.input))).sort()).toEqual(["locale", "outcome", "raw_text", "role", "scope"]);
+    expect(last.body).toMatchObject({ model: "gpt-6-luna" });
+    if (api === "chat_completions") {
+      expect(last.path).toBe("/v1/chat/completions");
+      // A compatible (non-OpenAI) endpoint receives no official-only fields.
+      expect(last.body).not.toHaveProperty("store");
+      const messages = last.body.messages as Array<{ role: string; content: string }>;
+      expect(Object.keys(JSON.parse(messages[1]!.content)).sort()).toEqual(["locale", "outcome", "raw_text", "role", "scope"]);
+    } else {
+      expect(last.path).toBe("/v1/responses");
+      expect(last.body).toMatchObject({ store: false });
+      expect(Object.keys(JSON.parse(String(last.body.input))).sort()).toEqual(["locale", "outcome", "raw_text", "role", "scope"]);
+    }
   });
 
   it("10. an unavailable provider fails the job and an explicit retry succeeds later", async () => {

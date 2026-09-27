@@ -9,7 +9,7 @@ export interface OpenAIStubRequest {
   body: Record<string, unknown>;
 }
 
-/** Local stand-in for POST /v1/responses so the real adapter runs without a network call. */
+/** Local stand-in for POST /v1/chat/completions and /v1/responses so the real adapter runs without a network call. */
 export interface OpenAIStub {
   baseUrl: string;
   requests: OpenAIStubRequest[];
@@ -41,12 +41,19 @@ export async function startOpenAIStub(): Promise<OpenAIStub> {
       response.writeHead(status, { "content-type": "application/json" });
       response.end(JSON.stringify(payload));
     };
+    const chat = (request.url ?? "").endsWith("/chat/completions");
+    const message = (content: Record<string, unknown>, finishReason = "stop") => ({
+      model: "stub-model",
+      choices: [{ index: 0, finish_reason: finishReason, message: { role: "assistant", ...content } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    });
     switch (mode) {
       case "rate_limited":
         return send(429, { error: { message: `rate limited ${leak}` } });
       case "server_error_leaky":
         return send(500, { error: { message: `internal ${leak}` } });
       case "refusal":
+        if (chat) return send(200, message({ content: null, refusal: `no ${leak}` }));
         return send(200, {
           status: "completed",
           model: "stub-model",
@@ -58,6 +65,7 @@ export async function startOpenAIStub(): Promise<OpenAIStub> {
         }, 2_000);
         return;
       default:
+        if (chat) return send(200, message({ content: JSON.stringify(VALID_OUTPUT) }));
         return send(200, {
           status: "completed",
           model: "stub-model",

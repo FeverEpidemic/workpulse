@@ -114,7 +114,8 @@ test("S12 AI consent: decline, allow, withdraw, conflict, locale and accessibili
   await page.keyboard.press("Enter");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Continue manually" })).toBeFocused();
-  await expect(dialog).toContainText("OpenAI");
+  await expect(dialog).toContainText("an external AI provider");
+  await expect(dialog).not.toContainText("OpenAI");
   await expect(dialog).toContainText("Evidence files, file names, your name, your email");
   await expectNoWcagViolations(page, testInfo, "s12-consent-dialog");
   await page.keyboard.press("Escape");
@@ -222,7 +223,7 @@ test("S12 AI consent dialog in Bahasa Indonesia", async ({ page }, testInfo) => 
   await expect(page.getByTestId("ai-consent-status")).toHaveText("Tidak diizinkan");
   await card.getByRole("button", { name: "Izinkan AI…" }).click();
   const dialog = page.getByRole("dialog", { name: "Izinkan pemrosesan AI?" });
-  await expect(dialog).toContainText("OpenAI");
+  await expect(dialog).toContainText("penyedia AI eksternal");
   await expect(dialog).toContainText("File bukti, nama file, nama Anda, email Anda");
   await expect(dialog).toContainText("entri manual serta pengeditan CV selalu tersedia");
   await expectNoWcagViolations(page, testInfo, "s12-consent-dialog-id");
