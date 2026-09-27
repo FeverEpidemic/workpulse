@@ -1,5 +1,44 @@
 # WorkPulse Implementation Status
 
+## T13 — Durable AI jobs dan consent, acceptance lokal dan smoke live — 27 September 2026
+
+Status authoritative T13: **DONE**. Dasarnya acceptance lokal dan smoke live pada endpoint OpenAI-compatible yang dipilih pengguna. Dependensi T05/T06 tetap **DONE**, dan Gate M2 **PASSED**. Rujukan: R05, PRD §3/§4, F02, S12, serta DB §2/§3/§6.
+[Rencana](verification/T13-implementation-plan.md), [bukti dan gate review](verification/T13-ai-jobs-consent.md), [decision 0019](decisions/0019-t13-ai-jobs-consent.md), receipt [Fase 0](verification/T13-phase0-baseline.md)–[6](verification/T13-phase6-live-smoke.md).
+
+Yang selesai:
+
+- `public.ai_jobs` hanya bisa ditulis lewat RPC. Klaim job memakai lease 120 detik, attempt token, dan maksimal 3 attempt tanpa retry otomatis. Lease yang kedaluwarsa menjadi `AI_TIMEOUT`. Key idempotency diturunkan per revisi activity.
+- Consent disimpan dengan versi dan timestamp (`ai-processing-v1`). Consent diperiksa sebelum enqueue, sebelum teks dirilis ke worker, dan sebelum hasil disimpan. Pengecekan revisi menghasilkan `STALE_INPUT` bila activity berubah. Akun yang sedang dihapus diblokir.
+- Adapter OpenAI-compatible memakai `fetch` (default Chat Completions, json_schema strict; Responses dan JSON mode bisa dipilih lewat env). Ada juga fake yang dibatasi ke development/test.
+- Skema hasil `detect.v1` divalidasi dengan grounding metric. Worker `ai-detect` hanya mencetak angka dan kode.
+- Kartu consent S12 memakai `AiConsentDialog` bersama, dengan copy generik "penyedia AI eksternal" dalam en/id. Hasil AI **tidak** diterapkan ke Achievement; itu tugas T14.
+
+Migration forward-only `20260928090000_t13_ai_jobs_consent.sql` diterapkan tanpa reset (parity 22/22). Types sudah diperbarui.
+
+Checks:
+
+- Unit 51 file / 274 test; pgTAP 8 file / 470 assertion; DB lint bersih.
+- Integration: ai 13, activity 6, achievements 5, projects 7, dashboard 4, m2 8, storage 1, evidence 14 (ClamAV nyata).
+- E2E: ai 2 (stabil 12/12 run), auth, ui, activity, projects, achievements 4, dashboard, evidence 8, m2 1.
+- `worker:check`, build, lint, typecheck, dan diff check lulus.
+- Smoke live `https://ai.sumopod.com/v1` dengan model `gpt-6-luna`: fixture sintetis en/id valid, dan satu job end-to-end melalui `node workers/run.ts --once` berakhir `succeeded`.
+
+Temuan saat eksekusi, semuanya sudah diperbaiki:
+
+- Worker crash karena *parameter properties* TypeScript.
+- Race fokus pada dialog consent.
+- Overflow email di S12 pada 360 px (bawaan T03).
+
+Tidak ada P0–P2 yang terbuka. Follow-up P3 R1–R6 ada di laporan. Satu di antaranya perlu tindakan pengguna: tambahkan `WORKPULSE_OPENAI_BASE_URL=https://ai.sumopod.com/v1` ke `.env.ai.local`.
+
+Batas:
+
+- Pelaksana sekaligus reviewer adalah Claude.
+- Bukti hanya dari stack lokal, ditambah satu smoke eksternal dengan data sintetis. Tidak ada deployment.
+- Retensi di pemroses pihak ketiga mengikuti kebijakan pemroses tersebut, karena `store:false` hanya dikirim ke api.openai.com.
+
+Berikutnya: **T14 Detection, refinement dan review**.
+
 ## Gate M2 — integration review Capture dan penggunaan manual — 27 September 2026
 
 Verdict authoritative Gate M2: **PASSED** (acceptance lokal), ditetapkan Claude setelah verifikasi ulang
@@ -29,6 +68,11 @@ activity 1, projects 1, achievements 4, dashboard 1, evidence 8, m2 1; worker ch
 
 Batas: hanya lokal (Supabase Docker, Storage, ClamAV, worker sekali jalan). Tidak ada deployment atau
 layanan eksternal. Berikutnya: **T13 Durable AI jobs dan consent**.
+
+[Handoff T13 single-agent](verification/T13-implementation-plan.md) untuk GPT-6 Luna sudah tersedia (27 September
+2026). Keputusan pengguna: provider OpenAI (Responses API via `fetch`, `store: false`), satu smoke live dengan
+fixture sintetis wajib untuk DONE, dan UI T13 terbatas pada kartu consent S12 serta dialog consent bersama.
+T13 tetap **TODO**; hanya dokumen rencana yang ditambahkan, tanpa perubahan kode atau hasil test.
 
 ## T12 — Dashboard dan Timeline, acceptance lokal — 26 September 2026
 
@@ -488,7 +532,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T10 | Evidence reservation dan screening | DONE |
 | T11 | Evidence UI dan lifecycle | DONE |
 | T12 | Dashboard dan timeline | DONE |
-| T13 | AI jobs dan consent | TODO |
+| T13 | AI jobs dan consent | DONE |
 | T14 | Detection dan review | TODO |
 | T15 | Import staging | TODO |
 | T16 | Import commit | TODO |

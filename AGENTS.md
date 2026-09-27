@@ -6,7 +6,7 @@ Panduan ini berlaku untuk seluruh workspace WorkPulse. Gunakan instruksi penggun
 
 WorkPulse MVP v0.1 adalah workspace karier privat: pengguna mencatat aktivitas, meninjau dan mengonfirmasi pencapaian, memilih data ke satu master CV, lalu mengunduh PDF. Jalur manual harus tetap berfungsi tanpa AI.
 
-Workspace sudah berisi aplikasi Next.js, worker, schema Supabase, dan test suite di repository Git (`origin` GitHub, branch utama `main`). Per 27 September 2026, T01–T12 berstatus DONE secara lokal dan Gate M2 berstatus PASSED (acceptance lokal, `docs/verification/M2-gate-review.md`); langkah berikutnya adalah T13 (AI jobs dan consent). Status ini hanya snapshot: periksa kondisi aktual setiap sesi dan gunakan `docs/IMPLEMENTATION_STATUS.md` sebagai checkpoint, bukan sebagai pengganti pemeriksaan kode. Keberhasilan lokal bukan bukti integrasi production.
+Workspace sudah berisi aplikasi Next.js, worker, schema Supabase, dan test suite di repository Git (`origin` GitHub, branch utama `main`). Per 27 September 2026, T01–T13 berstatus DONE secara lokal dan Gate M2 berstatus PASSED (acceptance lokal, `docs/verification/M2-gate-review.md`); T13 juga lulus smoke live pada endpoint OpenAI-compatible pilihan pengguna (`docs/verification/T13-ai-jobs-consent.md`). Langkah berikutnya adalah T14 (detection, refinement, dan review). Status ini hanya snapshot: periksa kondisi aktual setiap sesi dan gunakan `docs/IMPLEMENTATION_STATUS.md` sebagai checkpoint, bukan sebagai pengganti pemeriksaan kode. Keberhasilan lokal bukan bukti integrasi production.
 
 Dokumen proyek berada di `docs/`. `AGENTS.md` dan `Design.md` di root disalin juga ke `docs/`; jaga kedua salinan tetap identik saat mengubahnya.
 
@@ -52,7 +52,7 @@ Bootstrap T01 sudah memilih dan mem-pin stack (lihat `docs/decisions/0001-founda
 - Worker Node/TypeScript terpisah dengan queue PostgreSQL untuk AI, import, screening, PDF, dan cleanup. Job tidak bergantung pada umur request web.
 - Adapter terpisah: `AuthAdapter`, `StorageAdapter`, `AIProvider`, `DocumentParser`, `MalwareScanner`, `PdfRenderer`.
 - PDF berupa HTML print template yang dirender Chromium menjadi A4 dengan searchable text.
-- Provider/model AI produk dipilih pada T13. Sebutan LUNA MAX pada rencana merujuk pelaksana coding, bukan pilihan otomatis model AI produk.
+- Provider AI produk ditetapkan T13 (`docs/decisions/0019-t13-ai-jobs-consent.md`): adapter OpenAI-compatible via `fetch` (default Chat Completions + json_schema strict), endpoint/model/key hanya di `.env.ai.local` milik worker, default mode `unavailable`. Sebutan LUNA MAX pada rencana merujuk pelaksana coding, bukan pilihan otomatis model AI produk.
 
 ```text
 src/app/                    route dan server entrypoint
@@ -70,7 +70,7 @@ docs/decisions/             keputusan teknis dan alasan
 docs/verification/          bukti acceptance
 ```
 
-Struktur di atas sebagian besar sudah ada (termasuk `src/components/{ui,forms,layout}`, `src/server/{auth,storage,supabase,locale,theme}`, dan `src/features/{activity,achievement,project,evidence,profile,auth}`); `tests/pdf/` dan domain CV/import/AI belum dibuat. Buat direktori/abstraksi ketika diperlukan task, bukan sebagai scaffolding spekulatif. Pisahkan aturan domain dari UI dan adapter. Simpan secret hanya pada konfigurasi server; `.env.example` berisi nama variabel dan placeholder, tanpa credential.
+Struktur di atas sebagian besar sudah ada (termasuk `src/components/{ui,forms,layout}`, `src/server/{auth,storage,supabase,locale,theme}`, dan `src/features/{activity,achievement,project,evidence,profile,auth,ai}`, `src/domain/ai`, `src/server/ai`); `tests/pdf/` dan domain CV/import belum dibuat. Buat direktori/abstraksi ketika diperlukan task, bukan sebagai scaffolding spekulatif. Pisahkan aturan domain dari UI dan adapter. Simpan secret hanya pada konfigurasi server; `.env.example` berisi nama variabel dan placeholder, tanpa credential.
 
 ## Invariant data dan keamanan
 

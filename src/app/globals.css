@@ -1843,3 +1843,57 @@ a.dashboard-stat-card:hover,
     width: auto;
   }
 }
+
+/* T13 AI processing consent (S12) and shared consent dialog. */
+.ai-consent {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ai-consent-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-consent-status {
+  display: grid;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-3) var(--space-4);
+}
+
+.ai-consent-status-text {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ai-consent-status-text:focus-visible {
+  outline-offset: 2px;
+}
+
+.ai-consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-consent-withdraw {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ai-consent-dialog-body {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.ai-consent-dialog-heading {
+  font-size: 0.875rem;
+  font-weight: 600;
+}

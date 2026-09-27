@@ -48,11 +48,11 @@ select ok(
 );
 
 select ok(
-  to_regclass('public.ai_jobs') is null
+  to_regclass('public.ai_jobs') is not null
   and (select count(*) = 2 from pg_catalog.pg_indexes
        where schemaname = 'public'
          and indexname in ('activities_user_occurred_on_id_idx', 'activities_user_project_occurred_on_id_idx')),
-  'T06 adds the stable Activity indexes without creating AI jobs'
+  'T06 Activity indexes exist; AI jobs are added separately by T13'
 );
 
 insert into auth.users (
