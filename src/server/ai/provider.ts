@@ -21,8 +21,12 @@ export interface AIProvider {
 
 export class UnavailableAIProvider implements AIProvider {
   readonly kind = "unavailable" as const;
+  private readonly code: "AI_UNAVAILABLE" | "AI_CONFIG_INVALID";
 
-  constructor(private readonly code: "AI_UNAVAILABLE" | "AI_CONFIG_INVALID" = "AI_UNAVAILABLE") {}
+  // No TypeScript parameter properties: the worker runs under Node type stripping.
+  constructor(code: "AI_UNAVAILABLE" | "AI_CONFIG_INVALID" = "AI_UNAVAILABLE") {
+    this.code = code;
+  }
 
   async detect(): Promise<AIProviderResult> {
     return { status: "error", code: this.code };

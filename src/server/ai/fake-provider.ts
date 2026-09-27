@@ -18,11 +18,13 @@ function firstNumber(text: string): number | null {
 export class ExplicitTestFakeAIProvider implements AIProvider {
   readonly kind = "fake" as const;
   readonly calls: DetectInput[] = [];
+  private readonly scenario: FakeAIScenario;
+  private readonly onDetect?: (input: DetectInput) => Promise<void> | void;
 
-  constructor(
-    private readonly scenario: FakeAIScenario = "valid",
-    private readonly onDetect?: (input: DetectInput) => Promise<void> | void,
-  ) {}
+  constructor(scenario: FakeAIScenario = "valid", onDetect?: (input: DetectInput) => Promise<void> | void) {
+    this.scenario = scenario;
+    this.onDetect = onDetect;
+  }
 
   async detect(input: DetectInput, signal: AbortSignal): Promise<AIProviderResult> {
     this.calls.push(input);

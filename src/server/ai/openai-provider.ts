@@ -77,10 +77,12 @@ export function readResponsesOutput(body: unknown): AIProviderResult {
  */
 export class OpenAIProvider implements AIProvider {
   readonly kind = "openai" as const;
+  private readonly options: OpenAIProviderOptions;
   private readonly endpoint: string;
   private readonly fetchImpl: typeof fetch;
 
-  constructor(private readonly options: OpenAIProviderOptions) {
+  constructor(options: OpenAIProviderOptions) {
+    this.options = options;
     this.endpoint = `${(options.baseUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, "")}/responses`;
     this.fetchImpl = options.fetch ?? fetch;
   }
