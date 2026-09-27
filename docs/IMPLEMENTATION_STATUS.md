@@ -30,6 +30,11 @@ activity 1, projects 1, achievements 4, dashboard 1, evidence 8, m2 1; worker ch
 Batas: hanya lokal (Supabase Docker, Storage, ClamAV, worker sekali jalan). Tidak ada deployment atau
 layanan eksternal. Berikutnya: **T13 Durable AI jobs dan consent**.
 
+[Handoff T13 single-agent](verification/T13-implementation-plan.md) untuk GPT-6 Luna sudah tersedia (27 September
+2026). Keputusan pengguna: provider OpenAI (Responses API via `fetch`, `store: false`), satu smoke live dengan
+fixture sintetis wajib untuk DONE, dan UI T13 terbatas pada kartu consent S12 serta dialog consent bersama.
+T13 tetap **TODO**; hanya dokumen rencana yang ditambahkan, tanpa perubahan kode atau hasil test.
+
 ## T12 — Dashboard dan Timeline, acceptance lokal — 26 September 2026
 
 Status authoritative T12: **DONE** — implementasi dan acceptance lokal selesai setelah gate review
