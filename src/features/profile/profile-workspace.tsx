@@ -1,3 +1,4 @@
+import { AiConsentCard } from "@/features/profile/ai-consent-card";
 import { FoundationEditors } from "@/features/profile/foundation-editors";
 import { ProfileEditor } from "@/features/profile/profile-editor";
 import { Card } from "@/components/ui/card";
@@ -52,6 +53,9 @@ export async function ProfileWorkspace({
         <Card className="space-y-5">
           <h2 className="text-xl font-semibold">{t(locale, "profile.personalDetails")}</h2>
           <ProfileEditor profile={profile} userEmail={userEmail} locale={locale} />
+        </Card>
+        <Card className="space-y-4">
+          <AiConsentCard profile={profile} locale={locale} />
         </Card>
       </section>
 

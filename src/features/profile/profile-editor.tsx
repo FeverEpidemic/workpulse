@@ -46,7 +46,7 @@ export function ProfileEditor({ profile, userEmail, locale }: { profile: Profile
       className="space-y-5"
     >
       <input type="hidden" name="expected_revision" defaultValue={profile.revision} />
-      <p className="text-sm text-[var(--wp-muted)]"><span className="font-semibold">{t(locale, "profile.signInEmail")}:</span> {userEmail}</p>
+      <p className="text-sm text-[var(--wp-muted)] [overflow-wrap:anywhere]"><span className="font-semibold">{t(locale, "profile.signInEmail")}:</span> {userEmail}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="field-label" htmlFor="profile-display-name">
