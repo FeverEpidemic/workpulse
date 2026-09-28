@@ -30,6 +30,7 @@
     "test:integration:dashboard": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/dashboard-timeline.test.ts",
     "test:integration:m2": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/m2-cross-domain.test.ts",
     "test:integration:ai": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/ai-jobs.test.ts",
+    "test:integration:ai-review": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/ai-review.test.ts",
     "test:ai:live": "vitest run --config vitest.live.config.ts --configLoader native tests/live/openai-smoke.test.ts",
     "test:integration:storage": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/private-storage.test.ts",
     "test:integration:evidence": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/evidence-backend.test.ts tests/integration/evidence-scanner-real.test.ts tests/integration/evidence-pipeline.test.ts",
