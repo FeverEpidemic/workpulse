@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -291,6 +291,86 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_suggestion_reviews: {
+        Row: {
+          activity_id: string
+          activity_revision: number
+          answered_at: string | null
+          answers_hash: string | null
+          applied_achievement_id: string | null
+          applied_achievement_revision: number | null
+          created_at: string
+          id: string
+          job_id: string
+          questions_skipped_at: string | null
+          revision: number
+          state: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          activity_revision: number
+          answered_at?: string | null
+          answers_hash?: string | null
+          applied_achievement_id?: string | null
+          applied_achievement_revision?: number | null
+          created_at?: string
+          id?: string
+          job_id: string
+          questions_skipped_at?: string | null
+          revision?: number
+          state?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          activity_revision?: number
+          answered_at?: string | null
+          answers_hash?: string | null
+          applied_achievement_id?: string | null
+          applied_achievement_revision?: number | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          questions_skipped_at?: string | null
+          revision?: number
+          state?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestion_reviews_user_achievement_fkey"
+            columns: ["user_id", "applied_achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_suggestion_reviews_user_activity_fkey"
+            columns: ["user_id", "activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_suggestion_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestion_reviews_user_job_fkey"
+            columns: ["user_id", "job_id"]
+            isOneToOne: true
+            referencedRelation: "ai_jobs"
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -783,6 +863,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      answer_ai_questions: {
+        Args: { p_answers: Json; p_expected_revision: number; p_job_id: string }
+        Returns: {
+          activity_revision: number
+          job_id: string
+          job_status: string
+        }[]
+      }
+      apply_ai_suggestion: {
+        Args: {
+          p_expected_achievement_revision: number
+          p_expected_activity_revision: number
+          p_job_id: string
+        }
+        Returns: {
+          achievement_id: string
+          achievement_revision: number
+          created: boolean
+        }[]
+      }
       claim_ai_jobs: {
         Args: { p_limit?: number }
         Returns: {
@@ -1122,6 +1222,7 @@ export type Database = {
         Args: { p_expected_revision: number; p_skill_id: string }
         Returns: string
       }
+      dismiss_ai_suggestion: { Args: { p_job_id: string }; Returns: undefined }
       expire_ai_job_leases: { Args: never; Returns: number }
       expire_evidence_uploads: { Args: { p_limit?: number }; Returns: number }
       fail_ai_job: {
@@ -1438,6 +1539,7 @@ export type Database = {
           error_code: string
           input_revision: number
           job_id: string
+          kind: string
           status: string
         }[]
       }
@@ -1549,6 +1651,7 @@ export type Database = {
           revision: number
         }[]
       }
+      skip_ai_questions: { Args: { p_job_id: string }; Returns: undefined }
       update_activity: {
         Args: {
           p_activity_id: string
