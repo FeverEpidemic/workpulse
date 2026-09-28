@@ -1,4 +1,4 @@
-import type { AiErrorCode } from "../../domain/ai/contracts.ts";
+import type { AiErrorCode, AiJobKind } from "../../domain/ai/contracts.ts";
 import type { DetectInput } from "../../domain/ai/minimize.ts";
 
 export interface AIProviderUsage {
@@ -16,7 +16,7 @@ export type AIProviderResult =
  */
 export interface AIProvider {
   readonly kind: "openai" | "fake" | "unavailable";
-  detect(input: DetectInput, signal: AbortSignal): Promise<AIProviderResult>;
+  detect(input: DetectInput, signal: AbortSignal, jobKind?: AiJobKind): Promise<AIProviderResult>;
 }
 
 export class UnavailableAIProvider implements AIProvider {

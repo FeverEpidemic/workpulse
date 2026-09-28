@@ -29,3 +29,23 @@ export type AiErrorCode = (typeof AI_ERROR_CODES)[number];
 
 export const AI_LOCALES = ["en", "id"] as const;
 export type AiLocale = (typeof AI_LOCALES)[number];
+
+export const AI_JOB_KINDS = ["detect", "refine"] as const;
+export type AiJobKind = (typeof AI_JOB_KINDS)[number];
+
+/**
+ * T14 review errors raised by the ai_suggestion_reviews RPCs (skip/dismiss/answer/apply).
+ * Kept separate from AI_ERROR_CODES, which are worker/job outcome codes only.
+ */
+export const AI_REVIEW_ERROR_CODES = [
+  "AI_JOB_NOT_APPLICABLE",
+  "AI_SUGGESTION_DISMISSED",
+  "AI_SUGGESTION_APPLIED",
+  "AI_QUESTIONS_CLOSED",
+  "DRAFT_EDITED",
+  "ACHIEVEMENT_CONFIRMED",
+  "ACHIEVEMENT_DISMISSED",
+  "ACHIEVEMENT_EXISTS",
+  "INVALID_AI_ANSWER",
+] as const;
+export type AiReviewErrorCode = (typeof AI_REVIEW_ERROR_CODES)[number];

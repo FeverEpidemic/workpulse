@@ -153,19 +153,37 @@ function numbersIn(source: string): Set<number> {
   return found;
 }
 
+function inputNumbers(input: DetectInput): Set<number> {
+  return numbersIn([input.raw_text, input.role, input.scope, input.outcome].filter(Boolean).join("\n"));
+}
+
 /** Every metric value (and baseline) must literally appear in the user's own text. */
 export function hasGroundedMetrics(result: DetectResult, input: DetectInput): boolean {
   if (!result.suggestion) return true;
-  const available = numbersIn([input.raw_text, input.role, input.scope, input.outcome].filter(Boolean).join("\n"));
+  const available = inputNumbers(input);
   return result.suggestion.metrics.every((metric) =>
     available.has(metric.value) && (metric.baseline === null || available.has(metric.baseline)));
 }
 
-export type DetectValidation = { ok: true; result: DetectResult } | { ok: false };
+/** Every number written in the suggestion's free text must also appear in the user's own text. */
+export function hasGroundedText(result: DetectResult, input: DetectInput): boolean {
+  if (!result.suggestion) return true;
+  const available = inputNumbers(input);
+  const { title, contribution, outcome, scope, cv_bullet } = result.suggestion;
+  const text = [title, contribution, outcome, scope, cv_bullet].filter((value): value is string => value !== null).join("\n");
+  for (const value of numbersIn(text)) {
+    if (!available.has(value)) return false;
+  }
+  return true;
+}
 
-export function validateDetectResult(raw: unknown, input: DetectInput): DetectValidation {
+export type DetectValidation = { ok: true; result: DetectResult } | { ok: false };
+export type DetectValidationOptions = { kind?: "detect" | "refine" };
+
+export function validateDetectResult(raw: unknown, input: DetectInput, options: DetectValidationOptions = {}): DetectValidation {
   const parsed = detectResultSchema.safeParse(raw);
   if (!parsed.success) return { ok: false };
-  if (!hasGroundedMetrics(parsed.data, input)) return { ok: false };
+  if (options.kind === "refine" && parsed.data.questions.length > 0) return { ok: false };
+  if (!hasGroundedMetrics(parsed.data, input) || !hasGroundedText(parsed.data, input)) return { ok: false };
   return { ok: true, result: parsed.data };
 }
