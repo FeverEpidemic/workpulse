@@ -1586,6 +1586,7 @@ export type Database = {
           error_code: string
           input_revision: number
           job_id: string
+          kind: string
           status: string
         }[]
       }

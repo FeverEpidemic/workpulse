@@ -33,7 +33,7 @@ async function codeOf(promise: Promise<unknown>) {
 describe("AI job service", () => {
   it("returns the job receipt from request_ai_analysis", async () => {
     const { rpc, value } = client({
-      data: [{ job_id: JOB_ID, status: "queued", input_revision: 2, attempt_count: 0, error_code: null }],
+      data: [{ job_id: JOB_ID, status: "queued", input_revision: 2, attempt_count: 0, error_code: null, kind: "detect" }],
       error: null,
     });
     await expect(createAiJobService(value).requestAnalysis({ activityId: ACTIVITY_ID, expectedRevision: 2 })).resolves.toEqual({
@@ -42,6 +42,7 @@ describe("AI job service", () => {
       inputRevision: 2,
       attemptCount: 0,
       errorCode: null,
+      kind: "detect",
     });
     expect(rpc).toHaveBeenCalledWith("request_ai_analysis", { p_activity_id: ACTIVITY_ID, p_expected_revision: 2 });
   });

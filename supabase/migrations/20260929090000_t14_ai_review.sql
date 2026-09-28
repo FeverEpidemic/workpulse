@@ -237,6 +237,86 @@ begin
 end;
 $$;
 
+-- retry_ai_job: same contract as T13, with kind added to the receipt for the same reason as
+-- request_ai_analysis (the TS receipt shape is shared by both). Return type gains a column,
+-- so the function is dropped and recreated; the body is otherwise unchanged from T13.
+
+drop function if exists public.retry_ai_job(uuid);
+
+create function public.retry_ai_job(p_job_id uuid)
+returns table (
+  job_id uuid,
+  status text,
+  input_revision integer,
+  attempt_count integer,
+  error_code text,
+  kind text
+)
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $$
+#variable_conflict use_column
+declare
+  v_user_id uuid := auth.uid();
+  v_snapshot public.ai_jobs%rowtype;
+  v_activity_revision integer;
+  v_job public.ai_jobs%rowtype;
+begin
+  if v_user_id is null then
+    raise exception using errcode = '42501', message = 'AUTH_REQUIRED';
+  end if;
+  perform 1 from public.profiles as profile
+  where profile.id = v_user_id and profile.deleting_at is null
+  for share;
+  if not found then
+    raise exception using errcode = '42501', message = 'AUTH_REQUIRED';
+  end if;
+
+  select job.* into v_snapshot
+  from public.ai_jobs as job
+  where job.id = p_job_id and job.user_id = v_user_id;
+  if not found then
+    raise exception using errcode = 'P0001', message = 'AI_JOB_UNAVAILABLE';
+  end if;
+
+  select activity.revision into v_activity_revision
+  from public.activities as activity
+  where activity.user_id = v_user_id and activity.id = v_snapshot.activity_id
+  for update;
+
+  select job.* into v_job
+  from public.ai_jobs as job
+  where job.id = p_job_id and job.user_id = v_user_id
+  for update;
+  if not found then
+    raise exception using errcode = 'P0001', message = 'AI_JOB_UNAVAILABLE';
+  end if;
+  if v_job.status <> 'failed' then
+    raise exception using errcode = 'P0001', message = 'AI_JOB_NOT_RETRYABLE';
+  end if;
+  if not internal.has_current_ai_consent(v_user_id) then
+    raise exception using errcode = 'P0001', message = 'CONSENT_REQUIRED';
+  end if;
+  if v_activity_revision is distinct from v_job.input_revision then
+    raise exception using errcode = 'P0001', message = 'STALE_INPUT';
+  end if;
+  if v_job.attempt_count >= 3 then
+    raise exception using errcode = 'P0001', message = 'AI_RETRY_EXHAUSTED';
+  end if;
+
+  update public.ai_jobs as job
+  set status = 'queued', attempt_token = null, lease_expires_at = null,
+      error_code = null, result = null, finished_at = null,
+      consent_version = internal.current_ai_consent_version()
+  where job.id = v_job.id
+  returning job.* into v_job;
+  perform internal.set_activity_analysis_state(v_user_id, v_job.activity_id, v_job.input_revision, 'queued');
+
+  return query select v_job.id, v_job.status, v_job.input_revision, v_job.attempt_count, v_job.error_code, v_job.kind;
+end;
+$$;
+
 -- complete_ai_job: same contract as T13, with a pre-update check that a detect result has
 -- at most 3 questions and a refine result has none, returned as 'invalid' like a schema
 -- failure rather than raising, so the worker never has to distinguish the two cases.
@@ -795,6 +875,8 @@ revoke all on function internal.guard_ai_suggestion_review_row() from public, an
 
 revoke all on function public.request_ai_analysis(uuid, integer) from public, anon, service_role;
 grant execute on function public.request_ai_analysis(uuid, integer) to authenticated;
+revoke all on function public.retry_ai_job(uuid) from public, anon, service_role;
+grant execute on function public.retry_ai_job(uuid) to authenticated;
 
 revoke all on function public.answer_ai_questions(uuid, integer, jsonb) from public, anon, service_role;
 revoke all on function public.skip_ai_questions(uuid) from public, anon, service_role;
@@ -811,6 +893,8 @@ comment on function internal.ai_apply_metrics(jsonb) is
   'T14: maps a detect.v1 suggestion metrics array to the Achievement metrics shape, dropping a null baseline instead of storing JSON null.';
 comment on function public.request_ai_analysis(uuid, integer) is
   'T14: enqueue detect for the session owner activity at its expected revision; the receipt now carries kind. Requires current consent; idempotent per activity revision across kinds.';
+comment on function public.retry_ai_job(uuid) is
+  'T14: explicit failed -> queued retry for the same revision; max 3 attempts; consent rechecked. Receipt now carries kind (unchanged behavior otherwise).';
 comment on function public.complete_ai_job(uuid, uuid, jsonb) is
   'T14 worker: compare-and-set completion; also rejects more than 3 questions on detect or any questions on refine as AI_OUTPUT_INVALID before storing a result.';
 comment on function public.answer_ai_questions(uuid, integer, jsonb) is

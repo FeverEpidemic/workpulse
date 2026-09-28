@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { AI_JOB_STATUSES, type AiJobStatus } from "@/domain/ai/contracts";
+import { AI_JOB_KINDS, AI_JOB_STATUSES, type AiJobKind, type AiJobStatus } from "@/domain/ai/contracts";
 import {
   AiServiceError,
   mapAiDatabaseError,
@@ -15,6 +15,7 @@ export interface AiJobReceipt {
   inputRevision: number;
   attemptCount: number;
   errorCode: string | null;
+  kind: AiJobKind;
 }
 
 export interface AiJobView extends AiJobReceipt {
@@ -31,6 +32,7 @@ const receiptSchema = z.object({
   input_revision: z.number().int().positive(),
   attempt_count: z.number().int().min(0).max(3),
   error_code: z.string().nullable(),
+  kind: z.enum(AI_JOB_KINDS),
 }).strict();
 
 const requestSchema = z.object({
@@ -41,11 +43,12 @@ const requestSchema = z.object({
 const retrySchema = z.object({ jobId: z.uuid() }).strict();
 
 // Clients cannot read lease internals (column grants), so select explicit columns only.
-const JOB_COLUMNS = "id, activity_id, status, input_revision, attempt_count, error_code, result, created_at, finished_at";
+const JOB_COLUMNS = "id, activity_id, kind, status, input_revision, attempt_count, error_code, result, created_at, finished_at";
 
 const jobRowSchema = z.object({
   id: z.uuid(),
   activity_id: z.uuid(),
+  kind: z.enum(AI_JOB_KINDS),
   status: z.enum(AI_JOB_STATUSES),
   input_revision: z.number().int().positive(),
   attempt_count: z.number().int().min(0).max(3),
@@ -64,6 +67,7 @@ function toReceipt(data: unknown): AiJobReceipt {
     inputRevision: parsed.data.input_revision,
     attemptCount: parsed.data.attempt_count,
     errorCode: parsed.data.error_code,
+    kind: parsed.data.kind,
   };
 }
 
@@ -116,6 +120,7 @@ export function createAiJobService(client: AiClient) {
         return {
           jobId: row.data.id,
           activityId: row.data.activity_id,
+          kind: row.data.kind,
           status: row.data.status,
           inputRevision: row.data.input_revision,
           attemptCount: row.data.attempt_count,
