@@ -39,6 +39,9 @@ Batas:
 
 Berikutnya: **T14 Detection, refinement dan review**.
 
+[Handoff T14 single-agent](verification/T14-implementation-plan.md) untuk GPT-6 Luna sudah tersedia (28 September
+2026). T14 tetap **TODO**; hanya dokumen rencana yang ditambahkan, tanpa perubahan kode atau hasil test.
+
 ## Gate M2 — integration review Capture dan penggunaan manual — 27 September 2026
 
 Verdict authoritative Gate M2: **PASSED** (acceptance lokal), ditetapkan Claude setelah verifikasi ulang
