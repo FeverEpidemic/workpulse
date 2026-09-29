@@ -14,9 +14,13 @@ export type AIProviderResult =
  * Server-side AI adapter. Implementations never log or rethrow provider bodies,
  * request text or credentials; failures collapse to a stable AiErrorCode.
  */
+/** T15 CV import input: only the extracted text, never filename or account data. */
+export type ImportExtractInput = { text: string };
+
 export interface AIProvider {
   readonly kind: "openai" | "fake" | "unavailable";
   detect(input: DetectInput, signal: AbortSignal, jobKind?: AiJobKind): Promise<AIProviderResult>;
+  extractImport(input: ImportExtractInput, signal: AbortSignal): Promise<AIProviderResult>;
 }
 
 export class UnavailableAIProvider implements AIProvider {
@@ -29,6 +33,10 @@ export class UnavailableAIProvider implements AIProvider {
   }
 
   async detect(): Promise<AIProviderResult> {
+    return { status: "error", code: this.code };
+  }
+
+  async extractImport(): Promise<AIProviderResult> {
     return { status: "error", code: this.code };
   }
 }

@@ -1,11 +1,23 @@
 import type { AiErrorCode, AiJobKind } from "../../domain/ai/contracts.ts";
 import { detectResultJsonSchema } from "../../domain/ai/detect-result.ts";
 import type { DetectInput } from "../../domain/ai/minimize.ts";
+import { importResultJsonSchema } from "../../domain/import/extract-result.ts";
 import { DETECT_INSTRUCTIONS, REFINE_INSTRUCTIONS } from "./detect-prompt.ts";
-import type { AIProvider, AIProviderResult } from "./provider.ts";
+import { IMPORT_INSTRUCTIONS } from "./import-prompt.ts";
+import type { AIProvider, AIProviderResult, ImportExtractInput } from "./provider.ts";
 
 export const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const MAX_OUTPUT_TOKENS = 4_000;
+/** A 20 page CV can yield many candidates with verbatim excerpts. */
+const IMPORT_MAX_OUTPUT_TOKENS = 16_000;
+
+type RequestSpec = {
+  instructions: string;
+  userContent: string;
+  schemaName: string;
+  schema: unknown;
+  maxTokens: number;
+};
 
 export const OPENAI_API_STYLES = ["chat_completions", "responses"] as const;
 export type OpenAIApiStyle = (typeof OPENAI_API_STYLES)[number];
@@ -141,39 +153,69 @@ export class OpenAIProvider implements AIProvider {
     return `${this.baseUrl}/${this.api === "responses" ? "responses" : "chat/completions"}`;
   }
 
-  requestBody(input: DetectInput, jobKind: AiJobKind = "detect"): JsonObject {
-    const instructions = instructionsFor(this.structuredOutput, jobKind);
-    const userContent = JSON.stringify(input);
+  private body(spec: RequestSpec): JsonObject {
     if (this.api === "responses") {
       return {
         model: this.options.model,
-        instructions,
-        input: userContent,
+        instructions: spec.instructions,
+        input: spec.userContent,
         reasoning: { effort: this.options.reasoningEffort ?? "low" },
         text: {
           format: this.structuredOutput === "json_schema"
-            ? { type: "json_schema", name: "detect_v1", strict: true, schema: detectResultJsonSchema }
+            ? { type: "json_schema", name: spec.schemaName, strict: true, schema: spec.schema }
             : { type: "json_object" },
         },
         store: false,
-        max_output_tokens: MAX_OUTPUT_TOKENS,
+        max_output_tokens: spec.maxTokens,
       };
     }
     return {
       model: this.options.model,
       messages: [
-        { role: "system", content: instructions },
-        { role: "user", content: userContent },
+        { role: "system", content: spec.instructions },
+        { role: "user", content: spec.userContent },
       ],
       response_format: this.structuredOutput === "json_schema"
-        ? { type: "json_schema", json_schema: { name: "detect_v1", strict: true, schema: detectResultJsonSchema } }
+        ? { type: "json_schema", json_schema: { name: spec.schemaName, strict: true, schema: spec.schema } }
         : { type: "json_object" },
-      max_completion_tokens: MAX_OUTPUT_TOKENS,
+      max_completion_tokens: spec.maxTokens,
       ...(this.isOfficialOpenAI ? { store: false } : {}),
     };
   }
 
+  requestBody(input: DetectInput, jobKind: AiJobKind = "detect"): JsonObject {
+    return this.body({
+      instructions: instructionsFor(this.structuredOutput, jobKind),
+      userContent: JSON.stringify(input),
+      schemaName: "detect_v1",
+      schema: detectResultJsonSchema,
+      maxTokens: MAX_OUTPUT_TOKENS,
+    });
+  }
+
+  importRequestBody(input: ImportExtractInput): JsonObject {
+    const instructions = this.structuredOutput === "json_schema"
+      ? IMPORT_INSTRUCTIONS
+      : `${IMPORT_INSTRUCTIONS}\n\nRespond with exactly one JSON object and nothing else (no Markdown). `
+        + `It must validate against this JSON Schema:\n${JSON.stringify(importResultJsonSchema)}`;
+    return this.body({
+      instructions,
+      userContent: JSON.stringify({ text: input.text }),
+      schemaName: "import_v1",
+      schema: importResultJsonSchema,
+      maxTokens: IMPORT_MAX_OUTPUT_TOKENS,
+    });
+  }
+
   async detect(input: DetectInput, signal: AbortSignal, jobKind: AiJobKind = "detect"): Promise<AIProviderResult> {
+    return this.send(this.requestBody(input, jobKind), signal);
+  }
+
+  async extractImport(input: ImportExtractInput, signal: AbortSignal): Promise<AIProviderResult> {
+    return this.send(this.importRequestBody(input), signal);
+  }
+
+  private async send(requestBody: JsonObject, signal: AbortSignal): Promise<AIProviderResult> {
     let response: Response;
     try {
       response = await this.fetchImpl(this.endpoint, {
@@ -182,7 +224,7 @@ export class OpenAIProvider implements AIProvider {
           Authorization: `Bearer ${this.options.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(this.requestBody(input, jobKind)),
+        body: JSON.stringify(requestBody),
         signal,
       });
     } catch (error) {

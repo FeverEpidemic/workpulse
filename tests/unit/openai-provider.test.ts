@@ -181,3 +181,29 @@ describe("OpenAI Responses adapter (api=responses)", () => {
       .toEqual({ status: "error", code: "AI_PROVIDER_UNAVAILABLE" });
   });
 });
+
+describe("OpenAI-compatible import extraction (T15)", () => {
+  const importOutput = { schema_version: "import.v1", profile: null, experiences: [], education: [], certifications: [], skills: [], achievements: [] };
+
+  it("sends only the extracted text with the import instructions and strict import_v1 schema", async () => {
+    const { provider, fetchMock } = providerWith(json(chatBody({ content: JSON.stringify(importOutput) })));
+    const result = await provider.extractImport({ text: "EXP|WP-PRIVATE-IMPORT-SENTINEL|Analis|2019|2022" }, signal());
+    expect(result).toMatchObject({ status: "ok", output: importOutput });
+    const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(body.response_format).toMatchObject({ type: "json_schema", json_schema: { name: "import_v1", strict: true } });
+    expect(body.max_completion_tokens).toBe(16000);
+    expect(body.messages[0].content).toContain("Copy `excerpt` verbatim");
+    expect(JSON.parse(body.messages[1].content)).toEqual({ text: "EXP|WP-PRIVATE-IMPORT-SENTINEL|Analis|2019|2022" });
+    expect(String(fetchMock.mock.calls[0]![1]?.body)).not.toContain(KEY);
+  });
+
+  it("uses the Responses API format when configured and maps provider failures like detect", async () => {
+    const responses = providerWith(json(responsesBody([{ type: "output_text", text: JSON.stringify(importOutput) }])), { api: "responses" });
+    expect(await responses.provider.extractImport({ text: "x" }, signal())).toMatchObject({ status: "ok" });
+    const body = JSON.parse(String(responses.fetchMock.mock.calls[0]![1]?.body));
+    expect(body.text.format).toMatchObject({ type: "json_schema", name: "import_v1", strict: true });
+    expect(body.store).toBe(false);
+    expect(await providerWith(json({}, 429)).provider.extractImport({ text: "x" }, signal())).toEqual({ status: "error", code: "AI_RATE_LIMITED" });
+    expect(await providerWith(new Error("down")).provider.extractImport({ text: "x" }, signal())).toEqual({ status: "error", code: "AI_PROVIDER_UNAVAILABLE" });
+  });
+});

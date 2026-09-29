@@ -75,7 +75,11 @@ describe("AI worker", () => {
 
   it("treats a throwing provider as unavailable without leaking the error", async () => {
     const database = harness();
-    const provider: AIProvider = { kind: "openai", detect: vi.fn(async () => { throw new Error(SENTINEL); }) };
+    const provider: AIProvider = {
+      kind: "openai",
+      detect: vi.fn(async () => { throw new Error(SENTINEL); }),
+      extractImport: vi.fn(async () => { throw new Error(SENTINEL); }),
+    };
     const summary = await runAiWorkerOnce({ database, provider });
     expect(summary.aiFailed).toEqual({ AI_PROVIDER_UNAVAILABLE: 1 });
     expect(JSON.stringify(summary)).not.toContain(SENTINEL);
