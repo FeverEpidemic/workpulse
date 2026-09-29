@@ -497,6 +497,25 @@ describe("T14 detection, refinement and review against local PostgreSQL", () => 
     expect(count).toBe(1);
   });
 
+  it("11d. answer racing apply on the same job never deadlocks (consistent lock order)", async () => {
+    for (let round = 0; round < 8; round += 1) {
+      const activity = await note(ownerA, `Race activity ${round}, answer versus apply. ` + SENTINEL);
+      const job = await ownerA.jobs.requestAnalysis({ activityId: activity.activityId, expectedRevision: 1 });
+      await drain(fake("valid"));
+      const results = await Promise.allSettled([
+        ownerA.review.answerQuestions({ jobId: job.jobId, expectedRevision: 1, answers: { outcome: FAKE_ANSWER } }),
+        ownerA.review.applySuggestion({ jobId: job.jobId, expectedActivityRevision: 1, expectedAchievementRevision: null }),
+      ]);
+      expect(results.some((r) => r.status === "fulfilled")).toBe(true);
+      for (const result of results) {
+        if (result.status === "fulfilled") continue;
+        // A deadlock (40P01) would surface as UNAVAILABLE; losing the race must be a defined conflict.
+        expect(result.reason).toBeInstanceOf(AiServiceError);
+        expect((result.reason as AiServiceError).code).not.toBe("UNAVAILABLE");
+      }
+    }
+  });
+
   // 12. Nonpotential --------------------------------------------------------------------------
 
   it("12. a nonpotential result leaves the activity as a normal log entry with no apply available", async () => {
