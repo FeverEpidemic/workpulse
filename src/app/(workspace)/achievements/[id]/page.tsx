@@ -5,6 +5,8 @@ import { sanitizeAchievementReturnTo } from "@/domain/routes/safe-return";
 import { AchievementDetail } from "@/features/achievement/achievement-detail";
 import { AchievementPageIssue } from "@/features/achievement/achievement-page-issue";
 import { AchievementServiceError, createAchievementService } from "@/features/achievement/achievement-service";
+import { toAchievementAiSuggestion } from "@/features/ai/achievement-ai-suggestion";
+import { createAiReviewService } from "@/features/ai/ai-review-service";
 import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
 import { t } from "@/i18n/messages";
 
@@ -31,5 +33,10 @@ export default async function AchievementDetailPage({ params, searchParams }: Pr
     return <AchievementPageIssue locale={locale} messageKey={serviceError?.messageKey} correlationId={serviceError?.correlationId} retryHref={detailPath} signInReturnTo={serviceError?.code === "UNAUTHENTICATED" ? detailPath : undefined} />;
   }
   if (!loaded || !options) return <AchievementPageIssue locale={locale} retryHref={detailPath} />;
-  return <AchievementDetail locale={locale} ownerId={profile.id} detail={loaded} contextOptions={options} returnTo={returnTo} />;
+  const activityId = loaded.achievement.activity_id;
+  const analysis = activityId
+    ? await createAiReviewService(context.client).getAnalysisView(activityId).catch(() => null)
+    : null;
+  const aiSuggestion = toAchievementAiSuggestion(analysis, loaded.achievement.id, loaded.achievement.status);
+  return <AchievementDetail locale={locale} ownerId={profile.id} detail={loaded} contextOptions={options} returnTo={returnTo} aiSuggestion={aiSuggestion} />;
 }

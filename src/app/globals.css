@@ -1897,3 +1897,100 @@ a.dashboard-stat-card:hover,
   font-size: 0.875rem;
   font-weight: 600;
 }
+
+.ai-analysis {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ai-analysis-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ai-analysis-body {
+  display: grid;
+  gap: var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.ai-analysis-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ai-analysis-progress {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-info-border);
+  border-radius: var(--radius-md);
+  background: var(--color-info-surface);
+}
+
+.ai-analysis-progress-title {
+  font-weight: 600;
+}
+
+.ai-analysis-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.ai-analysis-source,
+.ai-analysis-suggestion,
+.ai-analysis-questions {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ai-analysis-questions {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+}
+
+.ai-analysis-fields {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ai-analysis-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ai-analysis-field dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ai-analysis-list {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.ai-analysis-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-suggested-skills {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (max-width: 560px) {
+  .ai-analysis-compare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

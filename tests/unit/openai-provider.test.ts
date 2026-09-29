@@ -72,6 +72,25 @@ describe("OpenAI-compatible Chat Completions adapter (default)", () => {
     expect(String(init?.body)).not.toContain(KEY);
   });
 
+  it("uses the refine instructions and keeps the five-key payload for a refine job", async () => {
+    const { provider, fetchMock } = providerWith(json(chatBody({ content: JSON.stringify(output) })));
+
+    await provider.detect(input, signal(), "refine");
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(body.messages[0].content).toContain("questions must be [].");
+    expect(Object.keys(JSON.parse(body.messages[1].content)).sort()).toEqual(["locale", "outcome", "raw_text", "role", "scope"]);
+  });
+
+  it("uses the detect instructions by default and when kind is detect", async () => {
+    const { provider, fetchMock } = providerWith(json(chatBody({ content: JSON.stringify(output) })));
+
+    await provider.detect(input, signal(), "detect");
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+    expect(body.messages[0].content).not.toContain("questions must be [].");
+  });
+
   it("sends store=false when the base URL is the official OpenAI API", async () => {
     const { provider, fetchMock } = providerWith(json(chatBody({ content: JSON.stringify(output) })), {
       baseUrl: "https://api.openai.com/v1",

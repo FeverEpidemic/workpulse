@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { detectResultJsonSchema, detectResultSchema, validateDetectResult } from "@/domain/ai/detect-result";
+import { detectResultJsonSchema, detectResultSchema, validateDetectResult, type DetectResult } from "@/domain/ai/detect-result";
 import { buildDetectInput } from "@/domain/ai/minimize";
 
 const input = buildDetectInput({
@@ -12,8 +12,9 @@ const input = buildDetectInput({
 });
 
 type Metric = { label: string; value: number; unit: string; baseline: number | null };
+type ValidResult = DetectResult & { suggestion: NonNullable<DetectResult["suggestion"]> };
 
-function valid() {
+function valid(): ValidResult {
   return {
     schema_version: "detect.v1",
     potential: true,
@@ -71,11 +72,48 @@ describe("detect.v1 result", () => {
   it("grounds metrics written with Indonesian decimal or thousand separators", () => {
     const idInput = buildDetectInput({ raw_text: "Memproses 1.500 dokumen, akurasi naik ke 98,5 persen.", role: null, scope: null, outcome: null, locale: "id" });
     const result = valid();
+    result.suggestion.title = "Memproses dokumen batch";
+    result.suggestion.contribution = "Memproses seluruh dokumen batch.";
+    result.suggestion.outcome = "Akurasi meningkat signifikan.";
+    result.suggestion.scope = null;
+    result.suggestion.cv_bullet = "Memproses dokumen batch dengan akurasi tinggi.";
     result.suggestion.metrics = [
       { label: "Dokumen", value: 1500, unit: "dokumen", baseline: null },
       { label: "Akurasi", value: 98.5, unit: "persen", baseline: null },
     ];
     expect(validateDetectResult(result, idInput).ok).toBe(true);
+  });
+
+  it("rejects a fabricated number in title, contribution, outcome or cv_bullet", () => {
+    const fabricatedTitle = valid();
+    fabricatedTitle.suggestion.title = "Migrated 40 weekly reports";
+    expect(validateDetectResult(fabricatedTitle, input)).toEqual({ ok: false });
+
+    const fabricatedOutcome = valid();
+    fabricatedOutcome.suggestion.outcome = "Weekly prep dropped from 5 to 2 hours, a 40% cut";
+    expect(validateDetectResult(fabricatedOutcome, input)).toEqual({ ok: false });
+
+    const fabricatedBullet = valid();
+    fabricatedBullet.suggestion.cv_bullet = "Migrated 3 reports for a team of 12 people";
+    expect(validateDetectResult(fabricatedBullet, input)).toEqual({ ok: false });
+  });
+
+  it("accepts a number in suggestion text that only appears in role/scope/outcome input, not raw_text", () => {
+    const withOutcome = buildDetectInput({ raw_text: "Led a migration project", role: null, scope: null, outcome: "Cut costs by 12 percent", locale: "en" });
+    const result = valid();
+    result.suggestion.title = "Led a migration project";
+    result.suggestion.contribution = "Led the migration end to end.";
+    result.suggestion.outcome = "Cut costs by 12 percent";
+    result.suggestion.scope = null;
+    result.suggestion.cv_bullet = "Led a migration that cut costs by 12 percent.";
+    result.suggestion.metrics = [];
+    expect(validateDetectResult(result, withOutcome).ok).toBe(true);
+  });
+
+  it("rejects a refine result that carries any questions", () => {
+    const withQuestions = { ...valid(), questions: [] as const };
+    expect(validateDetectResult(withQuestions, input, { kind: "refine" }).ok).toBe(true);
+    expect(validateDetectResult(valid(), input, { kind: "refine" })).toEqual({ ok: false });
   });
 
   it("keeps the strict JSON Schema aligned with the Zod shape", () => {

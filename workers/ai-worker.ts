@@ -45,7 +45,7 @@ export type AiWorkerOptions = {
 function isValidClaim(job: AiJobClaim): boolean {
   return UUID_PATTERN.test(job.id)
     && UUID_PATTERN.test(job.attempt_token)
-    && job.kind === "detect"
+    && (job.kind === "detect" || job.kind === "refine")
     && Number.isInteger(job.input_revision) && job.input_revision > 0
     && Number.isInteger(job.attempt_count) && job.attempt_count >= 1 && job.attempt_count <= AI_MAX_ATTEMPTS;
 }
@@ -54,11 +54,11 @@ function countFailure(summary: AiWorkerSummary, code: string): void {
   summary.aiFailed[code] = (summary.aiFailed[code] ?? 0) + 1;
 }
 
-async function callProvider(provider: AIProvider, source: AiJobSource, timeoutMs: number) {
+async function callProvider(provider: AIProvider, source: AiJobSource, timeoutMs: number, jobKind: "detect" | "refine") {
   const input = buildDetectInput(source);
   let result: AIProviderResult;
   try {
-    result = await provider.detect(input, AbortSignal.timeout(timeoutMs));
+    result = await provider.detect(input, AbortSignal.timeout(timeoutMs), jobKind);
   } catch {
     result = { status: "error", code: "AI_PROVIDER_UNAVAILABLE" };
   }
@@ -84,13 +84,14 @@ async function processJob(options: AiWorkerOptions, job: AiJobClaim, summary: Ai
     return;
   }
 
-  const { input, result } = await callProvider(provider, source, options.providerTimeoutMs ?? AI_PROVIDER_TIMEOUT_MS);
+  const jobKind = job.kind as "detect" | "refine";
+  const { input, result } = await callProvider(provider, source, options.providerTimeoutMs ?? AI_PROVIDER_TIMEOUT_MS, jobKind);
   if (result.status === "error") {
     await fail(database, job, result.code, summary);
     return;
   }
 
-  const validation = validateDetectResult(result.output, input);
+  const validation = validateDetectResult(result.output, input, { kind: jobKind });
   if (!validation.ok) {
     await fail(database, job, "AI_OUTPUT_INVALID", summary);
     return;

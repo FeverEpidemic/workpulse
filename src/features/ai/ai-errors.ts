@@ -19,7 +19,15 @@ export type AiServiceErrorCode =
   | "STALE_INPUT"
   | "CONSENT_REQUIRED"
   | "RETRY_EXHAUSTED"
-  | "UNAVAILABLE";
+  | "UNAVAILABLE"
+  | "AI_JOB_NOT_APPLICABLE"
+  | "AI_SUGGESTION_DISMISSED"
+  | "AI_SUGGESTION_APPLIED"
+  | "AI_QUESTIONS_CLOSED"
+  | "DRAFT_EDITED"
+  | "ACHIEVEMENT_CONFIRMED"
+  | "ACHIEVEMENT_DISMISSED"
+  | "ACHIEVEMENT_EXISTS";
 
 const AI_ERROR_MESSAGE_KEYS: Record<AiServiceErrorCode, MessageKey> = {
   VALIDATION: "error.validation",
@@ -30,6 +38,14 @@ const AI_ERROR_MESSAGE_KEYS: Record<AiServiceErrorCode, MessageKey> = {
   CONSENT_REQUIRED: "error.consentRequired",
   RETRY_EXHAUSTED: "error.aiRetryExhausted",
   UNAVAILABLE: "error.unavailable",
+  AI_JOB_NOT_APPLICABLE: "error.aiJobNotApplicable",
+  AI_SUGGESTION_DISMISSED: "error.aiSuggestionDismissed",
+  AI_SUGGESTION_APPLIED: "error.aiSuggestionApplied",
+  AI_QUESTIONS_CLOSED: "error.aiQuestionsClosed",
+  DRAFT_EDITED: "error.draftEdited",
+  ACHIEVEMENT_CONFIRMED: "error.achievementConfirmed",
+  ACHIEVEMENT_DISMISSED: "error.achievementDismissed",
+  ACHIEVEMENT_EXISTS: "error.conflict",
 };
 
 /** Safe, localized AI error with a correlation ID. The message never carries source text. */
@@ -87,7 +103,24 @@ export function mapAiDatabaseError(error: { code?: string; message?: string }): 
     case "STALE_REVISION":
     case "AI_JOB_NOT_RETRYABLE":
     case "IDEMPOTENCY_KEY_REUSED":
+    case "ACHIEVEMENT_EXISTS":
       return new AiServiceError("CONFLICT");
+    case "AI_JOB_NOT_APPLICABLE":
+      return new AiServiceError("AI_JOB_NOT_APPLICABLE");
+    case "AI_SUGGESTION_DISMISSED":
+      return new AiServiceError("AI_SUGGESTION_DISMISSED");
+    case "AI_SUGGESTION_APPLIED":
+      return new AiServiceError("AI_SUGGESTION_APPLIED");
+    case "AI_QUESTIONS_CLOSED":
+      return new AiServiceError("AI_QUESTIONS_CLOSED");
+    case "DRAFT_EDITED":
+      return new AiServiceError("DRAFT_EDITED");
+    case "ACHIEVEMENT_CONFIRMED":
+      return new AiServiceError("ACHIEVEMENT_CONFIRMED");
+    case "ACHIEVEMENT_DISMISSED":
+      return new AiServiceError("ACHIEVEMENT_DISMISSED");
+    case "INVALID_AI_ANSWER":
+      return new AiServiceError("VALIDATION");
     default:
       break;
   }

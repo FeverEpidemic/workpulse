@@ -54,6 +54,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:storage` | Private Storage access, signed download, and expiry checks (`tests/integration/private-storage.test.ts`) |
 | `pnpm test:integration:evidence` | Evidence reservation/quota, real scanner + Storage, and worker pipeline against local Supabase (scanner setup: [T10 runbook](docs/verification/T10-scanner-runbook.md)) |
 | `pnpm test:integration:ai` | AI jobs, consent, lease/stale/attempt guards, worker process log hygiene, and the OpenAI-compatible adapter (Chat Completions and Responses) against a local stub (no network) |
+| `pnpm test:integration:ai-review` | T14 detection, refinement and review against local Supabase with the real worker and the explicit fake provider: request/apply/answer/skip/dismiss, stale and retry guards, answer-versus-apply race, two-account isolation, and no-leak checks (no network) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
@@ -63,6 +64,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:achievements` | Manual Achievement lifecycle, Activity source handoff, responsive, and Axe checks against local Supabase |
 | `pnpm test:e2e:evidence` | Evidence API and attachment UI, plus Activity/Project/Achievement regression specs, against local Supabase |
 | `pnpm test:e2e:ai` | S12 AI consent card and dialog: decline, allow, withdraw, conflict, id copy, responsive, and Axe checks |
+| `pnpm test:e2e:ai-review` | S06 analysis panel and S08 suggestion aside: consent, analyze, follow-up questions, apply as draft, dismiss, outage/retry, stale, no-potential, `id` locale, responsive and Axe checks; drains the worker with the fake provider on port 3008 |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -114,6 +116,12 @@ revision are rechecked before text is released and before a result is stored. Pr
 settings (OpenAI-compatible base URL, key, model, API style) live in `.env.ai.local` (see
 `.env.example`); the default mode is `unavailable`, and
 the worker prints only counts and error codes, never note text, provider output or keys.
+
+T14 adds the `refine` job kind (one AI job per activity revision, across kinds), review
+actions (answer, skip, dismiss, apply as a draft Achievement) and the owner-scoped status
+route `GET /api/ai/activities/[id]/analysis`. Analysis is requested explicitly from the
+activity page; apply never confirms an Achievement. E2E and integration tests drain the
+worker with `WORKPULSE_AI_MODE=fake` set only on the child process (development/test only).
 
 ## Local database (Supabase)
 

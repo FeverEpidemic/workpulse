@@ -32,6 +32,7 @@ export function AchievementForm({
   sourceActivity,
   initialProjectId = "",
   initialExperienceId = "",
+  suggestedSkills: suggestedSkillNames = [],
 }: {
   locale: Locale;
   ownerId: string;
@@ -44,6 +45,7 @@ export function AchievementForm({
   sourceActivity?: AchievementDetail["activity"] | null;
   initialProjectId?: string;
   initialExperienceId?: string;
+  suggestedSkills?: string[];
 }) {
   const isEditing = Boolean(achievement);
   const formId = achievement ? `achievement-edit-form-${achievement.id}` : "achievement-create-form";
@@ -61,6 +63,7 @@ export function AchievementForm({
   const [projectId, setProjectId] = useState(initialProjectId || achievement?.project_id || "");
   const [experienceId, setExperienceId] = useState(initialExperienceId || achievement?.experience_id || "");
   const [skills, setSkills] = useState(detail?.skills.map((skill) => skill.name) ?? []);
+  const suggestedSkills = suggestedSkillNames.filter((name) => !skills.some((item) => item.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase()));
   const initialRevision = achievement?.revision ?? 1;
   const handledSuccess = useRef("");
   const latestConflict = state.status === "error" && state.error.code === "CONFLICT" && state.error.latestRecord
@@ -192,6 +195,23 @@ export function AchievementForm({
         <h2 className="text-lg font-semibold">{t(locale, "achievement.skills")}</h2>
         <p className="field-help mt-1">{t(locale, "achievement.skillsHelp")}</p>
         <div className="mt-3"><SkillTags locale={locale} value={skills} onChange={setSkills} /></div>
+        {suggestedSkills.length > 0 ? (
+          <div className="ai-suggested-skills mt-3" role="group" aria-labelledby="ai-suggested-skills-title">
+            <p id="ai-suggested-skills-title" className="field-label">{t(locale, "ai.aside.skillsTitle")}</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedSkills.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setSkills((current) => current.some((item) => item.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase()) ? current : [...current, name])}
+                >
+                  {t(locale, "ai.aside.addSkill", { name })}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </Card>
 
       <Card>

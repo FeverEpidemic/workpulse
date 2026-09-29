@@ -1,5 +1,38 @@
 # WorkPulse Implementation Status
 
+## T14 — Detection, refinement dan review — 29 September 2026
+
+Status authoritative T14: **DONE** (acceptance lokal), ditetapkan oleh pengguna setelah gate review Claude dan perbaikan satu temuan P2. Dependensi T06/T09/T13 tetap **DONE**, Gate M2 **PASSED**. Rujukan: R04, R05, F02, F03, S05, S06, S08, DB §3/§6.
+[Rencana](verification/T14-implementation-plan.md), [bukti dan gate review](verification/T14-detection-review.md), [decision 0020](decisions/0020-t14-detection-review.md), receipt [Fase 0](verification/T14-phase0-baseline.md)–[5](verification/T14-phase5-browser-regression.md).
+
+Yang selesai:
+
+- Analisis diminta eksplisit dari S06 (Save di S05 tidak meng-enqueue). Satu job AI per revisi activity, lintas kind `detect`/`refine`, ditegakkan unique index; request ganda mengembalikan job yang sama.
+- Maksimal tiga pertanyaan follow-up ditegakkan constraint tabel. Jawaban membuat revisi input baru, menambah pasangan chat bila capture chat, dan meng-enqueue `refine` bila consent masih berlaku. Skip dan dismiss tidak butuh consent dan idempoten.
+- Tabel `ai_suggestion_reviews` dan RPC `answer_ai_questions`, `skip_ai_questions`, `dismiss_ai_suggestion`, `apply_ai_suggestion`. Apply hanya membuat atau menyegarkan **draft**; tidak ada auto-confirm, dan draft yang sudah diedit, Achievement confirmed/dismissed, saran stale, atau consent hilang ditolak.
+- Grounding diperluas (angka dan metric harus ada di input); saran tersimpan yang gagal validasi tidak dapat di-apply.
+- UI: panel analisis S06 (status jujur: queued, running, failed, stale, no potential, suggestion, suppressed, applied) dan aside saran read-only di S08. Status dibaca lewat `GET /api/ai/activities/[id]/analysis` (owner session, `no-store`).
+- Perbaikan gate review (P2): `answer_ai_questions` semula mengunci job → review → activity, kebalikan `apply_ai_suggestion`, sehingga bisa deadlock (`40P01`). Migration `20260929100000_t14_answer_lock_order.sql` menyeragamkan urutan lock; test race `11d` menjaga regresi.
+
+Migration forward-only `20260929090000_t14_ai_review.sql` dan `20260929100000_t14_answer_lock_order.sql` diterapkan tanpa reset (parity 24/24). Kontrak T13 berubah: `request_ai_analysis`/`retry_ai_job` mengembalikan `kind`, `complete_ai_job` memvalidasi pertanyaan (rinci di decision 0020).
+
+Checks (hasil aktual):
+
+- Setelah perbaikan P2: integration `ai-review` 21/21, `ai` 13, `activity` 6, `achievements` 5; E2E `ai-review` 11/11; pgTAP 9 file / 540 assertion; `db:lint`, `lint`, `typecheck` bersih.
+- Dari Fase 5 (commit `6bc054d`, sebelum migration perbaikan): unit 57 file / 357 test, `build`, `worker:check`, integration projects/dashboard/m2, E2E ai/auth/ui/activity/projects/achievements/dashboard, `ai-review --repeat-each 2` 22/22.
+
+Belum terbukti atau terbuka (tidak menghalangi DONE lokal, atas keputusan pengguna):
+
+- `test:e2e:m2` dan `test:e2e:evidence` (`evidence-api.spec.ts:46`) gagal karena scanner ClamAV tidak berjalan di lingkungan ini; belum dibuktikan bahwa kegagalan itu sudah ada sebelum T14. Suite ClamAV nyata (`test:integration:evidence`) tidak dijalankan. T14 tidak mengubah kode evidence.
+- Smoke live `refine` pada provider nyata belum dijalankan (butuh persetujuan pengguna); perilaku model nyata terhadap `refine.prompt.v1` belum terbukti.
+- Unit/build tidak dijalankan ulang penuh setelah migration perbaikan (hanya satu fungsi SQL yang berubah, tanpa kode TypeScript). Test `11d` tidak dibuktikan gagal terhadap urutan lock lama.
+- Definisi `retry_ai_job` dari Fase 3 diterapkan ke DB lokal via psql; verifikasi dari database kosong sebelum environment bersama.
+- P3: log hygiene diuji pada return value, bukan stdout/stderr worker atau log server Next; `mapAiErrorCode` memetakan kode tak dikenal ke `CONFLICT`; jawaban dikirim tanpa `trim()`. Dialog consent: Enter tepat setelah Escape butuh jeda ~300 ms (akar penyebab tidak dibuktikan). `supabase_vector` restart terus di lokal.
+
+Batas: pelaksana sekaligus reviewer adalah Claude; bukti hanya dari stack lokal dengan fake provider (tanpa panggilan provider nyata untuk T14); tidak ada deployment.
+
+Berikutnya: **T15 Import staging**.
+
 ## T13 — Durable AI jobs dan consent, acceptance lokal dan smoke live — 27 September 2026
 
 Status authoritative T13: **DONE**. Dasarnya acceptance lokal dan smoke live pada endpoint OpenAI-compatible yang dipilih pengguna. Dependensi T05/T06 tetap **DONE**, dan Gate M2 **PASSED**. Rujukan: R05, PRD §3/§4, F02, S12, serta DB §2/§3/§6.
@@ -37,7 +70,7 @@ Batas:
 - Bukti hanya dari stack lokal, ditambah satu smoke eksternal dengan data sintetis. Tidak ada deployment.
 - Retensi di pemroses pihak ketiga mengikuti kebijakan pemroses tersebut, karena `store:false` hanya dikirim ke api.openai.com.
 
-Berikutnya: **T14 Detection, refinement dan review**.
+Berikutnya (saat T13 ditutup): T14 Detection, refinement dan review; sekarang **DONE** (lihat entri T14 di atas).
 
 ## Gate M2 — integration review Capture dan penggunaan manual — 27 September 2026
 
@@ -533,7 +566,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T11 | Evidence UI dan lifecycle | DONE |
 | T12 | Dashboard dan timeline | DONE |
 | T13 | AI jobs dan consent | DONE |
-| T14 | Detection dan review | TODO |
+| T14 | Detection dan review | DONE |
 | T15 | Import staging | TODO |
 | T16 | Import commit | TODO |
 | T17 | Import review UI | TODO |

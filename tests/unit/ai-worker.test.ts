@@ -103,6 +103,36 @@ describe("AI worker", () => {
     expect(provider.calls).toHaveLength(0);
   });
 
+  it("treats an unknown kind as stale without contacting the provider", async () => {
+    const database = harness({ claimAiJobs: vi.fn(async () => [{ ...job, kind: "import" }]) });
+    const provider = new ExplicitTestFakeAIProvider();
+    const summary = await runAiWorkerOnce({ database, provider });
+    expect(summary.aiStale).toBe(1);
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it("claims and processes a valid refine job, passing kind to the provider and validator", async () => {
+    const refineJob = { ...job, kind: "refine" };
+    const database = harness({ claimAiJobs: vi.fn(async () => [refineJob]) });
+    const provider = new ExplicitTestFakeAIProvider("valid");
+    const detectSpy = vi.spyOn(provider, "detect");
+
+    const summary = await runAiWorkerOnce({ database, provider });
+
+    expect(summary.aiSucceeded).toBe(1);
+    expect(detectSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), "refine");
+    const stored = vi.mocked(database.completeAiJob).mock.calls[0]?.[2];
+    expect(stored?.questions).toEqual([]);
+  });
+
+  it("rejects a refine job whose result carries questions as AI_OUTPUT_INVALID", async () => {
+    const refineJob = { ...job, kind: "refine" };
+    const database = harness({ claimAiJobs: vi.fn(async () => [refineJob]) });
+    const summary = await runAiWorkerOnce({ database, provider: new ExplicitTestFakeAIProvider("many_questions") });
+    expect(summary.aiFailed).toEqual({ AI_OUTPUT_INVALID: 1 });
+    expect(database.completeAiJob).not.toHaveBeenCalled();
+  });
+
   it("propagates gateway failures to the caller", async () => {
     const database = harness({ claimAiJobs: vi.fn(async () => { throw new Error("WORKER_BACKEND_UNAVAILABLE"); }) });
     await expect(runAiWorkerOnce({ database, provider: new ExplicitTestFakeAIProvider() })).rejects.toThrow("WORKER_BACKEND_UNAVAILABLE");

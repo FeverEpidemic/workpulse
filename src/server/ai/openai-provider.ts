@@ -1,7 +1,7 @@
-import type { AiErrorCode } from "../../domain/ai/contracts.ts";
+import type { AiErrorCode, AiJobKind } from "../../domain/ai/contracts.ts";
 import { detectResultJsonSchema } from "../../domain/ai/detect-result.ts";
 import type { DetectInput } from "../../domain/ai/minimize.ts";
-import { DETECT_INSTRUCTIONS } from "./detect-prompt.ts";
+import { DETECT_INSTRUCTIONS, REFINE_INSTRUCTIONS } from "./detect-prompt.ts";
 import type { AIProvider, AIProviderResult } from "./provider.ts";
 
 export const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1";
@@ -100,9 +100,10 @@ export function readChatCompletionOutput(body: unknown): AIProviderResult {
   return okResult(parsed.value, body.model, usage.prompt_tokens, usage.completion_tokens);
 }
 
-function instructionsFor(mode: StructuredOutputMode): string {
-  if (mode === "json_schema") return DETECT_INSTRUCTIONS;
-  return `${DETECT_INSTRUCTIONS}\n\nRespond with exactly one JSON object and nothing else (no Markdown). `
+function instructionsFor(mode: StructuredOutputMode, jobKind: AiJobKind): string {
+  const base = jobKind === "refine" ? REFINE_INSTRUCTIONS : DETECT_INSTRUCTIONS;
+  if (mode === "json_schema") return base;
+  return `${base}\n\nRespond with exactly one JSON object and nothing else (no Markdown). `
     + `It must validate against this JSON Schema:\n${JSON.stringify(detectResultJsonSchema)}`;
 }
 
@@ -140,8 +141,8 @@ export class OpenAIProvider implements AIProvider {
     return `${this.baseUrl}/${this.api === "responses" ? "responses" : "chat/completions"}`;
   }
 
-  requestBody(input: DetectInput): JsonObject {
-    const instructions = instructionsFor(this.structuredOutput);
+  requestBody(input: DetectInput, jobKind: AiJobKind = "detect"): JsonObject {
+    const instructions = instructionsFor(this.structuredOutput, jobKind);
     const userContent = JSON.stringify(input);
     if (this.api === "responses") {
       return {
@@ -172,7 +173,7 @@ export class OpenAIProvider implements AIProvider {
     };
   }
 
-  async detect(input: DetectInput, signal: AbortSignal): Promise<AIProviderResult> {
+  async detect(input: DetectInput, signal: AbortSignal, jobKind: AiJobKind = "detect"): Promise<AIProviderResult> {
     let response: Response;
     try {
       response = await this.fetchImpl(this.endpoint, {
@@ -181,7 +182,7 @@ export class OpenAIProvider implements AIProvider {
           Authorization: `Bearer ${this.options.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(this.requestBody(input)),
+        body: JSON.stringify(this.requestBody(input, jobKind)),
         signal,
       });
     } catch (error) {

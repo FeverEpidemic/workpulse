@@ -11,6 +11,8 @@ import {
 } from "@/features/activity/activity-context-service";
 import { ActivityServiceError, createActivityService } from "@/features/activity/activity-service";
 import { ActivityPageIssue } from "@/features/activity/activity-page-issue";
+import { createAiReviewService } from "@/features/ai/ai-review-service";
+import { hasCurrentAiConsent } from "@/features/ai/consent-service";
 import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
 
 type ActivityDetailPageProps = {
@@ -70,6 +72,7 @@ export default async function ActivityDetailPage({ params, searchParams }: Activ
   const contextIssue: ActivityContextIssue | undefined = contextResult.status === "error"
     ? activityContextIssueFromError(contextResult.error)
     : undefined;
+  const initialAnalysis = await createAiReviewService(context.client).getAnalysisView(id).catch(() => null);
 
   return (
     <ActivityDetailClient
@@ -81,6 +84,8 @@ export default async function ActivityDetailPage({ params, searchParams }: Activ
       options={contextResult.options}
       contextIssue={contextIssue}
       returnTo={returnTo}
+      consent={{ granted: hasCurrentAiConsent(profile), profileRevision: profile.revision }}
+      initialAnalysis={initialAnalysis}
     />
   );
 }

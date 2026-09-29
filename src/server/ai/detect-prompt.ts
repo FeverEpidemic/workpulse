@@ -28,3 +28,13 @@ export const DETECT_INSTRUCTIONS = [
   "",
   "Always set schema_version to \"detect.v1\".",
 ].join("\n");
+
+export const REFINE_PROMPT_VERSION = "refine.prompt.v1";
+
+/** Same input shape and rules as detect, but the previously missing fields are now answered. */
+export const REFINE_INSTRUCTIONS = [
+  DETECT_INSTRUCTIONS,
+  "",
+  "The person has already answered the follow-up questions from the earlier analysis of this",
+  "note (role, scope and/or outcome are filled in where they were missing). questions must be [].",
+].join("\n");
