@@ -1,5 +1,33 @@
 # WorkPulse Implementation Status
 
+## T15 — Import upload dan extraction staging — 29 September 2026
+
+Status T15: **IN_PROGRESS** — seluruh acceptance §1 terbukti lokal dan regresi penuh lulus; penetapan DONE menunggu keputusan pengguna karena pelaksana dan reviewer sama-sama Claude. Dependensi T13 (dan T05/T10/T14) **DONE**. Rujukan: R02, F01, S02, DB §1/§3/§4/§6.
+[Rencana](verification/T15-implementation-plan.md), [bukti dan tinjauan gate](verification/T15-import-staging.md), [decision 0021](decisions/0021-t15-import-staging.md), [runbook renderer](verification/T15-renderer-runbook.md), receipt [Fase 0](verification/T15-phase0-baseline.md)–[6](verification/T15-phase6-browser-regression.md).
+
+Yang selesai:
+
+- Migration `20260930090000_t15_import_staging.sql` (forward-only, tanpa reset, parity 25/25): `import_batches`, `import_items`, `internal.import_jobs`; `ai_jobs` kind `import` + `import_batch_id` (tepat satu target); RPC begin/finalize/cancel/retry, scan+parse queue, input/completion AI import, purge, cleanup berprefix `import`, orphan. Fungsi T13/T14 yang mengunci activity kini mengunci target job (activity atau batch).
+- Upload S02 satu request: validasi signature/MIME/ukuran, object privat, idempotensi per key, peringatan hash duplikat. Consent wajib sebelum upload.
+- Worker: ClamAV sebelum parsing; parser PDF (`pdfjs-dist` 6.3.289, tanpa binary native) dan DOCX di `worker_threads` terisolasi; halaman DOCX dari renderer Gotenberg/LibreOffice terisolasi; kandidat AI dibumikan ke teks (excerpt, fakta, angka, presisi tanggal) sebelum staging; achievement selalu draft; tidak ada write canonical.
+- Cancel, leave-return, retry pada batch yang sama, purge terminal (24 jam; retriable 23 jam), UI S02 en/id aksesibel.
+
+Checks (hasil aktual, HEAD `7864b69` + penyesuaian assertion M2): lint, typecheck, build exit 0; unit 66 file / 424 test; pgTAP 10 file / 668; integration import 21, ai 13, ai-review 21, activity 6, achievements 5, projects 7, dashboard 4, m2 8, evidence 14, storage 1; E2E import 7, ai-review 11, ai 2, auth 1, ui 1, activity 1, projects 1, achievements 4, dashboard 1, m2 1, evidence 8; `worker:check`, `worker:once` exit 0.
+
+Perubahan test lama (bukan pelemahan): `tests/e2e/m2-manual-journey.spec.ts:170` mengasersi placeholder S02 lama → kini tombol upload nonaktif sebelum ada file; contoh "kind tak dikenal" di `tests/unit/ai-worker.test.ts` diganti dari `import` ke `summarize`; `registeredJobs` worker bertambah tiga handler.
+
+Belum terbukti atau terbuka:
+
+- Smoke live `extractImport` ke provider nyata belum dijalankan (butuh persetujuan pengguna).
+- Keputusan produk: import memakai versi consent yang sama (`ai-processing-v1`) dengan copy dialog khusus import; perlu dikonfirmasi apakah cukup.
+- Batch `review` yang ditinggalkan tidak dipurge (bukan state terminal) — T17/T23.
+- P3: klien dapat membuat batch `uploading` miliknya sendiri tanpa upload (kedaluwarsa 15 menit); `GET /api/imports` belum dipakai client.
+- Docker lokal sempat berhenti di tengah sesi; stack dinyalakan ulang tanpa reset. Renderer dan scanner staging belum diverifikasi.
+
+Batas: bukti lokal dengan fake AI provider dan (untuk E2E/integration utama) fake renderer; renderer dan ClamAV nyata dibuktikan terpisah; tidak ada deployment.
+
+Berikutnya: keputusan DONE T15, lalu **T16 Import commit transaction**.
+
 ## T14 — Detection, refinement dan review — 29 September 2026
 
 Status authoritative T14: **DONE** (acceptance lokal), ditetapkan oleh pengguna setelah gate review Claude dan perbaikan satu temuan P2. Dependensi T06/T09/T13 tetap **DONE**, Gate M2 **PASSED**. Rujukan: R04, R05, F02, F03, S05, S06, S08, DB §3/§6.
@@ -567,7 +595,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T12 | Dashboard dan timeline | DONE |
 | T13 | AI jobs dan consent | DONE |
 | T14 | Detection dan review | DONE |
-| T15 | Import staging | TODO |
+| T15 | Import staging | IN_PROGRESS (acceptance lokal terbukti; menunggu keputusan DONE) |
 | T16 | Import commit | TODO |
 | T17 | Import review UI | TODO |
 | T18 | CV schema dan selection | TODO |

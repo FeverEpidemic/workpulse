@@ -55,6 +55,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:evidence` | Evidence reservation/quota, real scanner + Storage, and worker pipeline against local Supabase (scanner setup: [T10 runbook](docs/verification/T10-scanner-runbook.md)) |
 | `pnpm test:integration:ai` | AI jobs, consent, lease/stale/attempt guards, worker process log hygiene, and the OpenAI-compatible adapter (Chat Completions and Responses) against a local stub (no network) |
 | `pnpm test:integration:ai-review` | T14 detection, refinement and review against local Supabase with the real worker and the explicit fake provider: request/apply/answer/skip/dismiss, stale and retry guards, answer-versus-apply race, two-account isolation, and no-leak checks (no network) |
+| `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
 | `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
@@ -65,6 +66,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:evidence` | Evidence API and attachment UI, plus Activity/Project/Achievement regression specs, against local Supabase |
 | `pnpm test:e2e:ai` | S12 AI consent card and dialog: decline, allow, withdraw, conflict, id copy, responsive, and Axe checks |
 | `pnpm test:e2e:ai-review` | S06 analysis panel and S08 suggestion aside: consent, analyze, follow-up questions, apply as draft, dismiss, outage/retry, stale, no-potential, `id` locale, responsive and Axe checks; drains the worker with the fake provider on port 3008 |
+| `pnpm test:e2e:import` | S02 CV import: consent, keyboard file choice, leave-return, session expiry, failures, retry, cancel, duplicate warning, `id` locale, responsive and Axe checks; drains the worker (fake AI, fake renderer, real ClamAV) on port 3009 |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -122,6 +124,15 @@ actions (answer, skip, dismiss, apply as a draft Achievement) and the owner-scop
 route `GET /api/ai/activities/[id]/analysis`. Analysis is requested explicitly from the
 activity page; apply never confirms an Achievement. E2E and integration tests drain the
 worker with `WORKPULSE_AI_MODE=fake` set only on the child process (development/test only).
+
+T15 adds CV import (`/onboarding/import`, `POST /api/imports`, `GET /api/imports/[id]`). The worker
+gains an import pass (`import-scan-parse`, `import-cleanup`) and the `ai-import` handler: ClamAV
+screening always runs before parsing; PDF/DOCX text is extracted in a `worker_threads` sandbox
+(heap limit, no inherited environment, 30 s hard timeout) with `pdfjs-dist`; DOCX page counts come
+from an isolated LibreOffice renderer (`WORKPULSE_DOCX_RENDERER_MODE`, default `unavailable`; see the
+[T15 renderer runbook](docs/verification/T15-renderer-runbook.md)). Extraction only writes staging
+rows (`import_batches`, `import_items`); raw files and text are purged within 24 hours of a terminal
+state. See [decision 0021](docs/decisions/0021-t15-import-staging.md).
 
 ## Local database (Supabase)
 

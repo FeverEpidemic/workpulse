@@ -167,7 +167,9 @@ test("M2 manual journey: note → project → achievement → private evidence �
     // 1. Graduate without CV or employment: display name only, then an empty dashboard.
     await signIn(page, graduate);
     await expect(page).toHaveURL(/\/onboarding\/import$/);
-    await expect(page.getByText("Import CV · not available yet", { exact: true })).toBeVisible();
+    // T15 replaced the "Import CV · not available yet" placeholder with the real S02; the manual path is unchanged
+    // and nothing is uploaded or sent to AI unless the user chooses a file and uploads it.
+    await expect(page.getByRole("button", { name: "Upload and extract", exact: true })).toBeDisabled();
     await expectAiFree(page, "onboarding import");
     await page.getByRole("link", { name: "Start manually", exact: true }).click();
     await expect(page).toHaveURL(/\/settings\/profile\?mode=onboarding$/);
