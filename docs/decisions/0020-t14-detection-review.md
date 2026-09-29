@@ -1,7 +1,7 @@
 # 0020 — T14 Detection, refinement, dan review
 
 - Tanggal: 29 September 2026
-- Status: Diterima (menunggu keputusan status T14 oleh reviewer/pengguna)
+- Status: Diterima (T14 ditandai DONE oleh pengguna, 29 September 2026)
 - Rujukan: PRD R04/R05, §3 *Detection and confirmation*, §4 *AI disclosure / Data minimization / Failures*; User Flow F02 (langkah 3–6), F03; Wireframe §1, S05, S06, S08; Database Schema §3 dan §6; `IMPLEMENTATION_PLAN.md` §1, §3, §4/T14; [handoff T14](../verification/T14-implementation-plan.md); [decision 0019](0019-t13-ai-jobs-consent.md).
 
 ## Konteks

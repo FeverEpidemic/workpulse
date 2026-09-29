@@ -1,6 +1,6 @@
 # T14 — Detection, refinement, dan review: bukti acceptance
 
-- Tanggal: 29 September 2026. Status usulan: **PARTIAL sampai reviewer/pengguna memutuskan** (T14 belum ditandai DONE; `IMPLEMENTATION_STATUS.md` tidak diubah).
+- Tanggal: 29 September 2026. Status: **DONE (acceptance lokal)**, diputuskan pengguna pada 29 September 2026 dengan butir "Sebagian" dan "Tidak dijalankan atau belum terbukti" di bawah tetap terbuka dan dicatat di `IMPLEMENTATION_STATUS.md`.
 - Rujukan: R04, R05, F02, F03, S05, S06, S08, DB §3/§6; handoff [T14-implementation-plan.md](T14-implementation-plan.md); [decision 0020](../decisions/0020-t14-detection-review.md).
 - Receipt fase: [0](T14-phase0-baseline.md), [1](T14-phase1-database.md), [2](T14-phase2-domain.md), [3](T14-phase3-service-integration.md), [4](T14-phase4-ui.md), [5](T14-phase5-browser-regression.md).
 
@@ -68,4 +68,4 @@ Tambahan: concurrency answer-versus-apply (P2) — integration `11d` (Lulus).
 
 ## Langkah berikutnya
 
-Reviewer/pengguna memutuskan status T14 dan menutup atau menerima butir P3 dan item yang belum terbukti; pengguna memutuskan apakah smoke live `refine` dijalankan. Setelah itu, T15.
+T15 (Import staging). Butir P3 dan item yang belum terbukti tetap terbuka; pengguna memutuskan apakah smoke live `refine` dijalankan.
