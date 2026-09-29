@@ -4,6 +4,7 @@
 
 - Tanggal: 29 September 2026
 - Status saat plan ditulis: **TODO**. T15 belum dimulai.
+- Status plan: **DONE** (29 September 2026, acceptance lokal; lihat [T15-import-staging.md](T15-import-staging.md)). Atas permintaan pengguna, seluruh fase dieksekusi oleh Claude, bukan GPT-6 Luna.
 - Dependensi: T13 **DONE** (dependensi resmi). T05 (storage privat), T10 (scanner/cleanup), dan T14 (kontrak `ai_jobs` terbaru) juga **DONE**. Gate M2 **PASSED**. Suite ClamAV nyata lulus pada `7f39e81` (`test:integration:evidence` 14/14, `test:e2e:evidence` 8/8, `test:e2e:m2` 1/1).
 - Eksekutor: satu agent **GPT-6 Luna**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude**. Gate review read-only wajib setelah Fase 6; Fase 7 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 4 bersifat opsional.

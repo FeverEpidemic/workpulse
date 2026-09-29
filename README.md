@@ -4,14 +4,15 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T11 done locally; T12 (Dashboard and Timeline) next; Gate M2 open.** Auth/profile,
-app frame, Activity capture, Projects and context, manual Achievements/Skills, and Evidence are
+Status: **T01–T15 done locally; Gate M2 passed; T16 (Import commit) next.** Auth/profile,
+app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
+Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import staging are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
 checks, real ClamAV screening through the durable worker (T10), and the attachment UI on Activity,
 Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
-production build checks pass locally; nothing is deployed. Dashboard, timeline, AI, import, and CV
+production build checks pass locally; nothing is deployed. Import commit/review and the master CV
 remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.

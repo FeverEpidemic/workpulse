@@ -43,6 +43,36 @@ Eksekutor dan reviewer: Claude (atas permintaan pengguna). Review karena itu tid
 - Semua RPC worker compare-and-set pada token/lease; urutan lock profile → batch → job konsisten, termasuk fungsi AI T13 yang diubah.
 - Temuan: tidak ada P0–P2. P3: (a) klien dapat memanggil `begin_import_batch` langsung dan membuat batch `uploading` miliknya sendiri yang kedaluwarsa dalam 15 menit (finalize butuh service role, jadi tidak ada job atau object); (b) batch `review` yang ditinggalkan tidak dipurge (keputusan terbuka T17/T23); (c) route `GET /api/imports` belum dipakai client (page server memuat batch aktif langsung).
 
+## Gate review Claude — 29 September 2026
+
+HEAD `5399fba`, baseline handoff `7f39e81`. Verdict: **lulus, T15 DONE (acceptance lokal)**. Tidak ada P0–P2.
+
+Dibaca ulang: migration T15 penuh (grant/RLS, guard transisi, lock order profile → batch → job → items, CAS token/lease di setiap RPC worker, perbandingan fungsi AI yang diganti dengan versi T13/T14 terakhir), `import-service`, route/actions, `import-worker`, cabang import `ai-worker`, parser thread, renderer, validator grounding, dan pemisahan claim cleanup (`evidence` vs `import`). Grep log: tidak ada `console.*`/stdout pada jalur import selain pembungkaman di thread parser.
+
+| ID | Level | Temuan | Status |
+| --- | --- | --- | --- |
+| RV1 | P3 | Klien dapat memanggil `begin_import_batch` langsung dan membuat batch `uploading` miliknya sendiri tanpa object; kedaluwarsa `UPLOAD_INCOMPLETE` setelah 15 menit (finalize hanya service role). | Follow-up |
+| RV2 | P3 | Batch `review` yang ditinggalkan tidak dipurge (bukan terminal). | Follow-up T17/T23 |
+| RV3 | P3 | `GET /api/imports` belum dipakai client (page memuat batch aktif di server). | Follow-up T17 |
+| RV4 | P3 | Tidak ada perpanjangan lease: scan + parse (30 s) + render DOCX (hingga 60 s, `workers/import-worker.ts:24`) + hitung halaman di thread (30 s) terburuk melewati lease 120 s. Akibatnya attempt stale dan diulang (maks 5), lalu gagal retriable `IMPORT_WORKER_TIMEOUT`; tidak ada write ganda karena CAS. Test pembukti: unit worker dengan renderer lambat + lease pendek. | Follow-up |
+| RV5 | P3 | `tests/e2e/activity-ui.spec.ts:132` (T06) gagal sekali pada run penuh, lulus 8/8 saat diulang tanpa perubahan. | Flaky, dicatat |
+
+Verifikasi ulang independen (env `.env.local` + service key JWT hanya di proses; env AI harness dibersihkan):
+
+| Command | Exit | Hasil |
+| --- | --- | --- |
+| `pnpm lint` / `typecheck` / `build` / `worker:check` | 0 / 0 / 0 / 0 | — |
+| `pnpm test` | 0 | 66 file / 424 test |
+| `pnpm db:test` / `db:lint` | 0 / 0 | 10 file / 668 PASS / tanpa error |
+| `pnpm test:integration:import` | 0 | 21/21 (termasuk renderer Gotenberg nyata) |
+| `pnpm test:integration:{ai,ai-review,evidence,m2}` | 0 | 13, 21, 14, 8 |
+| `pnpm test:e2e:import` | 0 | 7/7 |
+| `pnpm test:e2e:{ai-review,ai,m2}` | 0 | 11, 2, 1 |
+| `pnpm test:e2e:evidence` | 1 lalu 0 | 7/8 (RV5) lalu 8/8 |
+| `git diff --check 7f39e81..HEAD` | 0 | — |
+
+Tidak diulang oleh reviewer (lulus di receipt Fase 6, tidak disentuh T15): integration activity/achievements/projects/dashboard/storage, E2E auth/ui/activity/projects/achievements/dashboard.
+
 ## Belum terbukti / di luar lokal
 
 - Smoke live `extractImport` terhadap provider nyata (butuh persetujuan pengguna).
