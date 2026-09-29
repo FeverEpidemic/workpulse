@@ -23,6 +23,8 @@ function harness(overrides: Partial<AiWorkerDatabase> = {}) {
     getAiJobInput: vi.fn(async () => source),
     completeAiJob: vi.fn(async () => "succeeded"),
     failAiJob: vi.fn(async () => true),
+    getImportAiJobInput: vi.fn(async () => null),
+    completeImportAiJob: vi.fn(async () => "succeeded"),
     ...overrides,
   } satisfies AiWorkerDatabase;
   return database;
@@ -108,7 +110,8 @@ describe("AI worker", () => {
   });
 
   it("treats an unknown kind as stale without contacting the provider", async () => {
-    const database = harness({ claimAiJobs: vi.fn(async () => [{ ...job, kind: "import" }]) });
+    // "import" became a known kind in T15; "summarize" is not a kind the worker handles.
+    const database = harness({ claimAiJobs: vi.fn(async () => [{ ...job, kind: "summarize" }]) });
     const provider = new ExplicitTestFakeAIProvider();
     const summary = await runAiWorkerOnce({ database, provider });
     expect(summary.aiStale).toBe(1);
@@ -140,5 +143,37 @@ describe("AI worker", () => {
   it("propagates gateway failures to the caller", async () => {
     const database = harness({ claimAiJobs: vi.fn(async () => { throw new Error("WORKER_BACKEND_UNAVAILABLE"); }) });
     await expect(runAiWorkerOnce({ database, provider: new ExplicitTestFakeAIProvider() })).rejects.toThrow("WORKER_BACKEND_UNAVAILABLE");
+  });
+});
+
+describe("AI worker import branch (T15)", () => {
+  const importJob: AiJobClaim = { ...job, kind: "import" };
+  const TEXT = `EXP|PT Sentinel Nusantara|Analis Data|2019|2022\nSKILL|Statistika\n${SENTINEL}`;
+
+  it("sends only the extracted text and stages grounded candidates", async () => {
+    const database = harness({ claimAiJobs: vi.fn(async () => [importJob]), getImportAiJobInput: vi.fn(async () => TEXT) });
+    const provider = new ExplicitTestFakeAIProvider("valid");
+    const summary = await runAiWorkerOnce({ database, provider });
+    expect(summary).toMatchObject({ aiJobsClaimed: 1, aiSucceeded: 1, aiFailed: {} });
+    expect(provider.importCalls).toEqual([{ text: TEXT }]);
+    expect(provider.calls).toHaveLength(0);
+    expect(database.getAiJobInput).not.toHaveBeenCalled();
+    const [, , stagedSummary, items] = vi.mocked(database.completeImportAiJob).mock.calls[0]!;
+    expect(stagedSummary.counts).toMatchObject({ experience: 1, skill: 1 });
+    expect(items.map((item) => item.source_excerpt)).toEqual(["EXP|PT Sentinel Nusantara|Analis Data|2019|2022", "SKILL|Statistika"]);
+    expect(JSON.stringify(summary)).not.toContain(SENTINEL);
+  });
+
+  it("fails invalid output and provider errors without staging, and skips when input is withheld", async () => {
+    for (const [scenario, code] of [["malformed", "AI_OUTPUT_INVALID"], ["unavailable", "AI_PROVIDER_UNAVAILABLE"]] as const) {
+      const database = harness({ claimAiJobs: vi.fn(async () => [importJob]), getImportAiJobInput: vi.fn(async () => TEXT) });
+      const summary = await runAiWorkerOnce({ database, provider: new ExplicitTestFakeAIProvider(scenario) });
+      expect(summary.aiFailed).toEqual({ [code]: 1 });
+      expect(database.completeImportAiJob).not.toHaveBeenCalled();
+    }
+    const withheld = harness({ claimAiJobs: vi.fn(async () => [importJob]) });
+    const provider = new ExplicitTestFakeAIProvider("valid");
+    expect((await runAiWorkerOnce({ database: withheld, provider })).aiSkipped).toBe(1);
+    expect(provider.importCalls).toHaveLength(0);
   });
 });
