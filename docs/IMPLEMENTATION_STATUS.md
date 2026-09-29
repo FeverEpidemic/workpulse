@@ -23,7 +23,7 @@ Checks (hasil aktual):
 
 Belum terbukti atau terbuka (tidak menghalangi DONE lokal, atas keputusan pengguna):
 
-- `test:e2e:m2` dan `test:e2e:evidence` (`evidence-api.spec.ts:46`) gagal karena scanner ClamAV tidak berjalan di lingkungan ini; belum dibuktikan bahwa kegagalan itu sudah ada sebelum T14. Suite ClamAV nyata (`test:integration:evidence`) tidak dijalankan. T14 tidak mengubah kode evidence.
+- ~~`test:e2e:m2` dan `test:e2e:evidence` gagal karena scanner ClamAV tidak berjalan.~~ Terselesaikan 29 September 2026 (tanpa perubahan kode): container ClamAV 1.5.4 (image pinned runbook T10, signature 28129) dijalankan di `127.0.0.1:13310`, env Supabase lokal dimuat ke proses. Hasil pada HEAD `507aaa5`: `test:integration:evidence` 14/14 (termasuk EICAR dan pipeline Storage→ClamAV→cleanup), `test:e2e:evidence` 8/8, `test:e2e:m2` 1/1. Kegagalan sebelumnya murni environment, bukan regresi T14.
 - Smoke live `refine` pada provider nyata belum dijalankan (butuh persetujuan pengguna); perilaku model nyata terhadap `refine.prompt.v1` belum terbukti.
 - Unit/build tidak dijalankan ulang penuh setelah migration perbaikan (hanya satu fungsi SQL yang berubah, tanpa kode TypeScript). Test `11d` tidak dibuktikan gagal terhadap urutan lock lama.
 - Definisi `retry_ai_job` dari Fase 3 diterapkan ke DB lokal via psql; verifikasi dari database kosong sebelum environment bersama.
