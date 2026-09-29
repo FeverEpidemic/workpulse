@@ -32,6 +32,13 @@ describe("ExplicitTestFakeAIProvider", () => {
     expect(input.raw_text).not.toContain("4173");
   });
 
+  it("with_skills scenario behaves like valid and proposes skill labels", async () => {
+    const result = await new ExplicitTestFakeAIProvider("with_skills").detect(input, signal(), "detect");
+    const output = (result as { output: { suggestion: { skills: string[] }; questions: unknown[] } }).output;
+    expect(output.suggestion.skills).toEqual(["Data pipelines", "Reporting"]);
+    expect(output.questions).toHaveLength(1);
+  });
+
   it("many_questions scenario returns 4 questions regardless of kind", async () => {
     const detect = await new ExplicitTestFakeAIProvider("many_questions").detect(input, signal(), "detect");
     expect((detect as { output: { questions: unknown[] } }).output.questions).toHaveLength(4);

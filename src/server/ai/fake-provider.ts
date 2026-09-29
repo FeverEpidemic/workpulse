@@ -4,7 +4,7 @@ import type { AIProvider, AIProviderResult } from "./provider.ts";
 
 export const FAKE_AI_SCENARIOS = [
   "valid", "malformed", "refusal", "ungrounded", "slow", "unavailable",
-  "no_potential", "fabricated_text", "many_questions",
+  "no_potential", "fabricated_text", "many_questions", "with_skills",
 ] as const;
 export type FakeAIScenario = (typeof FAKE_AI_SCENARIOS)[number];
 
@@ -113,7 +113,7 @@ export class ExplicitTestFakeAIProvider implements AIProvider {
           scope: input.scope,
           cv_bullet: "Delivered the work described in the note.",
           metrics: value === null ? [] : [{ label: "Stated count", value, unit: "items", baseline: null }],
-          skills: [],
+          skills: this.scenario === "with_skills" ? ["Data pipelines", "Reporting"] : [],
         },
         questions: jobKind === "refine" || input.outcome !== null
           ? []
