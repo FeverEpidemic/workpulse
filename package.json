@@ -24,7 +24,7 @@
     "test:e2e:evidence": "playwright test --config playwright.evidence.config.ts",
     "test:e2e:m2": "playwright test --config playwright.m2.config.ts tests/e2e/m2-manual-journey.spec.ts",
     "test:e2e:ai-review": "playwright test --config playwright.ai-review.config.ts tests/e2e/ai-review.spec.ts",
-    "test:e2e:ai":"playwright test --config playwright.ai.config.ts tests/e2e/ai-consent.spec.ts",
+    "test:e2e:ai": "playwright test --config playwright.ai.config.ts tests/e2e/ai-consent.spec.ts",
     "test:integration:activity": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/activity-persistence.test.ts",
     "test:integration:projects": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/project-context.test.ts",
     "test:integration:achievements": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/achievement-lifecycle.test.ts",
@@ -52,6 +52,7 @@
     "@supabase/supabase-js": "2.116.0",
     "lucide-react": "1.46.0",
     "next": "16.3.5",
+    "pdfjs-dist": "6.3.289",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.6.5"
