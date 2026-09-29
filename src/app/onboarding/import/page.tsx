@@ -2,8 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LocaleSwitcher } from "@/components/forms/locale-switcher";
-import { getRequestContext, getRequestLocale } from "@/server/auth/context";
+import { AI_CONSENT_VERSION } from "@/domain/ai/contracts";
+import { toImportView, type ImportView } from "@/domain/import/import-view";
+import { createImportService } from "@/features/import/import-service";
+import { ImportStart } from "@/features/import/import-start";
 import { t } from "@/i18n/messages";
+import { getRequestContext, getRequestLocale } from "@/server/auth/context";
+import { SupabaseStorageAdapter } from "@/server/storage/supabase-storage-adapter";
+import { getSupabaseAdminClient } from "@/server/supabase/admin";
+
+export const dynamic = "force-dynamic";
 
 export default async function OnboardingImportPage() {
   const [context, locale] = await Promise.all([getRequestContext(), getRequestLocale()]);
@@ -11,25 +19,32 @@ export default async function OnboardingImportPage() {
   if (!context.profile) redirect("/sign-in?notice=serviceUnavailable");
   if (context.profile.onboarding_completed_at) redirect("/dashboard");
 
+  const granted = Boolean(context.profile.ai_consent_at && context.profile.ai_consent_version === AI_CONSENT_VERSION);
+  // Leave-return: resume the latest saved batch from server state only.
+  let initialView: ImportView = toImportView({ batch: null, consent: granted });
+  try {
+    const admin = getSupabaseAdminClient();
+    initialView = await createImportService({
+      client: context.client!, admin, storage: new SupabaseStorageAdapter(admin), actorId: context.user.id,
+    }).getActiveView();
+  } catch {
+    // The chooser still works; the upload itself reports an unavailable service.
+  }
+
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-5xl content-center gap-6 px-5 py-10 lg:grid-cols-[1fr_440px]">
+    <main className="mx-auto grid min-h-screen w-full max-w-5xl content-center gap-6 px-5 py-10 lg:grid-cols-[1fr_480px]">
       <section className="space-y-4">
         <Link href="/" className="text-lg font-bold">WorkPulse</Link>
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">{t(locale, "onboarding.importTitle")}</h1>
-        <p className="max-w-xl text-[var(--wp-muted)]">{t(locale, "onboarding.importUnavailable")}</p>
+        <p className="max-w-xl text-[var(--wp-muted)]">{t(locale, "import.intro")}</p>
         <LocaleSwitcher locale={locale} />
       </section>
-      <section className="app-card space-y-5">
-        <div>
-          <h2 className="text-xl font-semibold">{t(locale, "onboarding.importTitle")}</h2>
-          <p className="mt-2 text-sm text-[var(--wp-muted)]">{t(locale, "onboarding.importUnavailable")}</p>
-        </div>
-        <button className="button-secondary w-full cursor-not-allowed opacity-70" type="button" disabled aria-disabled="true">
-          {t(locale, "onboarding.importUnavailableLabel")}
-        </button>
-        <Link className="button-primary w-full" href="/settings/profile?mode=onboarding">
-          {t(locale, "onboarding.startManually")}
-        </Link>
+      <section className="app-card">
+        <ImportStart
+          locale={locale}
+          initialView={initialView}
+          consent={{ granted, profileRevision: context.profile.revision }}
+        />
       </section>
     </main>
   );

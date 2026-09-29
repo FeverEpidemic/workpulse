@@ -17,24 +17,27 @@ export function AiConsentDialog({
   onOpenChange,
   locale,
   allowControl,
+  purpose = "analysis",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   locale: Locale;
   allowControl: ReactNode;
+  /** Same consent version; the copy names what this request sends (activity note or CV text). */
+  purpose?: "analysis" | "import";
 }) {
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
       title={t(locale, "ai.consent.dialogTitle")}
-      description={t(locale, "ai.consent.dialogIntro")}
+      description={t(locale, purpose === "import" ? "ai.consent.dialogIntroImport" : "ai.consent.dialogIntro")}
       className="ai-consent-dialog"
     >
       <div className="ai-consent-dialog-body">
         <section aria-labelledby="ai-consent-sent-title">
           <h3 id="ai-consent-sent-title" className="ai-consent-dialog-heading">{t(locale, "ai.consent.sentTitle")}</h3>
-          <p>{t(locale, "ai.consent.sent")}</p>
+          <p>{t(locale, purpose === "import" ? "ai.consent.sentImport" : "ai.consent.sent")}</p>
         </section>
         <section aria-labelledby="ai-consent-not-sent-title">
           <h3 id="ai-consent-not-sent-title" className="ai-consent-dialog-heading">{t(locale, "ai.consent.notSentTitle")}</h3>
