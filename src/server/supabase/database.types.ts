@@ -215,7 +215,7 @@ export type Database = {
       }
       ai_jobs: {
         Row: {
-          activity_id: string
+          activity_id: string | null
           attempt_count: number
           attempt_token: string | null
           consent_version: string
@@ -224,6 +224,7 @@ export type Database = {
           finished_at: string | null
           id: string
           idempotency_key: string
+          import_batch_id: string | null
           input_revision: number
           kind: string
           lease_expires_at: string | null
@@ -236,7 +237,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          activity_id: string
+          activity_id?: string | null
           attempt_count?: number
           attempt_token?: string | null
           consent_version: string
@@ -245,6 +246,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idempotency_key: string
+          import_batch_id?: string | null
           input_revision: number
           kind: string
           lease_expires_at?: string | null
@@ -257,7 +259,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          activity_id?: string
+          activity_id?: string | null
           attempt_count?: number
           attempt_token?: string | null
           consent_version?: string
@@ -266,6 +268,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           idempotency_key?: string
+          import_batch_id?: string | null
           input_revision?: number
           kind?: string
           lease_expires_at?: string | null
@@ -291,6 +294,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_user_import_batch_fkey"
+            columns: ["user_id", "import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -688,6 +698,154 @@ export type Database = {
           },
         ]
       }
+      import_batches: {
+        Row: {
+          bytes: number
+          cancelled_at: string | null
+          committed_at: string | null
+          created_at: string
+          error_code: string | null
+          expires_at: string | null
+          extracted_text: string | null
+          failed_at: string | null
+          file_key: string | null
+          filename: string
+          id: string
+          idempotency_key: string
+          mime_type: string
+          page_count: number | null
+          payload_hash: string
+          purged_at: string | null
+          retry_count: number
+          revision: number
+          sha256: string
+          stage: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bytes: number
+          cancelled_at?: string | null
+          committed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          expires_at?: string | null
+          extracted_text?: string | null
+          failed_at?: string | null
+          file_key?: string | null
+          filename: string
+          id?: string
+          idempotency_key: string
+          mime_type: string
+          page_count?: number | null
+          payload_hash: string
+          purged_at?: string | null
+          retry_count?: number
+          revision?: number
+          sha256: string
+          stage?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bytes?: number
+          cancelled_at?: string | null
+          committed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          expires_at?: string | null
+          extracted_text?: string | null
+          failed_at?: string | null
+          file_key?: string | null
+          filename?: string
+          id?: string
+          idempotency_key?: string
+          mime_type?: string
+          page_count?: number | null
+          payload_hash?: string
+          purged_at?: string | null
+          retry_count?: number
+          revision?: number
+          sha256?: string
+          stage?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_items: {
+        Row: {
+          action: string
+          batch_id: string
+          committed_id: string | null
+          created_at: string
+          entity_type: string
+          id: string
+          ordinal: number
+          payload: Json | null
+          purged_at: string | null
+          revision: number
+          source_excerpt: string | null
+          target_id: string | null
+          updated_at: string
+          user_id: string
+          validation_errors: Json
+        }
+        Insert: {
+          action?: string
+          batch_id: string
+          committed_id?: string | null
+          created_at?: string
+          entity_type: string
+          id?: string
+          ordinal: number
+          payload?: Json | null
+          purged_at?: string | null
+          revision?: number
+          source_excerpt?: string | null
+          target_id?: string | null
+          updated_at?: string
+          user_id: string
+          validation_errors?: Json
+        }
+        Update: {
+          action?: string
+          batch_id?: string
+          committed_id?: string | null
+          created_at?: string
+          entity_type?: string
+          id?: string
+          ordinal?: number
+          payload?: Json | null
+          purged_at?: string | null
+          revision?: number
+          source_excerpt?: string | null
+          target_id?: string | null
+          updated_at?: string
+          user_id?: string
+          validation_errors?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_items_user_batch_fkey"
+            columns: ["user_id", "batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           ai_consent_at: string | null
@@ -863,6 +1021,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_import_job: {
+        Args: { p_attempt_token: string; p_job_id: string }
+        Returns: boolean
+      }
       answer_ai_questions: {
         Args: { p_answers: Json; p_expected_revision: number; p_job_id: string }
         Returns: {
@@ -881,6 +1043,35 @@ export type Database = {
           achievement_id: string
           achievement_revision: number
           created: boolean
+        }[]
+      }
+      begin_import_batch: {
+        Args: {
+          p_bytes: number
+          p_filename: string
+          p_idempotency_key: string
+          p_mime_type: string
+          p_sha256: string
+        }
+        Returns: {
+          batch_id: string
+          duplicate_of_created_at: string
+          duplicate_of_status: string
+          file_key: string
+          replayed: boolean
+          revision: number
+          stage: string
+          status: string
+        }[]
+      }
+      cancel_import_batch: {
+        Args: { p_batch_id: string }
+        Returns: {
+          batch_id: string
+          error_code: string
+          revision: number
+          stage: string
+          status: string
         }[]
       }
       claim_ai_jobs: {
@@ -931,6 +1122,32 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_import_cleanup_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          id: string
+          lease_expires_at: string
+          object_key: string
+          user_id: string
+        }[]
+      }
+      claim_import_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          batch_id: string
+          expected_bytes: number
+          id: string
+          lease_expires_at: string
+          mime_type: string
+          object_key: string
+          sha256: string
+          user_id: string
+        }[]
+      }
       complete_ai_job: {
         Args: { p_attempt_token: string; p_job_id: string; p_result: Json }
         Returns: string
@@ -947,6 +1164,28 @@ export type Database = {
           p_result: string
         }
         Returns: boolean
+      }
+      complete_import_ai_job: {
+        Args: {
+          p_attempt_token: string
+          p_items: Json
+          p_job_id: string
+          p_summary: Json
+        }
+        Returns: string
+      }
+      complete_import_cleanup_job: {
+        Args: { p_attempt_token: string; p_job_id: string }
+        Returns: boolean
+      }
+      complete_import_parse: {
+        Args: {
+          p_attempt_token: string
+          p_job_id: string
+          p_page_count: number
+          p_text: string
+        }
+        Returns: string
       }
       complete_onboarding: {
         Args: {
@@ -1225,6 +1464,10 @@ export type Database = {
       dismiss_ai_suggestion: { Args: { p_job_id: string }; Returns: undefined }
       expire_ai_job_leases: { Args: never; Returns: number }
       expire_evidence_uploads: { Args: { p_limit?: number }; Returns: number }
+      expire_import_uploads: {
+        Args: { p_limit?: number; p_min_age_seconds?: number }
+        Returns: number
+      }
       fail_ai_job: {
         Args: {
           p_attempt_token: string
@@ -1268,6 +1511,24 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      fail_import_cleanup_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+        }
+        Returns: boolean
+      }
+      fail_import_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_final: boolean
+          p_job_id: string
+          p_next_attempt_at: string
+        }
+        Returns: boolean
       }
       filter_achievements: {
         Args: { p_missing_ready_evidence?: boolean; p_skill_id?: string }
@@ -1356,6 +1617,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      finalize_import_upload: {
+        Args: { p_batch_id: string; p_user_id: string }
+        Returns: {
+          batch_id: string
+          error_code: string
+          revision: number
+          stage: string
+          status: string
+        }[]
+      }
       get_ai_job_input: {
         Args: { p_attempt_token: string; p_job_id: string }
         Returns: {
@@ -1399,6 +1670,12 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_import_ai_job_input: {
+        Args: { p_attempt_token: string; p_job_id: string }
+        Returns: {
+          text: string
         }[]
       }
       list_demonstrated_skills: {
@@ -1461,6 +1738,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      purge_expired_import_batches: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
       reconcile_orphan_evidence_objects: {
         Args: { p_limit?: number; p_min_age_seconds?: number }
         Returns: {
@@ -1468,6 +1749,10 @@ export type Database = {
           object_key: string
           user_id: string
         }[]
+      }
+      reconcile_orphan_import_objects: {
+        Args: { p_limit?: number; p_min_age_seconds?: number }
+        Returns: number
       }
       relink_achievement_project: {
         Args: {
@@ -1600,6 +1885,25 @@ export type Database = {
         Returns: boolean
       }
       retry_evidence_scan_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+          p_next_attempt_at: string
+        }
+        Returns: boolean
+      }
+      retry_import_batch: {
+        Args: { p_batch_id: string }
+        Returns: {
+          batch_id: string
+          error_code: string
+          revision: number
+          stage: string
+          status: string
+        }[]
+      }
+      retry_import_cleanup_job: {
         Args: {
           p_attempt_token: string
           p_error_code: string

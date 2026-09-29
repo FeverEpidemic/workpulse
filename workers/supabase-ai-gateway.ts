@@ -129,5 +129,16 @@ export function createSupabaseAiWorkerGateway(
       if (typeof data !== "boolean") throw new AiWorkerGatewayError();
       return data;
     },
+    async getImportAiJobInput(jobId, attemptToken) {
+      const row = rows(await rpc("get_import_ai_job_input", { p_job_id: jobId, p_attempt_token: attemptToken }))[0];
+      return row && typeof row.text === "string" && row.text !== "" ? row.text : null;
+    },
+    async completeImportAiJob(jobId, attemptToken, summary, items) {
+      const data = await rpc("complete_import_ai_job", {
+        p_job_id: jobId, p_attempt_token: attemptToken, p_summary: summary, p_items: items,
+      });
+      if (typeof data !== "string") throw new AiWorkerGatewayError();
+      return data;
+    },
   };
 }

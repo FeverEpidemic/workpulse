@@ -3,3 +3,8 @@
 # root, not a monorepo. Native build scripts are allow-listed explicitly.
 allowBuilds:
   unrs-resolver: true
+# T15: pdfjs-dist lists @napi-rs/canvas as optional (rendering only). Import parsing is
+# text extraction in an isolated thread and must stay pure JavaScript, so the native
+# canvas binary is never installed.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"

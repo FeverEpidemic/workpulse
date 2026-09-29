@@ -136,7 +136,8 @@ export const detectResultJsonSchema = {
 
 const NUMBER_PATTERN = /\d+(?:[.,]\d+)*/g;
 
-function numbersIn(source: string): Set<number> {
+/** Every number written in `source`, read with both decimal conventions (1.000 / 1,000 / 5,5). */
+export function numbersIn(source: string): Set<number> {
   const found = new Set<number>();
   for (const match of source.matchAll(NUMBER_PATTERN)) {
     const token = match[0];
