@@ -28,7 +28,7 @@ Belum terbukti atau terbuka:
 
 Batas: bukti lokal dengan fake AI provider dan (untuk E2E/integration utama) fake renderer; renderer dan ClamAV nyata dibuktikan terpisah; tidak ada deployment.
 
-Berikutnya: **T16 Import commit transaction**.
+Berikutnya: **T16 Import commit transaction**. [Handoff T16 single-agent](verification/T16-implementation-plan.md) untuk Claude Sonnet 5.5 tersedia (29 September 2026); T16 tetap **TODO**, hanya dokumen rencana yang ditambahkan.
 
 ## T14 — Detection, refinement dan review — 29 September 2026
 
