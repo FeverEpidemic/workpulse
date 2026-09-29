@@ -647,8 +647,15 @@ grant select on pg_temp.a7 to public;
 select is(public.complete_import_ai_job((select id from pg_temp.a7), (select attempt_token from pg_temp.a7), pg_temp.summary(), pg_temp.items('draft')),
   'succeeded', 'b7 in review');
 reset role;
+-- T16: committed_id is written only by commit_import_batch (while the batch is still in review) and must
+-- reference an existing row, so the fixture creates a skill, records it the way the commit does (flag),
+-- and removes it again to keep the canonical count.
+insert into public.skills (id, user_id, name) values ('a7000000-0000-4000-8000-000000000007', 'e1515151-1515-4151-8151-151515151511', 'Fixture T16');
+select set_config('workpulse.import_commit', 'on', true);
+update public.import_items set committed_id = 'a7000000-0000-4000-8000-000000000007' where batch_id = (select batch_id from pg_temp.b7) and entity_type = 'skill';
+select set_config('workpulse.import_commit', 'off', true);
+delete from public.skills where id = 'a7000000-0000-4000-8000-000000000007';
 update public.import_batches set status = 'committed', committed_at = now(), expires_at = now() where id = (select batch_id from pg_temp.b7);
-update public.import_items set committed_id = gen_random_uuid() where batch_id = (select batch_id from pg_temp.b7) and entity_type = 'skill';
 set local role service_role;
 select ok(public.purge_expired_import_batches(100) >= 1, 'purge processes the committed batch');
 reset role;

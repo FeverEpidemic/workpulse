@@ -702,6 +702,7 @@ export type Database = {
         Row: {
           bytes: number
           cancelled_at: string | null
+          commit_result: Json | null
           committed_at: string | null
           created_at: string
           error_code: string | null
@@ -727,6 +728,7 @@ export type Database = {
         Insert: {
           bytes: number
           cancelled_at?: string | null
+          commit_result?: Json | null
           committed_at?: string | null
           created_at?: string
           error_code?: string | null
@@ -752,6 +754,7 @@ export type Database = {
         Update: {
           bytes?: number
           cancelled_at?: string | null
+          commit_result?: Json | null
           committed_at?: string | null
           created_at?: string
           error_code?: string | null
@@ -789,6 +792,7 @@ export type Database = {
           action: string
           batch_id: string
           committed_id: string | null
+          confirm_requested: boolean
           created_at: string
           entity_type: string
           id: string
@@ -806,6 +810,7 @@ export type Database = {
           action?: string
           batch_id: string
           committed_id?: string | null
+          confirm_requested?: boolean
           created_at?: string
           entity_type: string
           id?: string
@@ -823,6 +828,7 @@ export type Database = {
           action?: string
           batch_id?: string
           committed_id?: string | null
+          confirm_requested?: boolean
           created_at?: string
           entity_type?: string
           id?: string
@@ -1147,6 +1153,14 @@ export type Database = {
           sha256: string
           user_id: string
         }[]
+      }
+      commit_import_batch: {
+        Args: {
+          p_batch_id: string
+          p_expected_revision: number
+          p_onboarding?: Json
+        }
+        Returns: Json
       }
       complete_ai_job: {
         Args: { p_attempt_token: string; p_job_id: string; p_result: Json }
@@ -2069,6 +2083,21 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      update_import_item: {
+        Args: {
+          p_action: string
+          p_confirm_requested: boolean
+          p_expected_revision: number
+          p_item_id: string
+          p_payload_patch: Json
+          p_target_id: string
+        }
+        Returns: {
+          batch_revision: number
+          item_id: string
+          item_revision: number
+        }[]
+      }
       update_profile: {
         Args: { p_changes: Json; p_expected_revision: number }
         Returns: {
@@ -2149,6 +2178,15 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      validate_import_batch: {
+        Args: { p_batch_id: string }
+        Returns: {
+          code: string
+          existing_id: string
+          field: string
+          item_id: string
+        }[]
       }
     }
     Enums: {
