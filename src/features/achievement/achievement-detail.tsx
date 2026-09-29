@@ -13,6 +13,8 @@ import { formatActivityDate } from "@/domain/activity/activity-display";
 import type { AchievementContextOptions, AchievementDetail as AchievementDetailData } from "@/domain/achievement/contracts";
 import { deleteAchievementAction, relinkAchievementAction } from "@/features/achievement/actions";
 import { AchievementForm } from "@/features/achievement/achievement-form";
+import type { AchievementAiSuggestion } from "@/features/ai/achievement-ai-suggestion";
+import { AiSuggestionAside } from "@/features/ai/ai-suggestion-aside";
 import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
@@ -49,12 +51,14 @@ export function AchievementDetail({
   detail,
   contextOptions,
   returnTo,
+  aiSuggestion = null,
 }: {
   locale: Locale;
   ownerId: string;
   detail: AchievementDetailData;
   contextOptions: AchievementContextOptions;
   returnTo: string;
+  aiSuggestion?: AchievementAiSuggestion | null;
 }) {
   const { achievement, activity, skills } = detail;
   const [evidenceCount, setEvidenceCount] = useState<number | null>(null);
@@ -127,7 +131,19 @@ export function AchievementDetail({
         />
       </Card>
 
-      <AchievementForm locale={locale} ownerId={ownerId} contextOptions={contextOptions} returnTo={returnTo} achievement={achievement} detail={detail} />
+      {aiSuggestion?.showAside ? (
+        <AiSuggestionAside locale={locale} suggestion={aiSuggestion.suggestion} blockReason={aiSuggestion.blockReason} />
+      ) : null}
+
+      <AchievementForm
+        locale={locale}
+        ownerId={ownerId}
+        contextOptions={contextOptions}
+        returnTo={returnTo}
+        achievement={achievement}
+        detail={detail}
+        suggestedSkills={aiSuggestion?.skills}
+      />
     </section>
   );
 }

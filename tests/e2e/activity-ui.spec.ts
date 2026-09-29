@@ -263,7 +263,9 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     await expect(page.locator(".activity-chat-history > li")).toHaveCount(1);
     await expect(page.locator(".activity-chat-history .activity-detail-source")).toHaveJSProperty("textContent", chatMessage);
     await expect(page.getByText(/does not rewrite them/i)).toBeVisible();
-    await expect(page.getByText(/analyz/i)).toHaveCount(0);
+    // T14: analysis is only offered, never started or claimed, until the user explicitly requests it.
+    await expect(page.getByRole("button", { name: "Analyze with AI" })).toBeVisible();
+    await expect(page.getByText(/waiting to start|analyzing…|suggested wording/i)).toHaveCount(0);
     const chatId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
 
     const chatStructuredUpdate = await ownerClient!.rpc("update_activity", {

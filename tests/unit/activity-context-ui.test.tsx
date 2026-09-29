@@ -52,6 +52,7 @@ describe("Activity context reference UI", () => {
         options={{ experiences: [], projects: [] }}
         contextIssue={ISSUE}
         returnTo="/activity"
+        consent={{ granted: false, profileRevision: 1 }}
       />,
     );
 

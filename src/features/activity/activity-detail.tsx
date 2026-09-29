@@ -15,6 +15,8 @@ import type { ActivityContextIssue } from "@/features/activity/activity-context-
 import { NamedDeleteDialog } from "@/components/ui/named-delete-dialog";
 import type { AchievementRow } from "@/domain/achievement/contracts";
 import { deleteActivityAction } from "@/features/activity/actions";
+import { ActivityAnalysisPanel, type AnalysisPanelConsent } from "@/features/ai/activity-analysis-panel";
+import type { AnalysisViewPayload } from "@/features/ai/ai-review-service";
 import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
 import { t, type Locale } from "@/i18n/messages";
@@ -33,6 +35,8 @@ export function ActivityDetailClient({
   options,
   contextIssue,
   returnTo,
+  consent,
+  initialAnalysis,
 }: {
   locale: Locale;
   ownerId: string;
@@ -42,6 +46,8 @@ export function ActivityDetailClient({
   options: ActivityContextOptions;
   contextIssue?: ActivityContextIssue;
   returnTo: string;
+  consent: AnalysisPanelConsent;
+  initialAnalysis?: AnalysisViewPayload | null;
 }) {
   const [activity, setActivity] = useState(initialActivity);
   const [editing, setEditing] = useState(false);
@@ -164,6 +170,16 @@ export function ActivityDetailClient({
           </section>
         ) : null}
       </Card>
+
+      <ActivityAnalysisPanel
+        locale={locale}
+        activityId={activity.id}
+        activityRevision={activity.revision}
+        rawText={activity.raw_text}
+        consent={consent}
+        returnTo={returnTo}
+        initialPayload={initialAnalysis ?? null}
+      />
 
       <Card>
         <EvidenceAttachments
