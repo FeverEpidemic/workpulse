@@ -8,6 +8,7 @@ import type { Database } from "@/server/supabase/database.types";
 const protectedPaths = [
   "/dashboard",
   "/onboarding",
+  "/imports",
   "/settings",
   "/activity",
   "/achievements",
@@ -71,6 +72,7 @@ export const config = {
     "/auth/:path*",
     "/update-password",
     "/onboarding/:path*",
+    "/imports/:path*",
     "/dashboard/:path*",
     "/settings/:path*",
     "/activity/:path*",

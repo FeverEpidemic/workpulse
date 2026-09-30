@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 
-export type ImportWorkerScenario = "valid" | "unavailable" | "import_empty" | "malformed";
+export type ImportWorkerScenario = "valid" | "unavailable" | "import_empty" | "import_partial" | "malformed";
 
 const CHILD_ONLY_PREFIXES = ["WORKPULSE_AI_", "WORKPULSE_OPENAI_", "WORKPULSE_DOCX_", "WORKPULSE_GOTENBERG_", "WORKPULSE_SCANNER_", "WORKPULSE_CLAMD_"];
 

@@ -1,5 +1,31 @@
 # WorkPulse Implementation Status
 
+## T17 — Import review UI dan onboarding lengkap, acceptance lokal — 30 September 2026
+
+Status T17: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (HEAD `58e0183`) menemukan 1 P2 (RV1: token commit menyerap revision dari tab lain) dan 9 P3; RV1, N1 dan N7 diperbaiki di `2c81c02` oleh reviewer atas instruksi pengguna, lalu review ulang tanpa P0–P2 (tidak independen penuh; ditopang test yang terbukti gagal tanpa perbaikan). Dependensi T16, T15, T04, T03, T12 **DONE**; Gate M2 PASSED. Rujukan: R02, F01, S02, S03, S04, S12, DB §4 (lewat RPC T16).
+[Rencana](verification/T17-implementation-plan.md), [bukti](verification/T17-import-review-ui.md), [gate review dan remediasi](verification/T17-review-remediation-plan.md), [decision 0023](decisions/0023-t17-import-review-ui.md), receipt [Fase 0](verification/T17-phase0-baseline.md)–[5](verification/T17-phase5-browser-regression.md), [5b](verification/T17-phase5b-remediation.md).
+
+Yang selesai:
+
+- S03 `/imports/[id]/review` di luar workspace frame (provisional diizinkan; anonim → sign-in dengan return aman; id asing/tidak ada = not-found generik), loader session-client `import-review-view-service.ts`, route `GET /api/imports/[id]/review`, `validateImportAction`.
+- View model murni `review-view.ts` (grup, field wajib, duplikat, ringkasan, blocker) dan `review-edit.ts` (draft/patch, `RevisionTracker` untuk token commit).
+- UI: Create/Map/Skip tersimpan langsung dengan status persistensi, edit field lewat *Save changes*, konflik mempertahankan input lokal, confirm achievement per kandidat, onboarding (nama/locale/timezone) dalam commit, hasil dari `commit_result`, cancel, jalur manual.
+- Entry point: S02 *Review candidates* dan copy *Import saved*, S02 terbuka untuk pengguna lama, dashboard kosong dan S12 *Import CV* aktif.
+
+File berubah: `src/app/imports/[id]/review/{page,loading}.tsx`, `src/app/api/imports/[id]/review/route.ts`, `src/app/onboarding/import/page.tsx`, `src/app/globals.css`, `src/domain/import/{review-view,review-edit,commit-contracts}.ts`, `src/domain/routes/safe-return.ts`, `src/proxy.ts`, `src/features/import/{import-review,import-review-candidate,import-review-view-service,actions,http,import-start}.ts(x)`, `src/features/dashboard/dashboard-view.tsx`, `src/features/profile/profile-workspace.tsx`, `src/i18n/messages.ts`, 7 test unit baru + 2 diubah, `tests/integration/import-review-ui.test.ts`, `tests/e2e/import-review.spec.ts`, `playwright.import-review.config.ts`, helper E2E `import_partial`, 3 assertion E2E lama (disengaja), `package.json` (2 script), dokumen.
+
+Migration dan keputusan: tanpa migration (parity 26/26). Decision 0023.
+
+Checks (hasil aktual, lihat bukti): gate HEAD `58e0183` — lint, typecheck, build, `worker:check`, `db:lint` exit 0; unit 76/495; pgTAP 11/779; integration import-review 6, import-commit 11, import 21, achievements 5, dashboard 4, activity 6, projects 7, m2 8, ai 13, ai-review 21, evidence 14, storage 1; E2E import-review 9, import 7, dashboard 1, m2 1, auth 1, ui 1, achievements 4, ai 2, activity 1, projects 1, ai-review 11, evidence 8 (rerun; run pertama 7/8 flaky `activity-ui.spec.ts:356`). Setelah remediasi HEAD `2c81c02` — lint, typecheck, build, `worker:check` exit 0; unit 76/500; integration import-review 6, import-commit 11; E2E import-review `--repeat-each 2` 20/20, import 7, m2 1, dashboard 1; `git diff --check d4bd39f..HEAD` exit 0.
+
+Belum dijalankan: smoke live `extractImport`, uji stres race commit, `db:test` dan regresi penuh setelah remediasi (perubahan hanya komponen S03, helper domain, copy).
+
+Terbuka (P3): admin client tak terpakai di route GET review (N4); label error `metrics`/`experience_item_id` (N5); `ONBOARDING_INVALID` hanya notice umum (N6); nilai profil kosong dikirim `""` (N8); flaky `activity-ui.spec.ts:356` (N9); purge batch `review` yang ditinggalkan (T23); CV freshness perubahan profil lewat import (T20).
+
+Batas: bukti lokal dengan fake AI provider, ClamAV dan Gotenberg nyata; tidak ada deployment.
+
+Berikutnya: **Gate M3 (Assisted entry)** — integration review F01 import dan F02 assisted (malformed file, retry, consent withdrawal, AI unavailable, stale result) dalam sesi terpisah; setelah itu T18.
+
 ## T16 — Import commit transaction, acceptance lokal — 30 September 2026
 
 Status T16: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal; gate review Claude (HEAD `6a8dd06`) tanpa temuan P0–P2 (review dilakukan oleh sesi yang sama dengan pelaksana, tidak independen). Dependensi T15, T09, T02/T03, T12 **DONE**; Gate M2 PASSED. Rujukan: R02, F01, S03 (backend), S08, DB §1–§4/§6.
@@ -626,7 +652,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T14 | Detection dan review | DONE |
 | T15 | Import staging | DONE |
 | T16 | Import commit | DONE |
-| T17 | Import review UI | TODO |
+| T17 | Import review UI | DONE |
 | T18 | CV schema dan selection | TODO |
 | T19 | CV builder dan overrides | TODO |
 | T20 | CV freshness dan deletion | TODO |

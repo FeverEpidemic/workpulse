@@ -19,6 +19,7 @@ const APP_PATHS = [
   /^\/cv$/,
   /^\/settings\/profile$/,
   /^\/onboarding\/import$/,
+  /^\/imports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/review$/i,
 ];
 
 const QUERY_KEYS: Record<string, ReadonlySet<string>> = {

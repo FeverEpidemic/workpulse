@@ -178,7 +178,8 @@ test("M2 manual journey: note → project → achievement → private evidence �
     await page.getByRole("button", { name: "Continue to dashboard", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.locator(".dashboard-stat-card")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Import CV" })).toBeDisabled();
+    // T17: the empty dashboard now links to S02 (it was a disabled placeholder before).
+    await expect(page.getByRole("link", { name: "Import CV" })).toHaveAttribute("href", "/onboarding/import");
     await expectAiFree(page, "empty dashboard");
     await page.getByRole("link", { name: "Add your first activity", exact: true }).click();
     await expect(page).toHaveURL(/\/activity\/new$/);

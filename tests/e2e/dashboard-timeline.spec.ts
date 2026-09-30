@@ -346,8 +346,8 @@ test("Dashboard and Timeline browser acceptance, accessibility, filters, and own
     await signIn(page, fixture.emptyUser);
     await expect(page.locator(".dashboard-stat-card")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Add your first activity" })).toHaveAttribute("href", "/activity/new");
-    await expect(page.getByRole("button", { name: "Import CV" })).toBeDisabled();
-    await expect(page.locator("#dashboard-import-unavailable")).toBeVisible();
+    // T17: Import CV is now an active link to S02 (it was a disabled placeholder before).
+    await expect(page.getByRole("link", { name: "Import CV" })).toHaveAttribute("href", "/onboarding/import");
     await expectNoWcagViolations(page, testInfo, "dashboard-empty");
     await page.getByRole("link", { name: "Add your first activity" }).click();
     await expect(page).toHaveURL(/\/activity\/new$/);

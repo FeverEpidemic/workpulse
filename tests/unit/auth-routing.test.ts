@@ -27,6 +27,18 @@ describe("safe internal return routes", () => {
     expect(sanitizeProjectReturnTo("/projects?status=completed&cursor=" + encodeURIComponent("bad"))).toBe("/projects");
   });
 
+  it("allows the S03 import review route for one UUID and rejects look-alikes and queries", () => {
+    const id = "70d2c57c-46e8-4cda-9b3b-c47f342099da";
+    expect(sanitizeReturnTo(`/imports/${id}/review`)).toBe(`/imports/${id}/review`);
+    expect(sanitizeReturnTo("/imports/not-a-uuid/review")).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/imports/${id}`)).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/imports/${id}/review/extra`)).toBe("/dashboard");
+    expect(sanitizeReturnTo(`/imports/${id}/review?x=1`)).toBe("/dashboard");
+    expect(destinationForLifecycle("anonymous", `/imports/${id}/review`)).toBe(`/sign-in?returnTo=${encodeURIComponent(`/imports/${id}/review`)}`);
+    // A provisional account is still sent to S02, which links to S03 once the batch is ready.
+    expect(destinationForLifecycle("provisional", `/imports/${id}/review`)).toBe("/onboarding/import");
+  });
+
   it("allows only valid T12 filters and profile record links", () => {
     const id = "70d2c57c-46e8-4cda-9b3b-c47f342099da";
     expect(sanitizeReturnTo(`/achievements?status=confirmed&evidence=missing&skill=${id}`)).toBe(

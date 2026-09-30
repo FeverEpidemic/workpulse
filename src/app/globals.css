@@ -2080,3 +2080,211 @@ a.dashboard-stat-card:hover,
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 4px;
 }
+
+/* T17 S03 import review */
+.import-review-layout {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .import-review-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .import-review-aside {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+.import-group {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.import-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.import-group-summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.import-group-count {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.import-group-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.import-candidate {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  padding: var(--space-4);
+}
+
+.import-candidate:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.import-candidate[data-action="skip"] {
+  background: var(--color-bg-subtle);
+}
+
+.import-candidate-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.import-candidate-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.import-persistence {
+  min-height: 1.5rem;
+}
+
+.import-excerpt summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.import-excerpt summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.import-excerpt blockquote {
+  margin-top: var(--space-2);
+  border-left: 3px solid var(--color-border-strong);
+  padding-left: var(--space-3);
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+}
+
+.import-actionset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+
+.import-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-1);
+}
+
+.import-radio,
+.import-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+  font-size: var(--font-size-sm);
+}
+
+.import-fields {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.import-field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.import-field[data-missing] .field-input {
+  border-color: var(--color-danger-border);
+}
+
+.import-required {
+  margin-left: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.import-date {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+
+.import-date-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .import-date-grid {
+    grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  }
+}
+
+.import-confirm {
+  display: grid;
+  gap: var(--space-1);
+  border-top: 1px solid var(--color-border-default);
+  padding-top: var(--space-3);
+}
+
+.import-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.import-error-summary ul,
+.import-blockers,
+.import-summary,
+.import-result {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  list-style: disc;
+  font-size: var(--font-size-sm);
+}
+
+.import-error-summary a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.import-result-heading:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .import-review * { transition: none !important; animation: none !important; }
+}

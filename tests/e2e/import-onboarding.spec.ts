@@ -152,7 +152,8 @@ test("S02 allow, upload, leave and return, session expiry, then extraction finis
   await expect(page.getByRole("status")).toHaveText("Extraction finished", { timeout: 30_000 });
   await expect(page.getByText("We found 7 candidate records")).toBeVisible();
   await expect(page.locator("dl.import-counts")).toContainText("Experience");
-  await expect(page.locator('a[href*="/imports/"]')).toHaveCount(0);
+  // T17: the candidates can now be reviewed in S03 (this asserted the absence of any review link before).
+  await expect(page.getByRole("link", { name: "Review candidates" })).toHaveAttribute("href", /\/imports\/[0-9a-f-]{36}\/review$/);
   await snapshot(page, testInfo, "s02-review-ready");
   expect(await batches(user.id)).toEqual([expect.objectContaining({ status: "review" })]);
 });
