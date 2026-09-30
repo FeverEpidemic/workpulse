@@ -104,6 +104,18 @@ export async function updateImportItemAction(_previous: ActionState, formData: F
   }
 }
 
+/** S03: dry-run of the commit validation; returns item ids, fields and codes only. */
+export async function validateImportAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = batchFormSchema.safeParse({ batch_id: text(formData, "batch_id") ?? "" });
+  if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
+  try {
+    const service = await reviewService();
+    return actionSuccess(undefined, await service.validate(parsed.data.batch_id));
+  } catch (error) {
+    return failure(error);
+  }
+}
+
 /** S03 "Confirm import": one atomic commit; a repeated submit returns the first result. */
 export async function commitImportAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const displayName = text(formData, "onboarding_display_name");
@@ -121,6 +133,8 @@ export async function commitImportAction(_previous: ActionState, formData: FormD
     const service = await reviewService();
     const result = await service.commit(parsed.data);
     revalidatePath("/dashboard");
+    revalidatePath("/timeline");
+    revalidatePath("/settings/profile");
     return actionSuccess("import.committed", result);
   } catch (error) {
     return failure(error);

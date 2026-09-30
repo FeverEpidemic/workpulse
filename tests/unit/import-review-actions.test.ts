@@ -12,7 +12,7 @@ vi.mock("@/server/supabase/server", () => ({
 vi.mock("@/server/supabase/admin", () => ({ getSupabaseAdminClient: () => ({}) }));
 vi.mock("@/server/storage/supabase-storage-adapter", () => ({ SupabaseStorageAdapter: class {} }));
 
-import { commitImportAction, updateImportItemAction } from "@/features/import/actions";
+import { commitImportAction, updateImportItemAction, validateImportAction } from "@/features/import/actions";
 
 const BATCH = "1f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f";
 const ITEM = "2f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f";
@@ -80,6 +80,23 @@ describe("T16 import review actions", () => {
     const state = await commitImportAction({ status: "idle" }, form({ batch_id: BATCH, expected_revision: "4" }));
     expect(state).toMatchObject({ status: "error", error: { code: "UNAUTHENTICATED" } });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("revalidates the record surfaces a commit changes, never on failure", async () => {
+    rpc.mockResolvedValue({ data: RESULT, error: null });
+    await commitImportAction({ status: "idle" }, form({ batch_id: BATCH, expected_revision: "4" }));
+    expect(revalidatePath.mock.calls.map((call) => call[0]).sort()).toEqual(["/dashboard", "/settings/profile", "/timeline"]);
+  });
+
+  it("validates a batch as the session user without revalidating anything", async () => {
+    rpc.mockResolvedValue({ data: [{ item_id: ITEM, field: "role_title", code: "REQUIRED", existing_id: null }], error: null });
+    const state = await validateImportAction({ status: "idle" }, form({ batch_id: BATCH }));
+    expect(state).toMatchObject({ status: "success", data: [{ item_id: ITEM, field: "role_title", code: "REQUIRED" }] });
+    expect(rpc).toHaveBeenCalledWith("validate_import_batch", { p_batch_id: BATCH });
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(await validateImportAction({ status: "idle" }, form({ batch_id: "nope" }))).toMatchObject({ status: "error", error: { code: "VALIDATION" } });
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    expect(await validateImportAction({ status: "idle" }, form({ batch_id: BATCH }))).toMatchObject({ status: "error", error: { code: "UNAUTHENTICATED" } });
   });
 
   it("saves one review choice with a parsed payload patch", async () => {

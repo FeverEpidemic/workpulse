@@ -14,7 +14,13 @@ import { createImportService, type ImportService } from "./import-service";
  * Responses carry a view model only (no extracted text, no candidate payloads) and errors
  * carry a stable code, a localized message and a correlation ID.
  */
-export async function importHttp(request: Request, mutation: boolean, run: (service: ImportService) => Promise<unknown>) {
+export type ImportHttpContext = { client: NonNullable<Awaited<ReturnType<typeof getRequestContext>>["client"]>; actorId: string };
+
+export async function importHttp(
+  request: Request,
+  mutation: boolean,
+  run: (service: ImportService, context: ImportHttpContext) => Promise<unknown>,
+) {
   let locale: "en" | "id" = "en";
   try {
     if (mutation && request.headers.get("origin") !== getTrustedSiteUrl()) throw new ImportServiceError("VALIDATION");
@@ -30,7 +36,7 @@ export async function importHttp(request: Request, mutation: boolean, run: (serv
       storage: new SupabaseStorageAdapter(admin),
       actorId: context.user.id,
     });
-    return Response.json(await run(service), { headers: { "Cache-Control": "no-store" } });
+    return Response.json(await run(service, { client: context.client, actorId: context.user.id }), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const safe = toImportServiceError(error);
     return Response.json(

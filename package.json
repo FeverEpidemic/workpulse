@@ -37,6 +37,7 @@
     "test:integration:storage": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/private-storage.test.ts",
     "test:integration:import": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/import-staging.test.ts tests/integration/import-renderer-real.test.ts",
     "test:integration:import-commit": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/import-commit.test.ts",
+    "test:integration:import-review": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/import-review-ui.test.ts",
     "test:integration:evidence": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/evidence-backend.test.ts tests/integration/evidence-scanner-real.test.ts tests/integration/evidence-pipeline.test.ts",
     "build": "next build",
     "worker:check": "node workers/check.ts",
