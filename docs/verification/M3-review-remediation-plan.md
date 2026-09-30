@@ -1,6 +1,9 @@
 # Rencana Remediasi Gate M3 — Assisted entry
 
-Status plan: **OPEN — menunggu persetujuan pengguna** (1 temuan P2).
+Status plan: **DONE — 30 September 2026** (RV1 diperbaiki di `1da020a`; Gate M3 PASSED, lihat `M3-gate-review.md`).
+
+- Persetujuan pengguna (30 September 2026, "Boleh"): kerjakan remediasi RV1 lalu tetapkan verdict M3.
+- Remediasi RV1 (TDD): test unit baru di `tests/unit/import-start-ui.test.tsx` gagal lebih dulu (2 gagal: pemetaan `CONSENT_WITHDRAWN` dan render copy en/id), lalu lulus setelah perbaikan. Checks §3 diulang, semuanya exit 0: lint, typecheck, unit 76/501, build, `test:integration:m3` 7/7, `test:e2e:import` 7/7, `test:e2e:m3` 2/2, `git diff --check 42bab36` bersih. Remediasi dikerjakan oleh reviewer sendiri, jadi review ulang tidak sepenuhnya independen. Kebenarannya ditopang test yang terbukti gagal sebelum perbaikan.
 
 - Tanggal: 30 September 2026.
 - Reviewer: Claude (Opus), integration review Gate M3 atas permintaan pengguna ("Langsung jalankan Gate Review M3").
@@ -13,7 +16,7 @@ Status plan: **OPEN — menunggu persetujuan pengguna** (1 temuan P2).
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | S02 menampilkan "AI processing is not allowed, so the text was not sent." untuk batch `CONSENT_WITHDRAWN`, padahal kode itu hanya muncul setelah teks CV sudah terkirim ke provider | Open |
+| RV1 | P2 | S02 menampilkan "AI processing is not allowed, so the text was not sent." untuk batch `CONSENT_WITHDRAWN`, padahal kode itu hanya muncul setelah teks CV sudah terkirim ke provider | FIXED `1da020a` |
 | N1 | P3 | `workers/ai-worker.ts:90`: job import dengan teks kosong/terlalu panjang hanya dihitung `aiSkipped` tanpa `failAiJob`; job menunggu lease habis (120 s) lalu menjadi `AI_TIMEOUT`. Tidak terjangkau saat ini karena `workers/import-worker.ts:169` sudah menolak teks > 60.000 karakter sebagai `IMPORT_TEXT_TOO_LONG` | Follow-up |
 | N2 | P3 | S06 untuk job `CONSENT_WITHDRAWN`/`CONSENT_REQUIRED` hanya menampilkan pesan generik "The analysis could not be completed." (ditambah alasan consent bila consent masih ditarik). Jujur, tetapi tidak menjelaskan bahwa hasilnya dibuang karena consent | Follow-up (copy) |
 | N3 | P3 | Helper E2E `drainAiWorker` tidak mengembalikan stdout worker, sehingga hygiene log di E2E hanya diperiksa untuk output `drainImportWorker` (yang juga menjalankan pass AI). Warisan T14 §1.18 "Sebagian" | Follow-up |

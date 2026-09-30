@@ -2,18 +2,18 @@
 
 ## Gate M3 — Assisted entry, integration review — 30 September 2026
 
-Status Gate M3: **BELUM LULUS — 1 P2 terbuka (RV1)**. Reviewer: Claude (Opus), HEAD `42bab36`. Kalimat gate: F01 import dan F02 assisted bersama malformed file, retry, consent withdrawal, AI unavailable, stale result. Dependensi T13–T17 **DONE**.
+Status Gate M3: **PASSED** (acceptance lokal). Verdict awal pada HEAD `42bab36` adalah BELUM LULUS karena satu P2 (RV1). RV1 diperbaiki di `1da020a` atas persetujuan pengguna, lalu checks remediasi diulang dan semuanya exit 0 (unit 76/501, `test:integration:m3` 7/7, `test:e2e:import` 7/7, `test:e2e:m3` 2/2, lint, typecheck, build, `git diff --check`). Reviewer: Claude (Opus); review ulang tidak sepenuhnya independen. Kalimat gate: F01 import dan F02 assisted bersama malformed file, retry, consent withdrawal, AI unavailable, stale result. Dependensi T13–T17 **DONE**.
 [Laporan gate](verification/M3-gate-review.md), [rencana remediasi](verification/M3-review-remediation-plan.md).
 
 Yang dikerjakan: test lintas alur `tests/integration/m3-assisted-entry.test.ts` (7/7, script `test:integration:m3`) dan journey browser `tests/e2e/m3-assisted-journey.spec.ts` (2/2, script `test:e2e:m3`, `playwright.m3.config.ts` port 3011). Tanpa perubahan kode produk, tanpa migration.
 
 Hasil: 9 dari 10 kriteria PASS. Regresi penuh exit 0: lint, typecheck, unit 76/500, pgTAP 11/779, `db:lint`, `worker:check`, build, semua integration (m3 7, import 21, import-commit 11, import-review 6, ai 13, ai-review 21, activity 6, achievements 5, projects 7, dashboard 4, m2 8, storage 1, evidence 14), E2E m3 2, import 7, import-review 10, ai 2, ai-review 11, m2 1, auth 1, ui 1, activity 1, projects 1, achievements 4, dashboard 1. Pengecualian: `test:e2e:evidence` 7/8 dua kali, karena flaky bawaan `activity-ui.spec.ts:356` (N4, race hydration di test).
 
-Temuan: **RV1 (P2)**. Untuk batch `CONSENT_WITHDRAWN`, S02 menulis "teks tidak dikirim", padahal teks sudah diterima provider (`import-start.tsx:34`). P3: N1 (ai-worker skip tanpa fail, tidak terjangkau), N2 (copy S06 generik), N3 (stdout `drainAiWorker`), N4 (flaky).
+Temuan: **RV1 (P2, fixed `1da020a`)**. Untuk batch `CONSENT_WITHDRAWN`, S02 dulu menulis "teks tidak dikirim", padahal teks sudah diterima provider. Sekarang tampil copy en/id tersendiri (`import.failed.CONSENT_WITHDRAWN`). File berubah: `src/features/import/import-start.tsx`, `src/i18n/messages.ts`, `tests/unit/import-start-ui.test.tsx`. P3: N1 (ai-worker skip tanpa fail, tidak terjangkau), N2 (copy S06 generik), N3 (stdout `drainAiWorker`), N4 (flaky).
 
 Belum dijalankan: smoke live `refine`/`extractImport`, stres race commit, staging/production. Bukti lokal saja.
 
-Berikutnya: persetujuan pengguna untuk remediasi RV1 (copy + pemetaan, tanpa SQL), lalu ulangi checks §3 rencana dan tetapkan verdict M3. T18 menunggu Gate M3 PASSED.
+Berikutnya: **T18 CV schema dan selection** (milestone M4). Follow-up P3 N1–N4 tidak memblokir.
 
 ## T17 — Import review UI dan onboarding lengkap, acceptance lokal — 30 September 2026
 
