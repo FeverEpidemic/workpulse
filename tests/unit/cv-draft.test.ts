@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isValidSectionOrder } from "@/domain/cv/selection";
 import {
-  changedKeys, computeItemMove, computeSectionMove, draftFromSaved, isDirty, itemKey, profileKey, reconcileDraft, toSaveInput, validateDraft,
+  changedKeys, computeItemMove, computeSectionMove, draftFromSaved, isDirty, itemKey, profileKey, reconcileDraft, resolveConflict, syncDraft, toSaveInput, validateDraft,
 } from "@/domain/cv/draft";
 
 import { ORDER, achievementSnapshot, documentRow, graduateItems, itemRow, uuid } from "./cv-fixtures";
@@ -99,5 +99,49 @@ describe("T19 CV draft", () => {
       expect(computeSectionMove(ORDER, "experience", "up")).toBeNull();
       expect(computeSectionMove(ORDER, "certifications", "down")).toBeNull();
     });
+  });
+});
+
+describe("T19 CV draft sync", () => {
+  it("adopts saved values for untouched fields and keeps the user's edits", () => {
+    const base = { ...draftFromSaved(documentRow(), graduateItems()) };
+    const draft = { ...base, summary: "mine" };
+    const saved = { ...base, title: "Saved title", [itemKey(uuid(1))]: "theirs" };
+    const sync = syncDraft({ base, draft, unresolved: [], saved });
+    expect(sync.draft.title).toBe("Saved title");
+    expect(sync.draft.summary).toBe("mine");
+    expect(sync.draft[itemKey(uuid(1))]).toBe("theirs");
+    expect(sync.unresolved).toEqual([]);
+    expect(sync.base).toEqual(saved);
+  });
+
+  it("keeps conflicting text, marks it unresolved, and carries the mark across further syncs", () => {
+    const base = draftFromSaved(documentRow(), graduateItems());
+    const draft = { ...base, title: "mine" };
+    const saved = { ...base, title: "theirs" };
+    const first = syncDraft({ base, draft, unresolved: [], saved });
+    expect(first.draft.title).toBe("mine");
+    expect(first.unresolved).toEqual(["title"]);
+    const second = syncDraft({ ...first, saved });
+    expect(second.unresolved).toEqual(["title"]);
+    expect(isDirty(second.base, second.draft)).toBe(true);
+  });
+
+  it("resolves a conflict either way", () => {
+    const base = draftFromSaved(documentRow(), graduateItems());
+    const saved = { ...base, title: "theirs" };
+    const sync = syncDraft({ base, draft: { ...base, title: "mine" }, unresolved: [], saved });
+    const kept = resolveConflict(sync, "title", "mine", saved);
+    expect(kept).toMatchObject({ draft: { title: "mine" }, unresolved: [] });
+    const used = resolveConflict(sync, "title", "saved", saved);
+    expect(used).toMatchObject({ draft: { title: "theirs" }, unresolved: [] });
+    expect(isDirty(used.base, used.draft)).toBe(false);
+  });
+
+  it("clears the mark once the draft equals the saved value", () => {
+    const base = draftFromSaved(documentRow(), graduateItems());
+    const saved = { ...base, title: "same" };
+    const next = syncDraft({ base, draft: { ...base, title: "same" }, unresolved: ["title"], saved });
+    expect(next.unresolved).toEqual([]);
   });
 });

@@ -44,7 +44,8 @@ function joinParts(...parts: (string | null | undefined)[]): string | null {
   return present.length > 0 ? present.join(", ") : null;
 }
 
-function toEntry(item: PreviewItemInput, locale: CvLocale, deleted: boolean): CvPreviewEntry {
+/** One display entry (headline, dates, effective text) for a CV item; shared by the editor rows and the preview. */
+export function buildCvPreviewEntry(item: PreviewItemInput, locale: CvLocale, deleted: boolean): CvPreviewEntry {
   const snapshot = item.source_snapshot;
   const base = { itemId: item.id, type: snapshot.source_type, deleted, hasOverride: hasOverride(item), text: resolveItemText(item), children: [] };
   switch (snapshot.source_type) {
@@ -81,8 +82,8 @@ export function buildCvPreviewModel(input: { document: PreviewDocumentInput; ite
       key: section.key,
       heading: CV_LABELS[locale].sections[section.key],
       entries: section.entries.map((entry) => ({
-        ...toEntry(entry.item, locale, entry.deleted),
-        children: entry.children.map((child) => toEntry(child, locale, child.source_deleted)),
+        ...buildCvPreviewEntry(entry.item, locale, entry.deleted),
+        children: entry.children.map((child) => buildCvPreviewEntry(child, locale, child.source_deleted)),
       })),
     });
   }

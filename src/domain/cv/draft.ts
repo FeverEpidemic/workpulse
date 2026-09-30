@@ -138,6 +138,33 @@ function swap<T>(list: T[], a: number, b: number): void {
   list[b] = first;
 }
 
+export interface DraftSync {
+  base: CvDraft;
+  draft: CvDraft;
+  /** Fields where the user and the saved CV both changed; Save stays off until each one is resolved. */
+  unresolved: string[];
+}
+
+/**
+ * Applies a newly loaded saved CV to the local draft without losing what the user typed. Untouched fields
+ * take the saved value, edited fields keep the draft, and fields changed on both sides become unresolved.
+ */
+export function syncDraft(input: { base: CvDraft; draft: CvDraft; unresolved: readonly string[]; saved: CvDraft }): DraftSync {
+  const { fields, merged } = reconcileDraft({ base: input.base, draft: input.draft, server: input.saved });
+  const fresh = Object.entries(fields).filter(([, state]) => state === "conflict").map(([key]) => key);
+  const carried = input.unresolved.filter((key) => key in input.saved && normalized(merged[key]) !== normalized(input.saved[key]));
+  return { base: { ...input.saved }, draft: merged, unresolved: [...new Set([...fresh, ...carried])].sort() };
+}
+
+/** Resolves one conflicting field: keep the local text or take the saved text. */
+export function resolveConflict(sync: DraftSync, key: string, choice: "mine" | "saved", saved: CvDraft): DraftSync {
+  return {
+    base: sync.base,
+    draft: choice === "saved" ? { ...sync.draft, [key]: saved[key] ?? "" } : sync.draft,
+    unresolved: sync.unresolved.filter((entry) => entry !== key),
+  };
+}
+
 export type MoveDirection = "up" | "down";
 
 export interface MoveItemInput extends OutlineItemInput {
