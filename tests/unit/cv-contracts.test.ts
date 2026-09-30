@@ -5,10 +5,12 @@ import {
   CV_SECTION_KEYS,
   CV_SOURCE_TYPES,
   SECTION_FOR_SOURCE_TYPE,
+  cvProfileSnapshotSchema,
   cvSourceSnapshotSchema,
   parseChildItemsDetail,
   removeCvItemInput,
   reorderCvSectionInput,
+  saveCvEditsInput,
   selectCvSourceInput,
   updateCvLayoutInput,
 } from "@/domain/cv/contracts";
@@ -33,9 +35,9 @@ describe("T18 CV contracts", () => {
     });
   });
 
-  it("lists the twelve database error codes", () => {
+  it("lists the thirteen database error codes (T19 adds CV_OVERRIDE_UNSUPPORTED)", () => {
     expect([...CV_ERROR_CODES].sort()).toEqual([
-      "AUTH_REQUIRED", "CV_CHILD_ITEMS_EXIST", "CV_ITEM_IMMUTABLE", "CV_ITEM_NOT_FOUND", "CV_NOT_FOUND", "CV_REORDER_INVALID",
+      "AUTH_REQUIRED", "CV_CHILD_ITEMS_EXIST", "CV_ITEM_IMMUTABLE", "CV_ITEM_NOT_FOUND", "CV_NOT_FOUND", "CV_OVERRIDE_UNSUPPORTED", "CV_REORDER_INVALID",
       "CV_SOURCE_DUPLICATE", "CV_SOURCE_INELIGIBLE", "CV_SOURCE_NOT_FOUND", "INVALID_CV_INPUT", "ONBOARDING_REQUIRED", "STALE_REVISION",
     ]);
   });
@@ -131,5 +133,41 @@ describe("T18 CV contracts", () => {
       expect(parseChildItemsDetail(null)).toBeNull();
       expect(parseChildItemsDetail(undefined)).toBeNull();
     });
+  });
+});
+
+describe("T19 CV edit contracts", () => {
+  it("adds the override error code", () => {
+    expect(CV_ERROR_CODES).toContain("CV_OVERRIDE_UNSUPPORTED");
+  });
+
+  it("requires at least one edit and accepts null as clear", () => {
+    expect(saveCvEditsInput.safeParse({ expected_revision: 1 }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ expected_revision: 0, title: "x" }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ expected_revision: 1, summary_override: null }).success).toBe(true);
+    expect(saveCvEditsInput.safeParse({ expected_revision: 1, item_overrides: [{ item_id: ID, override_text: null }] }).success).toBe(true);
+  });
+
+  it("enforces limits, key sets, uuids and duplicates", () => {
+    const rev = { expected_revision: 1 };
+    expect(saveCvEditsInput.safeParse({ ...rev, title: " " }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, title: "t".repeat(121) }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, summary_override: "s".repeat(5001) }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, profile_overrides: { nickname: "x" } }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, profile_overrides: { website: "ftp://example.com" } }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, profile_overrides: { website: "https://example.com", headline: null } }).success).toBe(true);
+    expect(saveCvEditsInput.safeParse({ ...rev, profile_overrides: { contact_email: "bad" } }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, item_overrides: [{ item_id: "nope", override_text: "a" }] }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, item_overrides: [{ item_id: ID, override_text: "o".repeat(2001) }] }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, item_overrides: [{ item_id: ID, override_text: "a" }, { item_id: ID, override_text: "b" }] }).success).toBe(false);
+    expect(saveCvEditsInput.safeParse({ ...rev, user_id: ID, title: "x" }).success).toBe(false);
+  });
+
+  it("accepts display overrides on the profile snapshot and rejects unknown keys", () => {
+    const base = { schema_version: "cv-profile.v1", display_name: "Ani", summary: null };
+    expect(cvProfileSnapshotSchema.safeParse({ ...base, display_overrides: { headline: "Analyst" } }).success).toBe(true);
+    expect(cvProfileSnapshotSchema.safeParse({ ...base, display_overrides: { nickname: "x" } }).success).toBe(false);
+    expect(cvProfileSnapshotSchema.safeParse({ ...base, extra: 1 }).success).toBe(false);
+    expect(cvProfileSnapshotSchema.safeParse({ ...base, display_overrides: { website: "javascript:alert(1)" } }).success).toBe(false);
   });
 });
