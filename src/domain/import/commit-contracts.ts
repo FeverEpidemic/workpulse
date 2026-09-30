@@ -85,6 +85,10 @@ export const commitResultSchema = z.strictObject({
 });
 export type ImportCommitResult = z.infer<typeof commitResultSchema>;
 
+/** The counts stored on import_batches.commit_result (the RPC adds batch_id and committed_at on return). */
+export const storedCommitResultSchema = commitResultSchema.omit({ batch_id: true, committed_at: true });
+export type StoredImportCommitResult = z.infer<typeof storedCommitResultSchema>;
+
 export const importItemErrorSchema = z.strictObject({
   item_id: z.uuid(),
   field: z.string().regex(/^[a-z_]{1,40}$/),
