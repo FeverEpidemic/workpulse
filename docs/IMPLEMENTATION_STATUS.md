@@ -13,7 +13,7 @@ Temuan: **RV1 (P2, fixed `1da020a`)**. Untuk batch `CONSENT_WITHDRAWN`, S02 dulu
 
 Belum dijalankan: smoke live `refine`/`extractImport`, stres race commit, staging/production. Bukti lokal saja.
 
-Berikutnya: **T18 CV schema dan selection** (milestone M4). Follow-up P3 N1–N4 tidak memblokir.
+Berikutnya: **T18 CV schema dan selection** (milestone M4). Follow-up P3 N1–N4 tidak memblokir. [Handoff T18 single-agent](verification/T18-implementation-plan.md) untuk Claude Sonnet 5.5 tersedia (30 September 2026); T18 tetap **TODO**, hanya dokumen rencana yang ditambahkan.
 
 ## T17 — Import review UI dan onboarding lengkap, acceptance lokal — 30 September 2026
 
