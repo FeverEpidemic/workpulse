@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi. Semua nama tabel, kolom, fungsi, kode error, dan path di dokumen ini **dibekukan**; jangan mengganti namanya.
 
 - Tanggal: 30 September 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status plan: **DONE** (30 September 2026, acceptance lokal; lihat `T18-cv-schema-selection.md`).
 - Dependensi: T09 **DONE** (achievement lifecycle, skills) dan T03 **DONE** (profil, onboarding, foundation CRUD). T08 (projects) dan T16/T17 (import commit) juga **DONE**. Gate M3 **PASSED** (`docs/verification/M3-gate-review.md`).
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 4; Fase 5 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 1 bersifat opsional.
