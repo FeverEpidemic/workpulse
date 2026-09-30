@@ -476,6 +476,263 @@ export type Database = {
           },
         ]
       }
+      cv_documents: {
+        Row: {
+          created_at: string
+          id: string
+          locale: string
+          profile_ack_revision: number | null
+          profile_snapshot: Json
+          profile_source_revision: number
+          revision: number
+          section_order: Json
+          summary_override: string | null
+          template_key: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locale: string
+          profile_ack_revision?: number | null
+          profile_snapshot: Json
+          profile_source_revision: number
+          revision?: number
+          section_order: Json
+          summary_override?: string | null
+          template_key?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locale?: string
+          profile_ack_revision?: number | null
+          profile_snapshot?: Json
+          profile_source_revision?: number
+          revision?: number
+          section_order?: Json
+          summary_override?: string | null
+          template_key?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_exports: {
+        Row: {
+          attempt_count: number
+          attempt_token: string | null
+          created_at: string
+          cv_id: string
+          cv_revision: number
+          error_code: string | null
+          expires_at: string | null
+          finished_at: string | null
+          id: string
+          idempotency_key: string
+          lease_expires_at: string | null
+          object_key: string | null
+          revision: number
+          snapshot: Json
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          attempt_token?: string | null
+          created_at?: string
+          cv_id: string
+          cv_revision: number
+          error_code?: string | null
+          expires_at?: string | null
+          finished_at?: string | null
+          id?: string
+          idempotency_key: string
+          lease_expires_at?: string | null
+          object_key?: string | null
+          revision?: number
+          snapshot: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_count?: number
+          attempt_token?: string | null
+          created_at?: string
+          cv_id?: string
+          cv_revision?: number
+          error_code?: string | null
+          expires_at?: string | null
+          finished_at?: string | null
+          id?: string
+          idempotency_key?: string
+          lease_expires_at?: string | null
+          object_key?: string | null
+          revision?: number
+          snapshot?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_exports_cv_fk"
+            columns: ["user_id", "cv_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_exports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_items: {
+        Row: {
+          achievement_id: string | null
+          acknowledged_revision: number | null
+          certification_id: string | null
+          created_at: string
+          cv_id: string
+          education_id: string | null
+          experience_id: string | null
+          id: string
+          override_text: string | null
+          position: number
+          project_id: string | null
+          revision: number
+          section_key: string
+          skill_id: string | null
+          source_deleted: boolean
+          source_revision: number
+          source_snapshot: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          acknowledged_revision?: number | null
+          certification_id?: string | null
+          created_at?: string
+          cv_id: string
+          education_id?: string | null
+          experience_id?: string | null
+          id?: string
+          override_text?: string | null
+          position: number
+          project_id?: string | null
+          revision?: number
+          section_key: string
+          skill_id?: string | null
+          source_deleted?: boolean
+          source_revision: number
+          source_snapshot: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          acknowledged_revision?: number | null
+          certification_id?: string | null
+          created_at?: string
+          cv_id?: string
+          education_id?: string | null
+          experience_id?: string | null
+          id?: string
+          override_text?: string | null
+          position?: number
+          project_id?: string | null
+          revision?: number
+          section_key?: string
+          skill_id?: string | null
+          source_deleted?: boolean
+          source_revision?: number
+          source_snapshot?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_items_achievement_fk"
+            columns: ["user_id", "achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_certification_fk"
+            columns: ["user_id", "certification_id"]
+            isOneToOne: false
+            referencedRelation: "certifications"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_cv_fk"
+            columns: ["user_id", "cv_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_education_fk"
+            columns: ["user_id", "education_id"]
+            isOneToOne: false
+            referencedRelation: "education"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_experience_fk"
+            columns: ["user_id", "experience_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_project_fk"
+            columns: ["user_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_skill_fk"
+            columns: ["user_id", "skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "cv_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       education: {
         Row: {
           created_at: string
@@ -1476,6 +1733,14 @@ export type Database = {
         Returns: string
       }
       dismiss_ai_suggestion: { Args: { p_job_id: string }; Returns: undefined }
+      ensure_cv_document: {
+        Args: never
+        Returns: {
+          created: boolean
+          cv_id: string
+          revision: number
+        }[]
+      }
       expire_ai_job_leases: { Args: never; Returns: number }
       expire_evidence_uploads: { Args: { p_limit?: number }; Returns: number }
       expire_import_uploads: {
@@ -1831,6 +2096,25 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      remove_cv_item: {
+        Args: {
+          p_expected_revision: number
+          p_item_id: string
+          p_remove_children: boolean
+        }
+        Returns: {
+          cv_revision: number
+          removed_item_ids: string[]
+        }[]
+      }
+      reorder_cv_section: {
+        Args: {
+          p_expected_revision: number
+          p_item_ids: string[]
+          p_section_key: string
+        }
+        Returns: number
+      }
       request_ai_analysis: {
         Args: { p_activity_id: string; p_expected_revision: number }
         Returns: {
@@ -1962,6 +2246,18 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      select_cv_source: {
+        Args: {
+          p_expected_revision: number
+          p_source_id: string
+          p_source_type: string
+        }
+        Returns: {
+          cv_revision: number
+          item_ids: string[]
+          parent_item_ids: string[]
+        }[]
+      }
       set_ai_consent: {
         Args: { p_consented: boolean; p_expected_revision: number }
         Returns: {
@@ -2024,6 +2320,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      update_cv_layout: {
+        Args: {
+          p_expected_revision: number
+          p_locale: string
+          p_section_order: Json
+        }
+        Returns: number
       }
       update_education: {
         Args: {
