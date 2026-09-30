@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 30 September 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status plan: **DONE — acceptance lokal 30 September 2026** ([bukti](T17-import-review-ui.md), [gate review](T17-review-remediation-plan.md)).
 - Dependensi: T16 **DONE** (acceptance lokal, `docs/verification/T16-import-commit.md`) dan T04 **DONE**. T15 (staging, S02), T03 (onboarding manual, S12), dan T12 (dashboard) juga **DONE**. Gate M2 **PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 5; Fase 6 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 2 bersifat opsional.

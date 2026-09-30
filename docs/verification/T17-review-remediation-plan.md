@@ -1,5 +1,7 @@
 # Rencana Remediasi Review T17 — Import review UI dan onboarding
 
+Status plan: **DONE — 30 September 2026** (RV1, N1, N7 diperbaiki di `2c81c02`; T17 DONE, lihat `T17-import-review-ui.md`).
+
 - Tanggal: 30 September 2026.
 - Reviewer: Claude (Opus), gate review read-only setelah Fase 5 (`T17-implementation-plan.md` §9–§10).
 - HEAD yang direview: `58e0183` (branch `claude/clever-archimedes-gbu7qd`, baseline `d4bd39f`).

@@ -4,15 +4,15 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T16 done locally; Gate M2 passed; T17 (Import review UI) next.** Auth/profile,
+Status: **T01–T17 done locally; Gate M2 passed; Gate M3 (assisted entry) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
-Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import staging are
+Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
 checks, real ClamAV screening through the durable worker (T10), and the attachment UI on Activity,
 Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
-production build checks pass locally; nothing is deployed. The import commit backend (T16) is done; the review screen and the master CV
+production build checks pass locally; nothing is deployed. The master CV, export, and account deletion
 remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
@@ -57,6 +57,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:ai` | AI jobs, consent, lease/stale/attempt guards, worker process log hygiene, and the OpenAI-compatible adapter (Chat Completions and Responses) against a local stub (no network) |
 | `pnpm test:integration:ai-review` | T14 detection, refinement and review against local Supabase with the real worker and the explicit fake provider: request/apply/answer/skip/dismiss, stale and retry guards, answer-versus-apply race, two-account isolation, and no-leak checks (no network) |
 | `pnpm test:integration:import-commit` | T16 import commit against local Supabase, Storage and real ClamAV through the real T15 pipeline: PRD Indonesian-CV scenario, parallel commits, rollback, map ownership, onboarding through commit, races with update/cancel/delete, purge provenance, isolation, log hygiene |
+| `pnpm test:integration:import-review` | T17 S03 read model against local Supabase through the real T15 pipeline: groups/excerpts/revisions, map options owner-only, persisted choices, stale item saves, committed result equals real rows, isolation, log hygiene |
 | `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
@@ -69,6 +70,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:ai` | S12 AI consent card and dialog: decline, allow, withdraw, conflict, id copy, responsive, and Axe checks |
 | `pnpm test:e2e:ai-review` | S06 analysis panel and S08 suggestion aside: consent, analyze, follow-up questions, apply as draft, dismiss, outage/retry, stale, no-potential, `id` locale, responsive and Axe checks; drains the worker with the fake provider on port 3008 |
 | `pnpm test:e2e:import` | S02 CV import: consent, keyboard file choice, leave-return, session expiry, failures, retry, cancel, duplicate warning, `id` locale, responsive and Axe checks; drains the worker (fake AI, fake renderer, real ClamAV) on port 3009 |
+| `pnpm test:e2e:import-review` | S03 import review: PRD Indonesian-CV release scenario (keyboard only), idempotent commit, refresh, partial extraction, two-tab conflicts and commit token, empty extraction, returning user, isolation/privacy, 360/1440 light/dark and Axe; drains the worker on port 3010 |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -136,7 +138,9 @@ from an isolated LibreOffice renderer (`WORKPULSE_DOCX_RENDERER_MODE`, default `
 rows (`import_batches`, `import_items`); raw files and text are purged within 24 hours of a terminal
 state. See [decision 0021](docs/decisions/0021-t15-import-staging.md).
 
-T16 adds the import commit backend: `update_import_item` persists each Create/Map/Skip choice and edit, `validate_import_batch` dry-runs the validation, and `commit_import_batch` commits every selected candidate in one atomic, idempotent transaction (foundation rows first, achievements as drafts unless explicitly confirmed, only the selected profile fields, onboarding completed through the commit for new users). Map only reuses the user's own records. The review screen is T17. See [decision 0022](docs/decisions/0022-t16-import-commit.md).
+T16 adds the import commit backend: `update_import_item` persists each Create/Map/Skip choice and edit, `validate_import_batch` dry-runs the validation, and `commit_import_batch` commits every selected candidate in one atomic, idempotent transaction (foundation rows first, achievements as drafts unless explicitly confirmed, only the selected profile fields, onboarding completed through the commit for new users). Map only reuses the user's own records. See [decision 0022](docs/decisions/0022-t16-import-commit.md).
+
+T17 adds the S03 review screen at `/imports/<id>/review` (reachable before onboarding): grouped candidates with source excerpts, Create/Map/Skip saved immediately, field edits saved per candidate, per-achievement confirmation, conflict recovery that keeps local input, onboarding inside the commit, and the stored commit result with *Open dashboard*. Returning users reach S02 from the empty dashboard and Settings. No migration. See [decision 0023](docs/decisions/0023-t17-import-review-ui.md).
 
 ## Local database (Supabase)
 
