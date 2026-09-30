@@ -77,7 +77,11 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   const [notice, setNotice] = useState<Notice | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [openEditors, setOpenEditors] = useState<ReadonlySet<string>>(new Set());
-  const [poolOpen, setPoolOpen] = useState<Partial<Record<CvSectionKey, boolean>>>({});
+  // A list opens for an empty section or a suggested record on first load, then only follows the user.
+  const [poolOpen, setPoolOpen] = useState<Record<CvSectionKey, boolean>>(() => {
+    const initial = toEditorEntries(doc, items);
+    return Object.fromEntries(CV_SECTION_KEYS.map((key) => [key, initial[key].length === 0 || pool[key].some((option) => option.sourceId === highlightId)])) as Record<CvSectionKey, boolean>;
+  });
   const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
   const busyRef = useRef(false);
   const pendingFocus = useRef<(() => void) | null>(null);
@@ -89,7 +93,9 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   const problems = useMemo(() => validateDraft(sync.draft), [sync.draft]);
   const dirty = isDirty(sync.base, sync.draft);
   const hasProblems = Object.keys(problems).length > 0;
-  const status: SaveStatus = saving ? "saving" : sync.unresolved.length > 0 || conflict ? "conflict" : dirty ? "unsaved" : "saved";
+  // The panel stays while a rejected save still needs the user, and disappears once they edit again.
+  const showConflict = sync.unresolved.length > 0 || (conflict && dirty);
+  const status: SaveStatus = saving ? "saving" : sync.unresolved.length > 0 ? "conflict" : dirty ? "unsaved" : "saved";
   const canSave = dirty && !hasProblems && sync.unresolved.length === 0 && !saving && !busy;
 
   useEffect(() => {
@@ -105,8 +111,8 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   }, [savedKey]);
 
   useEffect(() => {
-    if (sync.unresolved.length > 0 || conflict) conflictRef.current?.focus();
-  }, [sync.unresolved.length, conflict]);
+    if (showConflict) conflictRef.current?.focus();
+  }, [showConflict]);
 
   const headlineOf = useCallback((itemId: string) => {
     const row = items.find((item) => item.id === itemId);
@@ -155,7 +161,10 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     }
   }
 
-  const onDraftChange = (key: string, value: string) => setSync((current) => ({ ...current, draft: { ...current.draft, [key]: value } }));
+  const onDraftChange = (key: string, value: string) => {
+    setConflict(false);
+    setSync((current) => ({ ...current, draft: { ...current.draft, [key]: value } }));
+  };
 
   const onAdd = (option: PoolOption) => {
     void runOperation(
@@ -311,7 +320,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     onAdd,
     onRemove,
     onMoveItem,
-    poolOpen: poolOpen[key] ?? (entries[key].length === 0 || pool[key].some((option) => option.sourceId === highlightId)),
+    poolOpen: poolOpen[key],
     onTogglePool: (open) => setPoolOpen((current) => ({ ...current, [key]: open })),
   });
 
@@ -332,7 +341,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
             <p>{t(locale, notice.messageKey)}</p>
           </InlineError>
         ) : null}
-        {sync.unresolved.length > 0 || conflict ? (
+        {showConflict ? (
           <CvConflictPanel
             locale={locale} fields={conflictFields} headingRef={conflictRef}
             onResolve={(key, choice) => setSync((current) => resolveConflict(current, key, choice, savedDraft))}
