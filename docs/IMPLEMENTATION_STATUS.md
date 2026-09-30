@@ -1,5 +1,20 @@
 # WorkPulse Implementation Status
 
+## Gate M3 — Assisted entry, integration review — 30 September 2026
+
+Status Gate M3: **BELUM LULUS — 1 P2 terbuka (RV1)**. Reviewer: Claude (Opus), HEAD `42bab36`. Kalimat gate: F01 import dan F02 assisted bersama malformed file, retry, consent withdrawal, AI unavailable, stale result. Dependensi T13–T17 **DONE**.
+[Laporan gate](verification/M3-gate-review.md), [rencana remediasi](verification/M3-review-remediation-plan.md).
+
+Yang dikerjakan: test lintas alur `tests/integration/m3-assisted-entry.test.ts` (7/7, script `test:integration:m3`) dan journey browser `tests/e2e/m3-assisted-journey.spec.ts` (2/2, script `test:e2e:m3`, `playwright.m3.config.ts` port 3011). Tanpa perubahan kode produk, tanpa migration.
+
+Hasil: 9 dari 10 kriteria PASS. Regresi penuh exit 0: lint, typecheck, unit 76/500, pgTAP 11/779, `db:lint`, `worker:check`, build, semua integration (m3 7, import 21, import-commit 11, import-review 6, ai 13, ai-review 21, activity 6, achievements 5, projects 7, dashboard 4, m2 8, storage 1, evidence 14), E2E m3 2, import 7, import-review 10, ai 2, ai-review 11, m2 1, auth 1, ui 1, activity 1, projects 1, achievements 4, dashboard 1. Pengecualian: `test:e2e:evidence` 7/8 dua kali, karena flaky bawaan `activity-ui.spec.ts:356` (N4, race hydration di test).
+
+Temuan: **RV1 (P2)**. Untuk batch `CONSENT_WITHDRAWN`, S02 menulis "teks tidak dikirim", padahal teks sudah diterima provider (`import-start.tsx:34`). P3: N1 (ai-worker skip tanpa fail, tidak terjangkau), N2 (copy S06 generik), N3 (stdout `drainAiWorker`), N4 (flaky).
+
+Belum dijalankan: smoke live `refine`/`extractImport`, stres race commit, staging/production. Bukti lokal saja.
+
+Berikutnya: persetujuan pengguna untuk remediasi RV1 (copy + pemetaan, tanpa SQL), lalu ulangi checks §3 rencana dan tetapkan verdict M3. T18 menunggu Gate M3 PASSED.
+
 ## T17 — Import review UI dan onboarding lengkap, acceptance lokal — 30 September 2026
 
 Status T17: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (HEAD `58e0183`) menemukan 1 P2 (RV1: token commit menyerap revision dari tab lain) dan 9 P3; RV1, N1 dan N7 diperbaiki di `2c81c02` oleh reviewer atas instruksi pengguna, lalu review ulang tanpa P0–P2 (tidak independen penuh; ditopang test yang terbukti gagal tanpa perbaikan). Dependensi T16, T15, T04, T03, T12 **DONE**; Gate M2 PASSED. Rujukan: R02, F01, S02, S03, S04, S12, DB §4 (lewat RPC T16).
