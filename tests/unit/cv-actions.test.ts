@@ -14,6 +14,7 @@ import {
   ensureCvAction,
   removeCvItemAction,
   reorderCvSectionAction,
+  saveCvEditsAction,
   selectCvSourceAction,
   updateCvLayoutAction,
 } from "@/features/cv/actions";
@@ -111,5 +112,66 @@ describe("T18 CV actions", () => {
     const state = await ensureCvAction(IDLE);
     expect(state).toMatchObject({ status: "error", error: { code: "UNAVAILABLE" } });
     expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe("T19 CV save action and correlation ids", () => {
+  beforeEach(() => {
+    revalidatePath.mockReset();
+    rpc.mockReset();
+    getUser.mockReset();
+    getUser.mockResolvedValue({ data: { user: { id: USER } }, error: null });
+  });
+
+  it("saves the changed fields and revalidates /cv after success only", async () => {
+    rpc.mockResolvedValue({ data: 6, error: null });
+    const state = await saveCvEditsAction(IDLE, form({ expected_revision: "5", edits: JSON.stringify({ title: "CV Ani", item_overrides: [{ item_id: ITEM_A, override_text: null }] }) }));
+    expect(state).toMatchObject({ status: "success", data: { cvRevision: 6 } });
+    expect(rpc).toHaveBeenCalledWith("save_cv_edits", {
+      p_expected_revision: 5, p_edits: { title: "CV Ani", item_overrides: [{ item_id: ITEM_A, override_text: null }] },
+    });
+    expect(revalidatePath).toHaveBeenCalledWith("/cv");
+  });
+
+  it("ignores a client-supplied revision inside edits and rejects malformed payloads without a call", async () => {
+    rpc.mockResolvedValue({ data: 3, error: null });
+    await saveCvEditsAction(IDLE, form({ expected_revision: "2", edits: JSON.stringify({ title: "x", expected_revision: 99 }) }));
+    expect(rpc).toHaveBeenLastCalledWith("save_cv_edits", { p_expected_revision: 2, p_edits: { title: "x" } });
+    rpc.mockClear();
+    revalidatePath.mockClear();
+    const results = await Promise.all([
+      saveCvEditsAction(IDLE, form({ expected_revision: "2", edits: "not json" })),
+      saveCvEditsAction(IDLE, form({ expected_revision: "2", edits: "[]" })),
+      saveCvEditsAction(IDLE, form({ expected_revision: "2", edits: "{}" })),
+      saveCvEditsAction(IDLE, form({ expected_revision: "abc", edits: JSON.stringify({ title: "x" }) })),
+      saveCvEditsAction(IDLE, form({ expected_revision: "2" })),
+      saveCvEditsAction(IDLE, form({ expected_revision: "2", edits: JSON.stringify({ user_id: USER, title: "x" }) })),
+    ]);
+    for (const state of results) expect(state).toMatchObject({ status: "error", error: { code: "VALIDATION" } });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("reports a stale save as a conflict and an unsupported override as validation", async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "STALE_REVISION" } });
+    const stale = await saveCvEditsAction(IDLE, form({ expected_revision: "1", edits: JSON.stringify({ title: "x" }) }));
+    expect(stale).toMatchObject({ status: "error", error: { code: "CONFLICT" } });
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "CV_OVERRIDE_UNSUPPORTED" } });
+    const unsupported = await saveCvEditsAction(IDLE, form({ expected_revision: "1", edits: JSON.stringify({ item_overrides: [{ item_id: ITEM_A, override_text: "x" }] }) }));
+    expect(unsupported).toMatchObject({ status: "error", error: { code: "VALIDATION", messageKey: "cv.error.overrideUnsupported" } });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("uses the same correlation id for the service and the returned error (P3 F2)", async () => {
+    const service = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const spy = vi.spyOn(crypto, "randomUUID").mockReturnValueOnce(service).mockReturnValue("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    rpc.mockRejectedValue(new Error("network down"));
+    const unexpected = await ensureCvAction(IDLE);
+    expect(unexpected).toMatchObject({ status: "error", error: { code: "UNAVAILABLE", correlationId: service } });
+    spy.mockReturnValueOnce(service).mockReturnValue("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "STALE_REVISION" } });
+    const stale = await selectCvSourceAction(IDLE, form({ expected_revision: "1", source_type: "skill", source_id: SOURCE }));
+    expect(stale).toMatchObject({ status: "error", error: { correlationId: service } });
+    spy.mockRestore();
   });
 });

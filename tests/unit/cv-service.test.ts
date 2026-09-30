@@ -238,3 +238,48 @@ describe("T18 CV service", () => {
     });
   });
 });
+
+describe("T19 CV saveEdits", () => {
+  it("sends only the edits with the session-owned RPC arguments and returns the new revision", async () => {
+    const { client, rpc } = fakeClient({ rpc: async () => ({ data: 8, error: null }) });
+    await expect(
+      service(client).saveEdits({
+        expected_revision: 7, title: "CV Ani", summary_override: null,
+        profile_overrides: { headline: "Analyst" }, item_overrides: [{ item_id: ID_A, override_text: "Custom" }],
+      }),
+    ).resolves.toEqual({ cvRevision: 8 });
+    expect(rpc).toHaveBeenCalledWith("save_cv_edits", {
+      p_expected_revision: 7,
+      p_edits: { title: "CV Ani", summary_override: null, profile_overrides: { headline: "Analyst" }, item_overrides: [{ item_id: ID_A, override_text: "Custom" }] },
+    });
+  });
+
+  it("rejects invalid or empty edits before any database call", async () => {
+    const { client, rpc } = fakeClient();
+    const svc = service(client);
+    await expect(svc.saveEdits({ expected_revision: 1 })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(svc.saveEdits({ expected_revision: 1, title: "x", user_id: USER })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(svc.saveEdits({ expected_revision: 1, item_overrides: [{ item_id: "nope", override_text: "x" }] })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps a stale revision to a conflict and an unsupported override to its own code", async () => {
+    const stale = fakeClient({ rpc: async () => ({ data: null, error: { code: "P0001", message: "STALE_REVISION" } }) });
+    await expect(service(stale.client).saveEdits({ expected_revision: 1, title: "x" })).rejects.toMatchObject({
+      code: "CONFLICT", messageKey: "error.conflict", correlationId: CORRELATION,
+    });
+    const unsupported = fakeClient({ rpc: async () => ({ data: null, error: { code: "P0001", message: "CV_OVERRIDE_UNSUPPORTED" } }) });
+    await expect(service(unsupported.client).saveEdits({ expected_revision: 1, item_overrides: [{ item_id: ID_A, override_text: "x" }] })).rejects.toMatchObject({
+      code: "OVERRIDE_UNSUPPORTED", messageKey: "cv.error.overrideUnsupported",
+    });
+  });
+
+  it("never echoes submitted text in an error and rejects a malformed receipt", async () => {
+    const leaky = fakeClient({ rpc: async () => ({ data: null, error: { code: "XX000", message: `boom ${SENTINEL}`, details: SENTINEL } }) });
+    const error = await service(leaky.client).saveEdits({ expected_revision: 1, title: SENTINEL }).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code: "UNAVAILABLE" });
+    expect(JSON.stringify(error)).not.toContain(SENTINEL);
+    const bad = fakeClient({ rpc: async () => ({ data: "eight", error: null }) });
+    await expect(service(bad.client).saveEdits({ expected_revision: 1, title: "x" })).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  });
+});

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { removeCvItemInput, reorderCvSectionInput, selectCvSourceInput, updateCvLayoutInput } from "@/domain/cv/contracts";
+import { removeCvItemInput, reorderCvSectionInput, saveCvEditsInput, selectCvSourceInput, updateCvLayoutInput } from "@/domain/cv/contracts";
 import { actionFailure, actionSuccess, type ActionState, type ErrorCode } from "@/server/action-result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -12,6 +12,7 @@ import { createCvService, type CvService } from "./cv-service";
 function mapCode(code: CvServiceError["code"]): ErrorCode {
   switch (code) {
     case "VALIDATION":
+    case "OVERRIDE_UNSUPPORTED":
     case "ONBOARDING_REQUIRED":
     case "SOURCE_INELIGIBLE": return "VALIDATION";
     case "UNAUTHENTICATED": return "UNAUTHENTICATED";
@@ -23,21 +24,23 @@ function mapCode(code: CvServiceError["code"]): ErrorCode {
 }
 
 /** Codes, message keys and item ids only; the service correlation ID is kept so support can match logs. */
-function failure(error: unknown): ActionState {
-  const cvError = toCvServiceError(error, crypto.randomUUID());
+function failure(error: unknown, correlationId: string): ActionState {
+  const cvError = toCvServiceError(error, correlationId);
   const details = cvError.code === "CHILD_ITEMS_EXIST" ? { latestRecord: { childItemIds: cvError.childItemIds } } : {};
   const state = actionFailure(mapCode(cvError.code), cvError.messageKey, details);
   return state.status === "error" ? { status: "error", error: { ...state.error, correlationId: cvError.correlationId } } : state;
 }
 
 async function run<T>(operation: (service: CvService) => Promise<T>): Promise<ActionState> {
+  // One ID per request: the service stamps its errors with it and failure() reuses it for anything else.
+  const correlationId = crypto.randomUUID();
   try {
     const supabase = await createSupabaseServerClient();
-    const data = await operation(createCvService({ supabase, correlationId: crypto.randomUUID() }));
+    const data = await operation(createCvService({ supabase, correlationId }));
     revalidatePath("/cv");
     return actionSuccess(undefined, data);
   } catch (error) {
-    return failure(error);
+    return failure(error, correlationId);
   }
 }
 
@@ -103,4 +106,18 @@ export async function updateCvLayoutAction(_previous: ActionState, formData: For
   });
   if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
   return run((service) => service.updateLayout(parsed.data));
+}
+
+/** Explicit Save of the text edits; "edits" is a JSON object with only the changed fields. */
+export async function saveCvEditsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  let edits: unknown;
+  try {
+    edits = JSON.parse(text(formData, "edits") ?? "");
+  } catch {
+    return actionFailure("VALIDATION", "error.validation");
+  }
+  if (typeof edits !== "object" || edits === null || Array.isArray(edits)) return actionFailure("VALIDATION", "error.validation");
+  const parsed = saveCvEditsInput.safeParse({ ...edits, expected_revision: revisionOf(formData) });
+  if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
+  return run((service) => service.saveEdits(parsed.data));
 }

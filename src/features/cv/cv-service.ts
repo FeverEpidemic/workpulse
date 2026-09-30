@@ -8,6 +8,7 @@ import {
   cvItemRowSchema,
   removeCvItemInput,
   reorderCvSectionInput,
+  saveCvEditsInput,
   selectCvSourceInput,
   updateCvLayoutInput,
   type CvDocumentRow,
@@ -210,6 +211,24 @@ export function createCvService(deps: { supabase: Client; correlationId?: string
           p_section_key: parsed.data.section_key,
           p_item_ids: parsed.data.item_ids,
         });
+        if (error) throw mapCvDatabaseError(error, correlationId);
+        const revision = revisionSchema.safeParse(data);
+        if (!revision.success) throw fail("UNAVAILABLE");
+        return { cvRevision: revision.data };
+      });
+    },
+
+    /**
+     * Save title, summary, profile display values and item wording together with one revision step.
+     * Nothing here touches the source snapshot or the canonical records; null or blank clears an override.
+     */
+    saveEdits(input: unknown): Promise<{ cvRevision: number }> {
+      return guarded(async () => {
+        const parsed = saveCvEditsInput.safeParse(input);
+        if (!parsed.success) throw fail("VALIDATION");
+        await requireActorId();
+        const { expected_revision: expectedRevision, ...edits } = parsed.data;
+        const { data, error } = await supabase.rpc("save_cv_edits", { p_expected_revision: expectedRevision, p_edits: edits });
         if (error) throw mapCvDatabaseError(error, correlationId);
         const revision = revisionSchema.safeParse(data);
         if (!revision.success) throw fail("UNAVAILABLE");
