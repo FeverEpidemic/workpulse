@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { parseItemErrorsDetail, type ImportItemError } from "@/domain/import/commit-contracts";
 import type { MessageKey } from "@/i18n/messages";
 
 export type ImportServiceErrorCode =
@@ -19,7 +20,14 @@ export type ImportServiceErrorCode =
   | "NOT_RETRIABLE"
   | "NOT_CANCELLABLE"
   | "RETRY_EXHAUSTED"
-  | "EXPIRED";
+  | "EXPIRED"
+  | "STALE"
+  | "ITEM_INVALID"
+  | "NOT_COMMITTABLE"
+  | "NOT_REVIEWABLE"
+  | "TARGET_INVALID"
+  | "ONBOARDING_REQUIRED"
+  | "ONBOARDING_INVALID";
 
 const MESSAGE_KEYS: Record<ImportServiceErrorCode, MessageKey> = {
   VALIDATION: "error.validation",
@@ -39,6 +47,13 @@ const MESSAGE_KEYS: Record<ImportServiceErrorCode, MessageKey> = {
   NOT_CANCELLABLE: "import.error.notCancellable",
   RETRY_EXHAUSTED: "import.retry.exhausted",
   EXPIRED: "import.retry.expired",
+  STALE: "error.conflict",
+  ITEM_INVALID: "import.error.itemInvalid",
+  NOT_COMMITTABLE: "import.error.notCommittable",
+  NOT_REVIEWABLE: "import.error.notReviewable",
+  TARGET_INVALID: "import.error.targetInvalid",
+  ONBOARDING_REQUIRED: "import.error.onboardingRequired",
+  ONBOARDING_INVALID: "import.error.onboardingInvalid",
 };
 
 const HTTP_STATUS: Record<ImportServiceErrorCode, number> = {
@@ -59,6 +74,13 @@ const HTTP_STATUS: Record<ImportServiceErrorCode, number> = {
   NOT_CANCELLABLE: 409,
   RETRY_EXHAUSTED: 409,
   EXPIRED: 409,
+  STALE: 409,
+  ITEM_INVALID: 422,
+  NOT_COMMITTABLE: 409,
+  NOT_REVIEWABLE: 409,
+  TARGET_INVALID: 422,
+  ONBOARDING_REQUIRED: 422,
+  ONBOARDING_INVALID: 422,
 };
 
 /** Safe, localized import error with a correlation ID. Never carries file names or content. */
@@ -67,19 +89,35 @@ export class ImportServiceError extends Error {
   readonly messageKey: MessageKey;
   readonly status: number;
   readonly correlationId: string;
+  /** Item ids, field names and codes for IMPORT_ITEM_INVALID; never candidate text. */
+  readonly itemErrors: ImportItemError[];
 
-  constructor(code: ImportServiceErrorCode) {
+  constructor(code: ImportServiceErrorCode, itemErrors: ImportItemError[] = []) {
     super("Import request could not be completed.");
     this.name = "ImportServiceError";
     this.code = code;
     this.messageKey = MESSAGE_KEYS[code];
     this.status = HTTP_STATUS[code];
     this.correlationId = randomUUID();
+    this.itemErrors = itemErrors;
   }
 }
 
 /** Database errors carry stable codes only; another account's batch is indistinguishable from none. */
-export function mapImportDatabaseError(error: { code?: string; message?: string }): ImportServiceError {
+export function mapImportDatabaseError(error: { code?: string; message?: string; details?: string | null }): ImportServiceError {
+  switch (error.message) {
+    case "STALE_REVISION": return new ImportServiceError("STALE");
+    case "IMPORT_ITEM_INVALID": return new ImportServiceError("ITEM_INVALID", parseItemErrorsDetail(error.details) ?? []);
+    case "IMPORT_NOT_COMMITTABLE": return new ImportServiceError("NOT_COMMITTABLE");
+    case "IMPORT_NOT_REVIEWABLE": return new ImportServiceError("NOT_REVIEWABLE");
+    case "IMPORT_TARGET_INVALID": return new ImportServiceError("TARGET_INVALID");
+    case "INVALID_IMPORT_ITEM_INPUT": return new ImportServiceError("VALIDATION");
+    case "ONBOARDING_REQUIRED": return new ImportServiceError("ONBOARDING_REQUIRED");
+    case "INVALID_DISPLAY_NAME":
+    case "INVALID_LOCALE":
+    case "INVALID_TIMEZONE": return new ImportServiceError("ONBOARDING_INVALID");
+    default: break;
+  }
   switch (error.message) {
     case "AUTH_REQUIRED": return new ImportServiceError("UNAUTHENTICATED");
     case "CONSENT_REQUIRED": return new ImportServiceError("CONSENT_REQUIRED");

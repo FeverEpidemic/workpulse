@@ -13,6 +13,7 @@ import { formatActivityDate } from "@/domain/activity/activity-display";
 import type { AchievementContextOptions, AchievementDetail as AchievementDetailData } from "@/domain/achievement/contracts";
 import { deleteAchievementAction, relinkAchievementAction } from "@/features/achievement/actions";
 import { AchievementForm } from "@/features/achievement/achievement-form";
+import { AchievementSourceCard } from "@/features/achievement/achievement-source-card";
 import type { AchievementAiSuggestion } from "@/features/ai/achievement-ai-suggestion";
 import { AiSuggestionAside } from "@/features/ai/ai-suggestion-aside";
 import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
@@ -63,7 +64,6 @@ export function AchievementDetail({
   const { achievement, activity, skills } = detail;
   const [evidenceCount, setEvidenceCount] = useState<number | null>(null);
   const [deleteState, deleteAction] = useActionState(deleteAchievementAction, IDLE_ACTION_STATE);
-  const sourceChanged = Boolean(activity && achievement.source_activity_revision && activity.revision !== achievement.source_activity_revision);
   const detailReturn = `/achievements/${achievement.id}?${new URLSearchParams({ returnTo }).toString()}`;
   return (
     <section className="space-y-5">
@@ -73,7 +73,7 @@ export function AchievementDetail({
           <div>
             <p className="field-help">{t(locale, `achievement.${achievement.status}`)}</p>
             <h1 className="text-3xl font-semibold tracking-tight">{achievement.title ?? t(locale, "achievement.untitledDraft")}</h1>
-            <p className="mt-2 text-[var(--color-text-secondary)]">{achievement.origin === "activity" ? t(locale, "achievement.createFromActivity") : achievement.project_id ? t(locale, "achievement.createFromProject") : t(locale, "achievement.standalone")}</p>
+            <p className="mt-2 text-[var(--color-text-secondary)]">{achievement.origin === "activity" ? t(locale, "achievement.createFromActivity") : achievement.origin === "import" ? t(locale, "achievement.importedFromCv") : achievement.project_id ? t(locale, "achievement.createFromProject") : t(locale, "achievement.standalone")}</p>
           </div>
           <NamedDeleteDialog
             title={t(locale, "common.deleteTitle")}
@@ -98,18 +98,7 @@ export function AchievementDetail({
         </div>
       </header>
 
-      {activity || achievement.source_excerpt ? (
-        <Card className="achievement-source-card">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 className="text-lg font-semibold">{t(locale, "achievement.source")}</h2><p className="field-help">{t(locale, "achievement.sourceHelp")}</p></div>
-            {activity ? <Link className="button-secondary" href={`/activity/${activity.id}?${new URLSearchParams({ returnTo: detailReturn }).toString()}`}>{t(locale, "activity.openActivity")}</Link> : null}
-          </div>
-          {sourceChanged ? <p className="ui-message ui-message--warning mt-3" role="status">{t(locale, "achievement.sourceChanged")}</p> : null}
-          {activity ? <div className="achievement-source-preview mt-3"><p className="field-label">{t(locale, "activity.currentText")}</p><p>{activity.raw_text}</p></div> : null}
-          {achievement.source_excerpt ? <div className="achievement-source-preview mt-3"><p className="field-label">{t(locale, "achievement.sourceExcerpt")}</p><p>{achievement.source_excerpt}</p></div> : null}
-          {!activity && achievement.source_excerpt ? <p className="field-help mt-2">{t(locale, "achievement.sourceUnavailable")}</p> : null}
-        </Card>
-      ) : null}
+      <AchievementSourceCard locale={locale} achievement={achievement} activity={activity} detailReturn={detailReturn} />
 
       <Card>
         <div className="achievement-detail-context mb-4">

@@ -1,5 +1,32 @@
 # WorkPulse Implementation Status
 
+## T16 — Import commit transaction, acceptance lokal — 30 September 2026
+
+Status T16: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal; gate review Claude (HEAD `6a8dd06`) tanpa temuan P0–P2 (review dilakukan oleh sesi yang sama dengan pelaksana, tidak independen). Dependensi T15, T09, T02/T03, T12 **DONE**; Gate M2 PASSED. Rujukan: R02, F01, S03 (backend), S08, DB §1–§4/§6.
+[Rencana](verification/T16-implementation-plan.md), [bukti](verification/T16-import-commit.md), [gate review](verification/T16-gate-review.md), [decision 0022](decisions/0022-t16-import-commit.md), receipt [Fase 0](verification/T16-phase0-baseline.md)–[4](verification/T16-phase4-provenance-regression.md).
+
+Yang selesai:
+
+- Migration `20261001090000_t16_import_commit.sql` (forward-only, tanpa reset, parity 26/26): `import_items.confirm_requested`, `import_batches.commit_result`, trigger target type-aware, guard item setelah commit, relaksasi `achievements_source_pair_check` untuk `origin = 'import'`, `internal.import_item_errors`, dan RPC `update_import_item`, `validate_import_batch`, `commit_import_batch` (authenticated saja, security definer).
+- Commit atomik dan idempotent: lock profile → batch → item → target map; foundation dulu lalu achievement (draft, atau confirmed hanya bila `confirm_requested` dan field wajib lengkap); profil hanya field terpilih; onboarding lewat `p_onboarding`; map tidak mengubah target; excerpt achievement bertahan setelah purge.
+- Server: `commit-contracts.ts`, `import-review-service.ts`, kode error baru, `updateImportItemAction`/`commitImportAction` (belum dirender; UI S03 = T17). S08 menampilkan "Imported from CV" untuk achievement import.
+
+File berubah: 1 migration, `import_commit.test.sql` (baru), `import_staging.test.sql` (fixture), `database.types.ts`, `src/domain/import/commit-contracts.ts`, `src/features/import/{import-review-service,import-errors,actions}.ts`, `src/features/achievement/{achievement-source-card,achievement-detail}.tsx`, `src/i18n/messages.ts`, 4 test unit, `tests/integration/import-commit.test.ts`, `package.json` (script `test:integration:import-commit`), dokumen.
+
+Checks (hasil aktual): lint, typecheck, build, `worker:check`, `db:lint`, `git diff --check` exit 0; unit 70 file / 449; pgTAP 11 file / 779; integration import-commit 11, import 21, achievements 5, dashboard 4, activity 6, projects 7, m2 8, ai 13, ai-review 21, evidence 14, storage 1; E2E achievements 4, import 7, m2 1, dashboard 1, auth 1, ui 1, activity 1, projects 1, ai 2, ai-review 11, evidence 8. Gate review mengulang sebagian (lint, typecheck, test, db:test, db:lint, worker:check, integration import-commit/import/achievements) dengan angka sama.
+
+Perubahan test lama (bukan pelemahan): fixture "committed purge" di `import_staging.test.sql` kini menulis `committed_id` lewat flag commit dengan skill nyata (lalu dihapus); assertion tidak berubah.
+
+Belum terbukti atau terbuka:
+
+- Race commit hanya satu putaran per skenario (hasil serial sah, tanpa deadlock); tidak ada uji stres.
+- P3: assertion pgTAP profile `skip` dan `validate` akun deleting; unique-race skill menghasilkan `IMPORT_ITEM_INVALID` dengan daftar kosong (UI T17 harus menangani); batch `review` yang ditinggalkan belum dipurge (T17/T23); CV freshness untuk perubahan profil via commit (T20).
+- Smoke live `extractImport` dan `refine` serta suite scanner ClamAV penuh masih belum dijalankan.
+
+Batas: bukti lokal dengan fake AI provider, ClamAV dan Gotenberg nyata; tidak ada deployment.
+
+Berikutnya: **T17 Import review UI dan onboarding lengkap**.
+
 ## T15 — Import upload dan extraction staging — 29 September 2026
 
 Status T15: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal; gate review Claude (29 September 2026, HEAD `5399fba`) tanpa temuan P0–P2 setelah verifikasi ulang independen. Pelaksana dan reviewer sama-sama Claude atas permintaan pengguna. Dependensi T13 (dan T05/T10/T14) **DONE**. Rujukan: R02, F01, S02, DB §1/§3/§4/§6.
@@ -28,7 +55,7 @@ Belum terbukti atau terbuka:
 
 Batas: bukti lokal dengan fake AI provider dan (untuk E2E/integration utama) fake renderer; renderer dan ClamAV nyata dibuktikan terpisah; tidak ada deployment.
 
-Berikutnya: **T16 Import commit transaction**.
+Berikutnya: **T16 Import commit transaction**. [Handoff T16 single-agent](verification/T16-implementation-plan.md) untuk Claude Sonnet 5.5 tersedia (29 September 2026); T16 tetap **TODO**, hanya dokumen rencana yang ditambahkan.
 
 ## T14 — Detection, refinement dan review — 29 September 2026
 
@@ -598,7 +625,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T13 | AI jobs dan consent | DONE |
 | T14 | Detection dan review | DONE |
 | T15 | Import staging | DONE |
-| T16 | Import commit | TODO |
+| T16 | Import commit | DONE |
 | T17 | Import review UI | TODO |
 | T18 | CV schema dan selection | TODO |
 | T19 | CV builder dan overrides | TODO |
