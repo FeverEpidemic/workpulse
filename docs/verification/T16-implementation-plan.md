@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 29 September 2026
-- Status saat plan ditulis: **TODO**. T16 belum dimulai.
+- Status saat plan ditulis: **TODO**. Status akhir: **DONE** (acceptance lokal, 30 September 2026; lihat T16-import-commit.md).
 - Keputusan produk: pengguna **menyetujui** (29 September 2026) keempat keputusan yang semula terbuka — §2.2.1 (RPC `update_import_item` di T16), §2.2.5 (relaksasi check provenance achievement `origin = 'import'`), §2.2.6 (onboarding lewat commit dengan `p_onboarding`), dan §2.2.9 (skill duplikat sebagai error `DUPLICATE`, tanpa auto-map). Semuanya dibekukan; pelaksana tidak perlu menanyakannya ulang.
 - Dependensi: T15 **DONE** (acceptance lokal, `docs/verification/T15-import-staging.md`) dan T09 **DONE**. T02/T03 (profile lifecycle, onboarding) dan T12 (dashboard/timeline) juga **DONE**. Gate M2 **PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
