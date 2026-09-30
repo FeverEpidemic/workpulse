@@ -37,12 +37,7 @@ export function DashboardView({ data, displayName, locale }: { data: DashboardDa
           action={{ href: dashboardLinks.newActivity(), label: t(locale, "dashboard.addFirstActivity") }}
         />
         <div className="dashboard-empty-actions">
-          <div>
-            <button className="button-secondary" type="button" disabled aria-describedby="dashboard-import-unavailable">
-              {t(locale, "dashboard.importCv")}
-            </button>
-            <p id="dashboard-import-unavailable" className="field-help">{t(locale, "dashboard.importUnavailable")}</p>
-          </div>
+          <Link className="button-secondary" href="/onboarding/import">{t(locale, "dashboard.importCv")}</Link>
           <Link className="button-secondary" href={dashboardLinks.profile()}>{t(locale, "dashboard.addCareerHistory")}</Link>
         </div>
       </div>

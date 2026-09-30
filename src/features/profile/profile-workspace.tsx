@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AiConsentCard } from "@/features/profile/ai-consent-card";
 import { FoundationEditors } from "@/features/profile/foundation-editors";
 import { ProfileEditor } from "@/features/profile/profile-editor";
@@ -53,6 +55,11 @@ export async function ProfileWorkspace({
         <Card className="space-y-5">
           <h2 className="text-xl font-semibold">{t(locale, "profile.personalDetails")}</h2>
           <ProfileEditor profile={profile} userEmail={userEmail} locale={locale} />
+        </Card>
+        <Card className="space-y-3">
+          <h2 className="text-xl font-semibold">{t(locale, "profile.importCvTitle")}</h2>
+          <p className="text-sm text-[var(--wp-muted)]">{t(locale, "profile.importCvBody")}</p>
+          <Link className="button-secondary inline-flex" href="/onboarding/import">{t(locale, "profile.importCvAction")}</Link>
         </Card>
         <Card className="space-y-4">
           <AiConsentCard profile={profile} locale={locale} />

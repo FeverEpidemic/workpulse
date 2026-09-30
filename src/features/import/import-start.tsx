@@ -55,9 +55,11 @@ export type ImportStartProps = {
   locale: Locale;
   initialView: ImportView;
   consent: { granted: boolean; profileRevision: number };
+  /** A returning user (onboarding finished) starts manually in the profile editor, not in onboarding mode. */
+  onboarded?: boolean;
 };
 
-export function ImportStart({ locale, initialView, consent }: ImportStartProps) {
+export function ImportStart({ locale, initialView, consent, onboarded = false }: ImportStartProps) {
   const [view, setView] = useState<ImportView>(initialView);
   const [choosing, setChoosing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -201,7 +203,7 @@ export function ImportStart({ locale, initialView, consent }: ImportStartProps) 
   const showChooser = view.state === "choose" || choosing;
   const progress = PROGRESS_KEYS[view.state];
   const manual = (primary = false) => (
-    <Link className={primary ? "button-primary" : "button-secondary"} href={MANUAL_HREF}>{t(locale, "import.startManually")}</Link>
+    <Link className={primary ? "button-primary" : "button-secondary"} href={onboarded ? "/settings/profile" : MANUAL_HREF}>{t(locale, "import.startManually")}</Link>
   );
   const tryAnother = () => {
     setChoosing(true);
@@ -303,25 +305,38 @@ export function ImportStart({ locale, initialView, consent }: ImportStartProps) 
             </>
           ) : null}
 
-          {view.state === "cancelled" || view.state === "committed" ? (
+          {view.state === "cancelled" ? (
             <>
               <h2 id={statusId} className="text-xl font-semibold" role="status">{t(locale, "import.cancelledTitle")}</h2>
               <p className="text-sm">{t(locale, "import.cancelledBody")}</p>
             </>
           ) : null}
 
+          {view.state === "committed" ? (
+            <>
+              <h2 id={statusId} className="text-xl font-semibold" role="status">{t(locale, "import.committedTitle")}</h2>
+              <p className="text-sm">{t(locale, "import.committedBody")}</p>
+            </>
+          ) : null}
+
           {error ? <p role="alert" className="field-error">{error}</p> : null}
 
           <div className="import-actions">
+            {view.state === "review_ready" && view.batchId ? (
+              <Link className="button-primary" href={`/imports/${view.batchId}/review`}>{t(locale, "import.reviewCandidates")}</Link>
+            ) : null}
+            {view.state === "committed" ? (
+              <Link className="button-primary" href="/dashboard">{t(locale, "import.openDashboard")}</Link>
+            ) : null}
             {view.state === "failed_retriable" ? (
               <Button disabled={!view.canRetry} loading={pending} loadingLabel={t(locale, "common.loading")} onClick={() => runBatchAction(retryImportAction)}>
                 {t(locale, "import.retry")}
               </Button>
             ) : null}
             {["failed_permanent", "failed_retriable", "cancelled", "review_empty", "committed"].includes(view.state) ? (
-              <Button variant={view.state === "failed_retriable" ? "secondary" : "primary"} onClick={tryAnother}>{t(locale, "import.tryAnother")}</Button>
+              <Button variant={view.state === "failed_retriable" || view.state === "committed" ? "secondary" : "primary"} onClick={tryAnother}>{t(locale, "import.tryAnother")}</Button>
             ) : null}
-            {manual(view.state === "review_empty")}
+            {view.state === "committed" ? null : manual(view.state === "review_empty")}
             {view.canCancel ? (
               <button ref={cancelTrigger} type="button" className="ui-button-ghost" onClick={() => setCancelOpen(true)}>{t(locale, "import.cancel")}</button>
             ) : null}

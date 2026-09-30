@@ -73,12 +73,14 @@ describe("T15 S02 import screen", () => {
     expect(exhausted).toContain("The retry limit was reached");
   });
 
-  it("shows candidate counts without a review link, and the manual path for an empty extraction", () => {
+  it("shows candidate counts with a review link, and the manual path for an empty extraction", () => {
     const ready = render(batch({ status: "review", stage: "done", page_count: 2 }), { counts: { experience: 2, skill: 3 } });
     expect(ready).toContain("Extraction finished");
     expect(ready).toContain("We found 5 candidate records");
     expect(ready).toContain("<dt>Experience</dt><dd>2</dd>");
-    expect(ready).not.toContain("/imports/");
+    // T17: candidates can be reviewed in S03 (this asserted the absence of a review link before).
+    expect(ready).toMatch(/class="button-primary" href="\/imports\/8f14e45f-ea5e-4a0b-9c2b-000000000001\/review">Review candidates/);
+    expect(ready).not.toContain("not available yet");
     const empty = render(batch({ status: "review", stage: "done", page_count: 1 }));
     expect(empty).toContain("No career data found");
     expect(empty).toMatch(/class="button-primary" href="\/settings\/profile\?mode=onboarding"/);
@@ -89,6 +91,25 @@ describe("T15 S02 import screen", () => {
     expect(html).toContain("Anda sudah pernah mengimpor file dengan isi yang sama");
     expect(html).toContain("Menunggu dimulai");
     expect(html).toContain("Batalkan impor");
+  });
+
+  it("shows a saved-import result for a committed batch, with the dashboard as the primary action", () => {
+    const html = render(batch({ status: "committed", stage: "done" }));
+    expect(html).toContain("Import saved");
+    expect(html).toContain("Your selected records were added to your workspace.");
+    expect(html).not.toContain("Import cancelled");
+    expect(html).not.toContain("Nothing was added");
+    expect(html).toMatch(/class="button-primary" href="\/dashboard">Open dashboard/);
+    expect(html).not.toContain("Start manually");
+  });
+
+  it("sends a returning user's manual path to the profile editor, not onboarding mode", () => {
+    const view = toImportView({ batch: null, consent: true, now });
+    const html = renderToStaticMarkup(<ImportStart locale="en" initialView={view} consent={consent} onboarded />);
+    expect(html).toContain('href="/settings/profile"');
+    expect(html).not.toContain("mode=onboarding");
+    const first = render(null);
+    expect(first).toContain('href="/settings/profile?mode=onboarding"');
   });
 
   it("uses no gradient or sparkle styling", () => {
