@@ -136,7 +136,7 @@ from an isolated LibreOffice renderer (`WORKPULSE_DOCX_RENDERER_MODE`, default `
 rows (`import_batches`, `import_items`); raw files and text are purged within 24 hours of a terminal
 state. See [decision 0021](docs/decisions/0021-t15-import-staging.md).
 
-T16 adds the import commit backend: `update_import_item` persists each Create/Map/Skip choice and edit, alidate_import_batch dry-runs the validation, and `commit_import_batch` commits every selected candidate in one atomic, idempotent transaction (foundation rows first, achievements as drafts unless explicitly confirmed, only the selected profile fields, onboarding completed through the commit for new users). Map only reuses the user's own records. The review screen is T17. See [decision 0022](docs/decisions/0022-t16-import-commit.md).
+T16 adds the import commit backend: `update_import_item` persists each Create/Map/Skip choice and edit, `validate_import_batch` dry-runs the validation, and `commit_import_batch` commits every selected candidate in one atomic, idempotent transaction (foundation rows first, achievements as drafts unless explicitly confirmed, only the selected profile fields, onboarding completed through the commit for new users). Map only reuses the user's own records. The review screen is T17. See [decision 0022](docs/decisions/0022-t16-import-commit.md).
 
 ## Local database (Supabase)
 
