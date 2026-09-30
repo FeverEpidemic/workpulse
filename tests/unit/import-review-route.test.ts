@@ -67,4 +67,3 @@ describe("T17 GET /api/imports/[id]/review", () => {
     expect((await response.json()).batch).toMatchObject({ id: BATCH, status: "committed" });
   });
 });
-

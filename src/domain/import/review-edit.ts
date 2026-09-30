@@ -60,11 +60,10 @@ export function clearSavedDraft(draft: FieldDraft | undefined, saved: Record<str
   return rest;
 }
 
-/** Concurrent saves can finish out of order: the commit token is the highest batch revision seen. */
-export function nextBatchRevision(current: number, receiptRevision: number): number {
-  return Math.max(current, receiptRevision);
-}
-
+/**
+ * The saved item after a successful update. The batch revision is deliberately left alone: a receipt's
+ * batch revision may include changes made in another tab, so the commit token comes from the tracker below.
+ */
 export function withReceipt(
   snapshot: ImportReviewSnapshot,
   itemId: string,
@@ -73,9 +72,49 @@ export function withReceipt(
 ): ImportReviewSnapshot {
   return {
     ...snapshot,
-    batch: { ...snapshot.batch, revision: nextBatchRevision(snapshot.batch.revision, receipt.batchRevision) },
     items: snapshot.items.map((item) => (item.id === itemId ? applyChange(item, change, receipt.itemRevision) : item)),
   };
+}
+
+/**
+ * Commit token bookkeeping. Every update_import_item raises the batch revision by exactly one, so the
+ * token is the revision this tab last loaded plus its own successful saves. A receipt above that (once
+ * this tab's saves have settled) means the batch changed elsewhere: the tab must reload before it may
+ * commit, and the token is never raised to a revision whose choices this tab has not shown.
+ */
+export type RevisionTracker = { generation: number; base: number; ownSaves: number; inFlight: number; highest: number };
+
+export function startRevisionTracker(base: number): RevisionTracker {
+  return { generation: 0, base, ownSaves: 0, inFlight: 0, highest: base };
+}
+
+/** After a reload: saves started before it no longer count. */
+export function resetRevisionTracker(tracker: RevisionTracker, base: number): RevisionTracker {
+  return { generation: tracker.generation + 1, base, ownSaves: 0, inFlight: 0, highest: base };
+}
+
+export function beginSave(tracker: RevisionTracker): { tracker: RevisionTracker; generation: number } {
+  return { tracker: { ...tracker, inFlight: tracker.inFlight + 1 }, generation: tracker.generation };
+}
+
+/** `receiptRevision` is the batch revision of a successful save, or null for a failed one. */
+export function settleSave(
+  tracker: RevisionTracker,
+  generation: number,
+  receiptRevision: number | null,
+): { tracker: RevisionTracker; outOfSync: boolean } {
+  if (generation !== tracker.generation) return { tracker, outOfSync: false };
+  const next: RevisionTracker = {
+    ...tracker,
+    inFlight: Math.max(0, tracker.inFlight - 1),
+    ownSaves: tracker.ownSaves + (receiptRevision === null ? 0 : 1),
+    highest: receiptRevision === null ? tracker.highest : Math.max(tracker.highest, receiptRevision),
+  };
+  return { tracker: next, outOfSync: next.inFlight === 0 && next.highest > commitToken(next) };
+}
+
+export function commitToken(tracker: RevisionTracker): number {
+  return tracker.base + tracker.ownSaves;
 }
 
 export type ItemSaveStatus = "idle" | "saving" | "saved" | "failed" | "conflict";

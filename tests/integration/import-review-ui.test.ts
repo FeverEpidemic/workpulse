@@ -306,5 +306,3 @@ describe("T17 import review read model against local Supabase, Storage and ClamA
     expect(dump).not.toContain("Sentinel Nusantara");
   });
 });
-
-

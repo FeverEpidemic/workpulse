@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { applyChange, changeFormData, clearSavedDraft, draftPatch, isDirty, nextBatchRevision, withReceipt } from "@/domain/import/review-edit";
+import {
+  applyChange,
+  beginSave,
+  changeFormData,
+  clearSavedDraft,
+  commitToken,
+  draftPatch,
+  isDirty,
+  resetRevisionTracker,
+  settleSave,
+  startRevisionTracker,
+  withReceipt,
+} from "@/domain/import/review-edit";
 import type { ImportReviewSnapshot, ReviewItemRow } from "@/domain/import/review-view";
 
 const item = (extra: Partial<ReviewItemRow> = {}): ReviewItemRow => ({
@@ -30,14 +42,64 @@ describe("T17 review edit helpers", () => {
     expect(clearSavedDraft({ title: "" }, { title: null })).toEqual({});
   });
 
-  it("uses the highest batch revision seen as the commit token, whatever order saves finish", () => {
-    expect(nextBatchRevision(5, 7)).toBe(7);
-    expect(nextBatchRevision(7, 6)).toBe(7);
+  it("applies a receipt to the item only; the batch revision is not taken from a receipt", () => {
     const snapshot = { batch: { revision: 5 }, items: [item()] } as unknown as ImportReviewSnapshot;
-    const first = withReceipt(snapshot, item().id, { confirm: true }, { itemRevision: 3, batchRevision: 8 });
-    const late = withReceipt(first, item().id, { confirm: false }, { itemRevision: 4, batchRevision: 7 });
-    expect(late.batch.revision).toBe(8);
-    expect(late.items[0]!.revision).toBe(4);
+    const next = withReceipt(snapshot, item().id, { confirm: true }, { itemRevision: 3, batchRevision: 8 });
+    expect(next.batch.revision).toBe(5);
+    expect(next.items[0]!.revision).toBe(3);
+  });
+
+  it("advances the commit token only by this tab's own saves", () => {
+    let tracker = startRevisionTracker(5);
+    const save = beginSave(tracker);
+    tracker = save.tracker;
+    const settled = settleSave(tracker, save.generation, 6);
+    expect(settled.outOfSync).toBe(false);
+    expect(commitToken(settled.tracker)).toBe(6);
+  });
+
+  it("reports a batch changed elsewhere instead of adopting the receipt revision (RV1)", () => {
+    // Another tab saved once (5 -> 6) before this tab's save (6 -> 7).
+    let tracker = startRevisionTracker(5);
+    const save = beginSave(tracker);
+    tracker = save.tracker;
+    const settled = settleSave(tracker, save.generation, 7);
+    expect(settled.outOfSync).toBe(true);
+    expect(commitToken(settled.tracker)).toBe(6);
+  });
+
+  it("does not report a conflict when this tab's own saves finish out of order", () => {
+    let tracker = startRevisionTracker(5);
+    const a = beginSave(tracker);
+    const b = beginSave(a.tracker);
+    tracker = b.tracker;
+    const first = settleSave(tracker, b.generation, 7);
+    expect(first.outOfSync).toBe(false);
+    const second = settleSave(first.tracker, a.generation, 6);
+    expect(second.outOfSync).toBe(false);
+    expect(commitToken(second.tracker)).toBe(7);
+  });
+
+  it("detects a foreign change once concurrent own saves settle, and failed saves do not count", () => {
+    let tracker = startRevisionTracker(5);
+    const a = beginSave(tracker);
+    const b = beginSave(a.tracker);
+    tracker = b.tracker;
+    const failed = settleSave(tracker, a.generation, null);
+    expect(failed.outOfSync).toBe(false);
+    const done = settleSave(failed.tracker, b.generation, 7);
+    expect(done.outOfSync).toBe(true);
+    expect(commitToken(done.tracker)).toBe(6);
+  });
+
+  it("ignores saves started before a reload and restarts from the reloaded revision", () => {
+    let tracker = startRevisionTracker(5);
+    const old = beginSave(tracker);
+    tracker = resetRevisionTracker(old.tracker, 9);
+    const late = settleSave(tracker, old.generation, 10);
+    expect(late.outOfSync).toBe(false);
+    expect(commitToken(late.tracker)).toBe(9);
+    expect(late.tracker.inFlight).toBe(0);
   });
 
   it("sends only what changed to the update action", () => {

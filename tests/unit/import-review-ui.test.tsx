@@ -202,4 +202,3 @@ describe("T17 candidate persistence states", () => {
     expect(html).toContain("Changed elsewhere");
   });
 });
-

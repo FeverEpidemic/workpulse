@@ -7,14 +7,20 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/field-control";
-import { clearUnsavedForm, useUnsavedForm } from "@/components/ui/unsaved-changes";
+import { useUnsavedForm } from "@/components/ui/unsaved-changes";
 import type { ImportCommitResult, ImportItemAction, ImportItemError } from "@/domain/import/commit-contracts";
 import {
+  beginSave,
   changeFormData,
   clearSavedDraft,
+  commitToken,
   draftPatch,
   isDirty,
+  resetRevisionTracker,
+  settleSave,
+  startRevisionTracker,
   withReceipt,
+  type RevisionTracker,
   type FieldDraft,
   type ItemChange,
   type ItemSaveStatus,
@@ -133,6 +139,8 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
   const [cancelling, setCancelling] = useState(false);
   const validationSeq = useRef(0);
   const commitLock = useRef(false);
+  // Commit token: the revision this tab last loaded plus its own saves, never a revision taken from a receipt.
+  const revisions = useRef<RevisionTracker>(startRevisionTracker(initial.batch.revision));
   const cancelTrigger = useRef<HTMLButtonElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
   const resultHeading = useRef<HTMLHeadingElement>(null);
@@ -200,6 +208,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       const next = await response.json() as ImportReviewSnapshot;
       if (!Array.isArray(next.items) || !next.batch) throw new Error("reload");
       setSnapshot(next);
+      revisions.current = resetRevisionTracker(revisions.current, next.batch.revision);
       setReloadedConflicts((current) => [...new Set([...current, ...Object.entries(statuses).filter(([, value]) => value === "conflict").map(([id]) => id)])]);
       setStatuses({});
       return true;
@@ -214,13 +223,23 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     if (!item) return;
     setStatus(itemId, "saving");
     setNotice("");
+    const started = beginSave(revisions.current);
+    revisions.current = started.tracker;
     const state: ActionState = await updateImportItemAction(IDLE_ACTION_STATE, changeFormData(itemId, item.revision, change));
-    if (state.status === "success") {
-      const receipt = state.data as { itemRevision: number; batchRevision: number };
+    const receipt = state.status === "success" ? state.data as { itemRevision: number; batchRevision: number } : null;
+    const settled = settleSave(revisions.current, started.generation, receipt?.batchRevision ?? null);
+    revisions.current = settled.tracker;
+    if (receipt) {
       setSnapshot((current) => withReceipt(current, itemId, change, receipt));
       if (change.patch) setDrafts((current) => ({ ...current, [itemId]: clearSavedDraft(current[itemId], change.patch as Record<string, unknown>) }));
       setStatus(itemId, "saved");
       setReloadedConflicts((current) => current.filter((id) => id !== itemId));
+      if (settled.outOfSync) {
+        // The batch also changed in another tab: show those choices before this tab may commit.
+        setNotice(t(locale, "import.review.changedElsewhere"));
+        await reload();
+        return;
+      }
       await refreshValidation();
       return;
     }
@@ -290,7 +309,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     try {
       const form = new FormData();
       form.set("batch_id", batchId);
-      form.set("expected_revision", String(snapshot.batch.revision));
+      form.set("expected_revision", String(commitToken(revisions.current)));
       if (view.onboarding.required) {
         form.set("onboarding_display_name", onboarding.display_name.trim());
         form.set("onboarding_locale", onboarding.locale);
@@ -334,7 +353,6 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     form.set("batch_id", batchId);
     const state = await cancelImportAction(IDLE_ACTION_STATE, form);
     if (state.status === "success") {
-      for (const item of snapshot.items) clearUnsavedForm(`import-review-${item.id}`);
       guardClean();
       router.push("/onboarding/import");
       return;
@@ -596,7 +614,3 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
   );
 
 }
-
-
-
-

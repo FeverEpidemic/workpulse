@@ -446,6 +446,39 @@ test("two tabs: a stale save keeps the local input and shows the server value; a
   expect(await experienceRows(user.id)).toHaveLength(2);
 });
 
+test("a save that reveals a change from another tab reloads before this tab can commit (RV1)", async ({ page, context }) => {
+  const user = await createUser({ onboarded: true });
+  await signIn(page, user);
+  const { batchId } = await uploadAndExtract(page, user, ["EXP|Sinkron Satu|Analis|2018|2019", "EXP|Sinkron Dua|Analis|2019|2020"]);
+  await openReview(page, batchId);
+
+  const other = await context.newPage();
+  await other.goto(reviewUrl(batchId));
+  await expect(other.getByRole("heading", { name: "Review imported data", level: 1 })).toBeVisible();
+
+  // The other tab skips the first candidate; this tab still shows it as Create new.
+  const otherFirst = card(other, "EXP|Sinkron Satu|Analis|2018|2019");
+  await otherFirst.getByRole("radio", { name: "Skip" }).click();
+  await expect(cardStatus(otherFirst)).toHaveText("Saved");
+  await expect(otherFirst.getByRole("radio", { name: "Skip" })).toBeChecked();
+  const first = card(page, "EXP|Sinkron Satu|Analis|2018|2019");
+  await expect(first.getByRole("radio", { name: "Create new" })).toBeChecked();
+
+  // This tab saves a different candidate: the receipt shows the batch moved further than its own save.
+  const second = card(page, "EXP|Sinkron Dua|Analis|2019|2020");
+  await second.getByLabel("Role").fill("Analis Sinkron");
+  await activate(second.getByRole("button", { name: "Save changes" }), page);
+  await expect(page.getByText("This import also changed in another tab or window.", { exact: false })).toBeVisible();
+  await expect(first.getByRole("radio", { name: "Skip" })).toBeChecked();
+  expect(await experienceRows(user.id)).toHaveLength(0);
+
+  // Now the tab shows what will be committed: one experience created, the skipped one not.
+  await activate(confirmButton(page), page);
+  await expect(page.getByRole("heading", { name: "Import saved" })).toBeVisible({ timeout: 30_000 });
+  const rows = await experienceRows(user.id);
+  expect(rows.map((row) => row.role_title)).toEqual(["Analis Sinkron"]);
+});
+
 test("empty extraction offers manual entry as the primary action and lets the user cancel the import", async ({ page }, testInfo) => {
   const user = await createUser();
   await signIn(page, user);
