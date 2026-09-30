@@ -3,7 +3,8 @@
 - Tanggal: 30 September 2026.
 - Reviewer: Claude (Opus), gate review read-only setelah Fase 5 (`T17-implementation-plan.md` §9–§10).
 - HEAD yang direview: `58e0183` (branch `claude/clever-archimedes-gbu7qd`, baseline `d4bd39f`).
-- Verdict: **BELUM LULUS — 1 temuan P2 terbuka.** T17 tetap **PARTIAL**. Fase 6 (decision 0023, dokumen verifikasi, README) baru dikerjakan setelah RV1 ditutup dan checks §4 diulang.
+- Verdict awal (HEAD `58e0183`): **BELUM LULUS — 1 temuan P2 terbuka.**
+- **Review ulang (30 September 2026, HEAD `2c81c02`): LULUS — tidak ada P0–P2 terbuka.** RV1 dan N1/N7 ditutup di `2c81c02` (bukti: `T17-phase5b-remediation.md`); checks §4 diulang semuanya exit 0, `git diff --check d4bd39f..HEAD` exit 0. Remediasi dikerjakan reviewer sendiri atas instruksi pengguna, sehingga review ulang tidak independen penuh: ditopang test yang terbukti gagal tanpa perbaikan (unit 6 gagal, E2E RV1 gagal di notice) dan lulus dengan perbaikan. Lanjut Fase 6/closeout.
 - Persetujuan pengguna (30 September 2026, "Setuju semua"): verdict, klasifikasi RV1 dan N1–N9, perbaikan RV1 §2, perapian §3, serta penerimaan N2 (HTTP 200 dengan konten 404 generik) dan N3 (assertion `m2-manual-journey`) untuk dicatat di decision 0023.
 - Eksekutor remediasi: satu agent, tanpa sub-agent, TDD (test gagal → perbaikan minimal → lulus). Tanpa migration, tanpa perubahan RPC/validasi T15/T16, tanpa `db reset`.
 
@@ -11,14 +12,14 @@
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | Token revision batch untuk commit ikut "melompat" ke revision yang dibuat tab lain lewat receipt update, sehingga commit dapat menerapkan pilihan yang tidak pernah ditampilkan di tab ini | OPEN |
-| N1 | P3 | `git diff --check d4bd39f..HEAD` exit 2: baris kosong ekstra di EOF pada 5 file; receipt Fase 5 melaporkan exit 0 (dijalankan pada working tree bersih, bukan pada range T17) | OPEN (ikut dirapikan bersama RV1) |
+| RV1 | P2 | Token revision batch untuk commit ikut "melompat" ke revision yang dibuat tab lain lewat receipt update, sehingga commit dapat menerapkan pilihan yang tidak pernah ditampilkan di tab ini | FIXED `2c81c02` |
+| N1 | P3 | `git diff --check d4bd39f..HEAD` exit 2: baris kosong ekstra di EOF pada 5 file; receipt Fase 5 melaporkan exit 0 (dijalankan pada working tree bersih, bukan pada range T17) | FIXED `2c81c02` |
 | N2 | P3 | S03 untuk id asing/tidak ada merespons HTTP 200 (streaming `loading.tsx`) dengan konten 404 generik identik; API tetap 404 | Diterima; catat di decision 0023 |
 | N3 | P3 | Perubahan assertion `tests/e2e/m2-manual-journey.spec.ts:181` di luar daftar §1.16 | Diterima (kontrak Import CV aktif yang sama dengan `dashboard-timeline`); catat di decision 0023 |
 | N4 | P3 | `GET /api/imports/[id]/review` lewat `importHttp` tetap menginstansiasi admin client + `ImportService` meski data hanya dibaca lewat session client | Follow-up |
 | N5 | P3 | Tidak ada label `import.review.field.metrics` / `import.review.field.experience_item_id`; bila SQL mengeluarkan error pada field itu, ringkasan error menampilkan key mentah | Follow-up |
 | N6 | P3 | `ONBOARDING_INVALID` dari commit hanya tampil sebagai notice umum, bukan error pada field onboarding (§2.2.12) | Follow-up |
-| N7 | P3 | `cancelImport` memanggil `clearUnsavedForm("import-review-<itemId>")` untuk key yang tidak pernah dipakai (key sebenarnya per batch, sudah dibersihkan `guardClean`) | Follow-up |
+| N7 | P3 | `cancelImport` memanggil `clearUnsavedForm("import-review-<itemId>")` untuk key yang tidak pernah dipakai (key sebenarnya per batch, sudah dibersihkan `guardClean`) | FIXED `2c81c02` |
 | N8 | P3 | `onProfileField` mengirim `""` (bukan `null`) untuk nilai profil yang dikosongkan, berbeda dari `draftPatch` | Follow-up |
 | N9 | P3 | Flaky pra-T17: `activity-ui.spec.ts:356` (`toHaveURL` project) gagal sekali dalam `test:e2e:evidence`, lulus pada `test:e2e:activity` dan rerun evidence (8/8) | Pantau |
 
