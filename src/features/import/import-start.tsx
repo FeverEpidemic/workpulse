@@ -25,13 +25,15 @@ const FAILURE_KEYS = new Set([
   "FILE_EMPTY", "FILE_TOO_LARGE", "FILE_TYPE_MISMATCH", "UNSUPPORTED_FORMAT", "ENCRYPTED_FILE", "SCANNED_PDF",
   "CORRUPT_FILE", "EMPTY_DOCUMENT", "TOO_MANY_PAGES", "IMPORT_TEXT_TOO_LONG", "PARSER_TIMEOUT", "MALWARE_DETECTED",
   "UPLOAD_INCOMPLETE", "SCANNER_UNAVAILABLE", "STORAGE_UNAVAILABLE", "PAGE_COUNT_UNAVAILABLE", "IMPORT_WORKER_TIMEOUT",
-  "CONSENT_REQUIRED",
+  // CONSENT_REQUIRED: refused before the text was sent. CONSENT_WITHDRAWN: the provider already
+  // received the text and the result was discarded, so its copy must not claim otherwise.
+  "CONSENT_REQUIRED", "CONSENT_WITHDRAWN",
 ]);
 
 /** Localized reason for a batch failure code; AI outages share one message. */
 export function importFailureKey(code: string | null): MessageKey {
   if (code && FAILURE_KEYS.has(code)) return `import.failed.${code}` as MessageKey;
-  if (code?.startsWith("AI_") || code === "CONSENT_WITHDRAWN") return code === "CONSENT_WITHDRAWN" ? "import.failed.CONSENT_REQUIRED" : "import.failed.AI";
+  if (code?.startsWith("AI_")) return "import.failed.AI";
   return "import.failed.GENERIC";
 }
 
