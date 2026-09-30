@@ -36,6 +36,8 @@ export type CandidateProps = {
   payload: Record<string, unknown> | null;
   draft: FieldDraft | undefined;
   status: ItemSaveStatus;
+  /** After a reload following a conflict, kept edits still show the saved server value. */
+  showServerValues?: boolean;
   invalidFields: readonly string[];
   handlers: CandidateHandlers;
   titleText: string;
@@ -272,7 +274,7 @@ const STATUS_KEY: Record<Exclude<ItemSaveStatus, "idle">, MessageKey> = {
   conflict: "import.review.status.conflict",
 };
 
-export function ImportReviewCandidate({ locale, candidate, payload, draft, status, invalidFields, handlers, titleText }: CandidateProps) {
+export function ImportReviewCandidate({ locale, candidate, payload, draft, status, showServerValues = false, invalidFields, handlers, titleText }: CandidateProps) {
   const [mapMode, setMapMode] = useState(false);
   const saving = status === "saving";
   const conflicted = status === "conflict";
@@ -375,7 +377,7 @@ export function ImportReviewCandidate({ locale, candidate, payload, draft, statu
           ) : candidate.fields.map((field) => (
             <FieldRow
               key={field.name} locale={locale} itemId={candidate.id} field={field} draft={draft} disabled={disabled}
-              invalid={invalidFields.includes(field.name)} conflicted={conflicted} saved={payload} handlers={handlers}
+              invalid={invalidFields.includes(field.name)} conflicted={conflicted || showServerValues} saved={payload} handlers={handlers}
             />
           ))}
           {candidate.errors.filter((error) => !candidate.fields.some((field) => field.name === error.field) && !candidate.profileFields?.some((field) => field.name === error.field)).map((error) => (

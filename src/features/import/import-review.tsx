@@ -60,7 +60,7 @@ function candidateTitle(locale: Locale, candidate: ReviewCandidate, payload: Rec
       default: return typeLabel(locale, "profile");
     }
   })();
-  return name || t(locale, "import.review.candidate", { type: typeLabel(locale, candidate.type), number: candidate.ordinal });
+  return name || t(locale, "import.review.candidate", { type: typeLabel(locale, candidate.type), number: candidate.ordinal + 1 });
 }
 
 function onboardingKey(ownerId: string, batchId: string) {
@@ -124,6 +124,8 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
   const [drafts, setDrafts] = useState<Record<string, FieldDraft>>({});
   const [statuses, setStatuses] = useState<Record<string, ItemSaveStatus>>({});
   const [invalid, setInvalid] = useState<Record<string, string[]>>({});
+  // Candidates whose save hit a conflict and were then reloaded: their kept edits show the server value beside them.
+  const [reloadedConflicts, setReloadedConflicts] = useState<string[]>([]);
   const [onboardingEdit, setOnboardingEdit] = useState<OnboardingDraft | null>(null);
   const [committing, setCommitting] = useState(false);
   const [notice, setNotice] = useState("");
@@ -198,6 +200,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       const next = await response.json() as ImportReviewSnapshot;
       if (!Array.isArray(next.items) || !next.batch) throw new Error("reload");
       setSnapshot(next);
+      setReloadedConflicts((current) => [...new Set([...current, ...Object.entries(statuses).filter(([, value]) => value === "conflict").map(([id]) => id)])]);
       setStatuses({});
       return true;
     } catch {
@@ -217,6 +220,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       setSnapshot((current) => withReceipt(current, itemId, change, receipt));
       if (change.patch) setDrafts((current) => ({ ...current, [itemId]: clearSavedDraft(current[itemId], change.patch as Record<string, unknown>) }));
       setStatus(itemId, "saved");
+      setReloadedConflicts((current) => current.filter((id) => id !== itemId));
       await refreshValidation();
       return;
     }
@@ -255,6 +259,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     onDiscard: (itemId) => {
       setDrafts((current) => ({ ...current, [itemId]: {} }));
       setInvalid((current) => ({ ...current, [itemId]: [] }));
+      setReloadedConflicts((current) => current.filter((id) => id !== itemId));
       setStatus(itemId, "idle");
     },
     onAction: (itemId, action: ImportItemAction) => {
@@ -384,7 +389,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       <div className="import-review space-y-5">
         {header}
         <section className="space-y-3" aria-labelledby="import-review-state">
-          <h2 id="import-review-state" className="text-xl font-semibold" role="status">{t(locale, "import.review.processingTitle")}</h2>
+          <h2 id="import-review-state" className="text-xl font-semibold" aria-live="polite">{t(locale, "import.review.processingTitle")}</h2>
           <p className="text-sm">{t(locale, "import.review.processingBody")}</p>
           <Link className="button-primary" href="/onboarding/import">{t(locale, "import.review.backToStatus")}</Link>
         </section>
@@ -397,7 +402,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       <div className="import-review space-y-5">
         {header}
         <section className="space-y-3" aria-labelledby="import-review-state">
-          <h2 id="import-review-state" className="text-xl font-semibold" role="status">
+          <h2 id="import-review-state" className="text-xl font-semibold" aria-live="polite">
             {t(locale, view.state === "failed" ? "import.failedTitle" : "import.cancelledTitle")}
           </h2>
           <p className="text-sm">{view.state === "failed" ? t(locale, importFailureKey(view.errorCode)) : t(locale, "import.cancelledBody")}</p>
@@ -417,7 +422,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       <div className="import-review space-y-5">
         {header}
         <section className="space-y-4" aria-labelledby="import-review-state">
-          <h2 id="import-review-state" ref={resultHeading} tabIndex={-1} className="import-result-heading text-xl font-semibold" role="status">
+          <h2 id="import-review-state" ref={resultHeading} tabIndex={-1} className="import-result-heading text-xl font-semibold" aria-live="polite">
             {t(locale, "import.review.committedTitle")}
           </h2>
           {result ? (
@@ -442,7 +447,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       <div className="import-review space-y-5">
         {header}
         <section className="space-y-3" aria-labelledby="import-review-state">
-          <h2 id="import-review-state" className="text-xl font-semibold" role="status">{t(locale, "import.review.emptyTitle")}</h2>
+          <h2 id="import-review-state" className="text-xl font-semibold" aria-live="polite">{t(locale, "import.review.emptyTitle")}</h2>
           <p className="text-sm">{t(locale, "import.review.emptyBody")}</p>
           <div className="import-actions">{manual(true)}{cancelButton}</div>
         </section>
@@ -470,7 +475,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
               <li key={`${error.itemId}-${error.field}-${error.code}`}>
                 <a href={`#${fieldElementId(error.itemId, error.field)}`} onClick={(event) => { event.preventDefault(); focusError(error.itemId, error.field); }}>
                   {t(locale, "import.review.errorSummaryItem", {
-                    group: typeLabel(locale, error.type), number: error.ordinal,
+                    group: typeLabel(locale, error.type), number: error.ordinal + 1,
                     field: t(locale, `import.review.field.${error.field}` as MessageKey),
                   })}
                   {" — "}
@@ -543,6 +548,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
                       payload={row.payload}
                       draft={drafts[candidate.id]}
                       status={statuses[candidate.id] ?? "idle"}
+                      showServerValues={reloadedConflicts.includes(candidate.id)}
                       invalidFields={invalid[candidate.id] ?? []}
                       handlers={handlers}
                       titleText={candidateTitle(locale, candidate, row.payload)}
