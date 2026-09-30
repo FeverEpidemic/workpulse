@@ -4,6 +4,7 @@
 - Reviewer: Claude (Opus), gate review read-only setelah Fase 5 (`T17-implementation-plan.md` §9–§10).
 - HEAD yang direview: `58e0183` (branch `claude/clever-archimedes-gbu7qd`, baseline `d4bd39f`).
 - Verdict: **BELUM LULUS — 1 temuan P2 terbuka.** T17 tetap **PARTIAL**. Fase 6 (decision 0023, dokumen verifikasi, README) baru dikerjakan setelah RV1 ditutup dan checks §4 diulang.
+- Persetujuan pengguna (30 September 2026, "Setuju semua"): verdict, klasifikasi RV1 dan N1–N9, perbaikan RV1 §2, perapian §3, serta penerimaan N2 (HTTP 200 dengan konten 404 generik) dan N3 (assertion `m2-manual-journey`) untuk dicatat di decision 0023.
 - Eksekutor remediasi: satu agent, tanpa sub-agent, TDD (test gagal → perbaikan minimal → lulus). Tanpa migration, tanpa perubahan RPC/validasi T15/T16, tanpa `db reset`.
 
 ## 1. Ringkasan temuan
