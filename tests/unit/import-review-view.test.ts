@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   canConfirmAchievement,
@@ -130,8 +130,8 @@ describe("T17 import review view model", () => {
     const achievement = item("achievement", 1, { ...achievementPayload, title: "cut REPORT time" });
     const view = toImportReviewView(snapshot([skill, experience, mapped, skippedDuplicate, education, certification, achievement], {
       targets: {
-        experience: [{ id: uuid(500), label: "Analis Â· PT Sentinel", match: duplicateKey("experience", experiencePayload) }],
-        education: [{ id: uuid(501), label: "S1 Â· UI", match: duplicateKey("education", { institution: "UI", qualification: "S1" }) }],
+        experience: [{ id: uuid(500), label: "Analis · PT Sentinel", match: duplicateKey("experience", experiencePayload) }],
+        education: [{ id: uuid(501), label: "S1 · UI", match: duplicateKey("education", { institution: "UI", qualification: "S1" }) }],
         certification: [{ id: uuid(502), label: "AWS", match: duplicateKey("certification", { name: "aws", issuer: "" }) }],
         skill: [{ id: uuid(503), label: "SQL", match: null }],
         achievement: [{ id: uuid(504), label: "Cut report time", match: duplicateKey("achievement", { title: "Cut report time" }) }],
@@ -140,7 +140,7 @@ describe("T17 import review view model", () => {
     }));
     const byId = new Map(view.groups.flatMap((group) => group.candidates).map((candidate) => [candidate.id, candidate]));
     expect(byId.get(skill.id)!.duplicate).toEqual({ source: "validation", targetId: uuid(503), label: "SQL", blocking: true });
-    expect(byId.get(experience.id)!.duplicate).toEqual({ source: "heuristic", targetId: uuid(500), label: "Analis Â· PT Sentinel", blocking: false });
+    expect(byId.get(experience.id)!.duplicate).toEqual({ source: "heuristic", targetId: uuid(500), label: "Analis · PT Sentinel", blocking: false });
     expect(byId.get(education.id)!.duplicate).toMatchObject({ targetId: uuid(501), blocking: false });
     expect(byId.get(certification.id)!.duplicate).toMatchObject({ targetId: uuid(502) });
     expect(byId.get(achievement.id)!.duplicate).toMatchObject({ targetId: uuid(504) });

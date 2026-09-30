@@ -1,4 +1,4 @@
-﻿import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
