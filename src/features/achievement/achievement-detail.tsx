@@ -75,6 +75,10 @@ export function AchievementDetail({
             <h1 className="text-3xl font-semibold tracking-tight">{achievement.title ?? t(locale, "achievement.untitledDraft")}</h1>
             <p className="mt-2 text-[var(--color-text-secondary)]">{achievement.origin === "activity" ? t(locale, "achievement.createFromActivity") : achievement.origin === "import" ? t(locale, "achievement.importedFromCv") : achievement.project_id ? t(locale, "achievement.createFromProject") : t(locale, "achievement.standalone")}</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+          {achievement.status === "confirmed" ? (
+            <Link className="button-secondary" href={`/cv?highlight=${achievement.id}`} aria-describedby="achievement-add-to-cv-help">{t(locale, "cv.addToCv")}</Link>
+          ) : null}
           <NamedDeleteDialog
             title={t(locale, "common.deleteTitle")}
             description={t(locale, "achievement.deleteDescription")}
@@ -95,7 +99,9 @@ export function AchievementDetail({
               <ActionFeedback state={deleteState} locale={locale} returnTo={returnTo} />
             </form>
           </NamedDeleteDialog>
+          </div>
         </div>
+        {achievement.status === "confirmed" ? <p id="achievement-add-to-cv-help" className="field-help mt-2">{t(locale, "cv.addToCvHelp")}</p> : null}
       </header>
 
       <AchievementSourceCard locale={locale} achievement={achievement} activity={activity} detailReturn={detailReturn} />

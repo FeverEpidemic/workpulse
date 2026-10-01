@@ -35,6 +35,7 @@ export const CV_ERROR_CODES = [
   "CV_CHILD_ITEMS_EXIST",
   "CV_REORDER_INVALID",
   "CV_ITEM_IMMUTABLE",
+  "CV_OVERRIDE_UNSUPPORTED",
 ] as const;
 export type CvErrorCode = (typeof CV_ERROR_CODES)[number];
 
@@ -84,6 +85,60 @@ export const sectionOrderSchema = z
   .length(CV_SECTION_KEYS.length)
   .refine((order) => new Set(order).size === CV_SECTION_KEYS.length, { message: "duplicate_section" });
 
+/** Keys of the optional display overrides kept beside the copied profile source (decision 0025). */
+export const CV_PROFILE_OVERRIDE_KEYS = ["display_name", "headline", "contact_email", "phone", "location", "website"] as const;
+export type CvProfileOverrideKey = (typeof CV_PROFILE_OVERRIDE_KEYS)[number];
+
+/** Same limits as the canonical profile columns (T03); website must be http(s). */
+export const CV_PROFILE_OVERRIDE_MAX = {
+  display_name: 80,
+  headline: 120,
+  contact_email: 320,
+  phone: 40,
+  location: 120,
+  website: 2048,
+} as const satisfies Record<CvProfileOverrideKey, number>;
+export const CV_TITLE_MAX = 120;
+export const CV_SUMMARY_MAX = 5000;
+export const CV_OVERRIDE_TEXT_MAX = 2000;
+
+const EMAIL_PATTERN = /^[A-Za-z0-9_+'-]+([.][A-Za-z0-9_+'-]+)*@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?([.][A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$/;
+const WEBSITE_PATTERN = /^https?:\/\/[^/?#\s]+([/?#]\S*)?$/i;
+
+/** Validates one non-empty, already trimmed display override value. */
+export function isValidProfileOverride(key: CvProfileOverrideKey, value: string): boolean {
+  if (value === "" || value !== value.trim() || value.length > CV_PROFILE_OVERRIDE_MAX[key]) return false;
+  if (key === "contact_email") return EMAIL_PATTERN.test(value);
+  if (key === "website") return WEBSITE_PATTERN.test(value);
+  return true;
+}
+
+const profileOverrideValues = z.strictObject({
+  display_name: z.string(),
+  headline: z.string(),
+  contact_email: z.string(),
+  phone: z.string(),
+  location: z.string(),
+  website: z.string(),
+}).partial().refine(
+  (value) => Object.entries(value).every(([key, text]) => typeof text === "string" && isValidProfileOverride(key as CvProfileOverrideKey, text)),
+  { message: "invalid_profile_override" },
+);
+
+/** The copied profile source (cv-profile.v1) plus optional display overrides. Unknown keys are rejected. */
+export const cvProfileSnapshotSchema = z.strictObject({
+  schema_version: z.literal("cv-profile.v1").optional(),
+  display_name: z.string().nullish(),
+  headline: z.string().nullish(),
+  summary: z.string().nullish(),
+  contact_email: z.string().nullish(),
+  phone: z.string().nullish(),
+  location: z.string().nullish(),
+  website: z.string().nullish(),
+  display_overrides: profileOverrideValues.optional(),
+});
+export type CvProfileSnapshot = z.infer<typeof cvProfileSnapshotSchema>;
+
 export const cvDocumentRowSchema = z.object({
   id: z.uuid(),
   user_id: z.uuid(),
@@ -91,7 +146,7 @@ export const cvDocumentRowSchema = z.object({
   locale: z.enum(CV_LOCALES),
   template_key: z.literal("single_column_v1"),
   summary_override: z.string().nullable(),
-  profile_snapshot: z.record(z.string(), z.unknown()),
+  profile_snapshot: cvProfileSnapshotSchema,
   profile_source_revision: revision,
   profile_ack_revision: revision.nullable(),
   section_order: sectionOrderSchema,
@@ -153,6 +208,50 @@ export const updateCvLayoutInput = z
   })
   .refine((value) => value.locale !== undefined || value.section_order !== undefined, { message: "empty_layout" });
 export type UpdateCvLayoutInput = z.infer<typeof updateCvLayoutInput>;
+
+const editText = (max: number) => z.string().max(max);
+
+/**
+ * Text edits saved together by save_cv_edits. A null (or blank) summary, profile value or override clears it;
+ * the title cannot be cleared. At least one edit is required.
+ */
+export const saveCvEditsInput = z
+  .strictObject({
+    expected_revision: revision,
+    title: z.string().trim().min(1).max(CV_TITLE_MAX).optional(),
+    summary_override: editText(CV_SUMMARY_MAX).nullable().optional(),
+    profile_overrides: z
+      .strictObject({
+        display_name: editText(CV_PROFILE_OVERRIDE_MAX.display_name).nullable(),
+        headline: editText(CV_PROFILE_OVERRIDE_MAX.headline).nullable(),
+        contact_email: editText(CV_PROFILE_OVERRIDE_MAX.contact_email).nullable(),
+        phone: editText(CV_PROFILE_OVERRIDE_MAX.phone).nullable(),
+        location: editText(CV_PROFILE_OVERRIDE_MAX.location).nullable(),
+        website: editText(CV_PROFILE_OVERRIDE_MAX.website).nullable(),
+      })
+      .partial()
+      .superRefine((value, ctx) => {
+        for (const [key, text] of Object.entries(value)) {
+          const trimmed = typeof text === "string" ? text.trim() : "";
+          if (trimmed !== "" && !isValidProfileOverride(key as CvProfileOverrideKey, trimmed)) {
+            ctx.addIssue({ code: "custom", path: [key], message: "invalid_profile_override" });
+          }
+        }
+      })
+      .optional(),
+    item_overrides: z
+      .array(z.strictObject({ item_id: z.uuid(), override_text: editText(CV_OVERRIDE_TEXT_MAX).nullable() }))
+      .max(200)
+      .refine((items) => new Set(items.map((item) => item.item_id)).size === items.length, { message: "duplicate_item" })
+      .optional(),
+  })
+  .refine(
+    (value) =>
+      value.title !== undefined || value.summary_override !== undefined ||
+      value.profile_overrides !== undefined || value.item_overrides !== undefined,
+    { message: "empty_edits" },
+  );
+export type SaveCvEditsInput = z.infer<typeof saveCvEditsInput>;
 
 /** The CV_CHILD_ITEMS_EXIST detail is a JSON array of item ids; anything else is rejected. */
 export function parseChildItemsDetail(detail: string | null | undefined): string[] | null {

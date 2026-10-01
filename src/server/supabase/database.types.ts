@@ -2246,6 +2246,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      save_cv_edits: {
+        Args: { p_edits: Json; p_expected_revision: number }
+        Returns: number
+      }
       select_cv_source: {
         Args: {
           p_expected_revision: number
