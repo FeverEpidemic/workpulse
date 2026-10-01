@@ -1,4 +1,4 @@
-﻿# T19 Fase 3 — Service, action, i18n (30 September 2026)
+# T19 Fase 3 — Service, action, i18n (30 September 2026)
 
 - Tujuan: `saveEdits` di service, `saveCvEditsAction`, pemetaan `CV_OVERRIDE_UNSUPPORTED`, dan perbaikan correlation ID (P3 F2 dari gate T18).
 - File: `src/features/cv/{cv-service,cv-errors,actions}.ts`, `src/i18n/messages.ts` (`cv.error.overrideUnsupported`, en + id; paritas dijaga tipe `Record<keyof en, string>`), `tests/unit/{cv-service,cv-actions}.test.ts`.
@@ -10,4 +10,3 @@
 | --- | --- |
 | `pnpm test` | 85 file / 609 test PASS |
 | `pnpm typecheck` / `pnpm lint` | exit 0 / exit 0 |
-

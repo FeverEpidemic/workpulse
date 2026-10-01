@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isValidSectionOrder } from "@/domain/cv/selection";
 import {
-  changedKeys, computeItemMove, computeSectionMove, draftFromSaved, isDirty, itemKey, profileKey, reconcileDraft, resolveConflict, syncDraft, toSaveInput, validateDraft,
+  changedKeys, computeItemMove, computeSectionMove, draftFromSaved, droppedEdits, isDirty, itemKey, profileKey, reconcileDraft, resolveConflict, syncDraft, toSaveInput, validateDraft,
 } from "@/domain/cv/draft";
 
 import { ORDER, achievementSnapshot, documentRow, graduateItems, itemRow, uuid } from "./cv-fixtures";
@@ -143,5 +143,17 @@ describe("T19 CV draft sync", () => {
     const saved = { ...base, title: "same" };
     const next = syncDraft({ base, draft: { ...base, title: "same" }, unresolved: ["title"], saved });
     expect(next.unresolved).toEqual([]);
+  });
+
+  it("reports edited wording of items that disappeared from the saved CV instead of dropping it silently", () => {
+    const base = draftFromSaved(documentRow(), graduateItems());
+    const draft = { ...base, [itemKey(uuid(3))]: "Typed text", [itemKey(uuid(4))]: "Also typed" };
+    // Items 3 (edited) and 1 (untouched) were removed elsewhere; only the edited one is reported.
+    const saved = { ...base };
+    delete saved[itemKey(uuid(3))];
+    delete saved[itemKey(uuid(1))];
+    expect(droppedEdits({ base, draft, saved })).toEqual([itemKey(uuid(3))]);
+    expect(droppedEdits({ base, draft: base, saved })).toEqual([]);
+    expect(itemKey(uuid(3)) in syncDraft({ base, draft, unresolved: [], saved }).draft).toBe(false);
   });
 });

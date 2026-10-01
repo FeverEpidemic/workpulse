@@ -30,6 +30,8 @@ export interface SectionHandlers {
   problems: Record<string, DraftProblem>;
   openEditors: ReadonlySet<string>;
   highlightId: string | null;
+  /** Selected achievements rendered under a parent entry, with that parent's headline. */
+  placements: Readonly<Record<string, string>>;
   onToggleEditor: (itemId: string) => void;
   onDraftChange: (key: string, value: string) => void;
   onAdd: (option: PoolOption) => void;
@@ -116,6 +118,7 @@ function ItemRow({ entry, handlers, nested }: { entry: EditorEntry; handlers: Se
 function PoolRow({ option, handlers }: { option: PoolOption; handlers: SectionHandlers }) {
   const { locale } = handlers;
   const suggested = handlers.highlightId === option.sourceId;
+  const placedUnder = option.selected && option.sourceType === "achievement" ? handlers.placements[option.sourceId] : undefined;
   useEffect(() => {
     if (!suggested) return;
     const target = document.getElementById(`cv-add-${option.sourceId}`);
@@ -131,6 +134,7 @@ function PoolRow({ option, handlers }: { option: PoolOption; handlers: SectionHa
           {suggested ? <Badge variant="success">{t(locale, "cv.badge.suggested")}</Badge> : null}
         </p>
         {option.detail ? <p className="field-help">{option.detail}</p> : null}
+        {placedUnder ? <p className="field-help" data-testid="cv-pool-placement">{t(locale, "cv.pool.shownUnder", { name: placedUnder })}</p> : null}
       </div>
       <Button
         id={`cv-add-${option.sourceId}`} variant="secondary" aria-disabled={option.selected || undefined}

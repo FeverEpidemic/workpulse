@@ -12,6 +12,8 @@ import { CV_LOCALES, CV_PROFILE_OVERRIDE_KEYS, type CvLocale, type CvSectionKey 
 import { profileKey, SUMMARY_KEY, TITLE_KEY, type CvDraft, type DraftProblem } from "@/domain/cv/draft";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 
+import type { SaveStatus } from "./cv-builder-state";
+
 const problemKey = (problem: DraftProblem): MessageKey =>
   problem === "required" ? "cv.validation.required" : problem === "too_long" ? "cv.validation.tooLong" : "cv.validation.invalid";
 
@@ -19,7 +21,7 @@ export function FieldProblem({ id, locale, problem }: { id: string; locale: Loca
   return problem ? <p id={id} className="field-error" role="status">{t(locale, problemKey(problem))}</p> : <span id={id} className="sr-only" />;
 }
 
-export type SaveStatus = "saved" | "unsaved" | "saving" | "conflict";
+export type { SaveStatus };
 
 export function CvSaveBar({ locale, status, canSave, onSave }: { locale: Locale; status: SaveStatus; canSave: boolean; onSave: () => void }) {
   const label: Record<SaveStatus, MessageKey> = {

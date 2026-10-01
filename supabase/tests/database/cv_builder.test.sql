@@ -29,6 +29,12 @@ select ok(
   exists (select 1 from pg_catalog.pg_constraint where conname = 'cv_documents_profile_overrides_check' and contype = 'c'),
   'cv_documents_profile_overrides_check exists'
 );
+select ok(
+  not has_function_privilege('anon', 'internal.cv_profile_overrides_valid(jsonb)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'internal.cv_profile_overrides_valid(jsonb)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'internal.cv_profile_overrides_valid(jsonb)', 'EXECUTE'),
+  'internal.cv_profile_overrides_valid is not executable by API roles (gate review T19 F2)'
+);
 
 -- 2. Fixtures -------------------------------------------------------------------
 

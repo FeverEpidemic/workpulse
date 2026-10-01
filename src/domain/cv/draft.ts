@@ -156,6 +156,16 @@ export function syncDraft(input: { base: CvDraft; draft: CvDraft; unresolved: re
   return { base: { ...input.saved }, draft: merged, unresolved: [...new Set([...fresh, ...carried])].sort() };
 }
 
+/**
+ * Fields the user had edited that no longer exist in the saved CV (an item removed elsewhere). syncDraft drops
+ * them because there is nothing left to save them to; the editor tells the user instead of losing them silently.
+ */
+export function droppedEdits(input: { base: CvDraft; draft: CvDraft; saved: CvDraft }): string[] {
+  return Object.keys(input.draft)
+    .filter((key) => !(key in input.saved) && normalized(input.draft[key]) !== normalized(input.base[key]))
+    .sort();
+}
+
 /** Resolves one conflicting field: keep the local text or take the saved text. */
 export function resolveConflict(sync: DraftSync, key: string, choice: "mine" | "saved", saved: CvDraft): DraftSync {
   return {

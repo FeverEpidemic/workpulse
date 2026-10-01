@@ -190,6 +190,8 @@ test("graduate journey: first open is empty, records are added, moved with the k
   await expect(section(page, "achievements").getByText("Menurunkan waktu antre").first()).toBeVisible();
   expect(await itemTitles(page, "achievements")).toEqual([]);
   await expect(page.getByTestId("cv-preview-paper")).toContainText("Bullet Menurunkan waktu antre");
+  // The Achievements list says where the added child is instead of looking missing.
+  await expect(section(page, "achievements").getByTestId("cv-pool-placement")).toHaveText("On the CV under Skripsi Sistem Antrian");
 
   await add(page, "Menulis panduan");
   await expect(section(page, "achievements").locator('[data-testid="cv-item"]')).toHaveCount(1);
@@ -346,6 +348,28 @@ test("a stale save in a second session keeps the typed text and asks which versi
   await expect(other.page.locator("#cv-summary")).toHaveValue("Ringkasan A kedua");
   await expect(status(other.page)).toContainText("All changes saved");
   await other.context.close();
+});
+
+test("wording typed for an item removed in another session is reported, not dropped silently", async ({ page, browser }) => {
+  const user = await createUser();
+  await createEducation(user);
+  await createSkill(user, "SQL");
+  await signIn(page, user);
+  await add(page, "S1 · Informatika · Universitas Contoh");
+  await page.getByRole("button", { name: "Edit wording for S1, Informatika" }).click();
+  await page.getByLabel("CV wording for S1, Informatika").fill("Teks yang belum disimpan");
+  await expect(status(page)).toContainText("Unsaved changes");
+
+  const other = await secondSession(browser, user);
+  await other.page.getByRole("button", { name: "Remove S1, Informatika from CV" }).click();
+  await expect(section(other.page, "education").locator('[data-testid="cv-item"]')).toHaveCount(0);
+  await other.context.close();
+
+  // Any reload of the saved CV in the first session (here a stale Add) brings the removal in.
+  await page.getByRole("button", { name: "Add SQL to CV" }).click();
+  await expect(page.getByTestId("cv-dropped-notice")).toContainText("Unsaved wording for 1 item(s) was discarded");
+  await expect(section(page, "education").locator('[data-testid="cv-item"]')).toHaveCount(0);
+  await expect(status(page)).toContainText("All changes saved");
 });
 
 test("Add to CV opens the CV with the achievement suggested but not added; drafts and bad parameters are ignored", async ({ page }) => {
