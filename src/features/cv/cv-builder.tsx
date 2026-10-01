@@ -7,7 +7,7 @@ import { InlineError } from "@/components/ui/inline-error";
 import { useUnsavedForm } from "@/components/ui/unsaved-changes";
 import { CV_SECTION_KEYS, CV_PROFILE_OVERRIDE_KEYS, type CvDocumentRow, type CvItemRow, type CvLocale, type CvSectionKey } from "@/domain/cv/contracts";
 import {
-  changedKeys, computeItemMove, computeSectionMove, draftFromSaved, isDirty, resolveConflict, syncDraft, toSaveInput,
+  changedKeys, computeItemMove, computeSectionMove, draftFromSaved, droppedEdits, isDirty, resolveConflict, syncDraft, toSaveInput,
   validateDraft, type DraftSync,
 } from "@/domain/cv/draft";
 import { buildCvOutline } from "@/domain/cv/outline";
@@ -16,7 +16,10 @@ import { t, type Locale, type MessageKey } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 
 import { removeCvItemAction, reorderCvSectionAction, saveCvEditsAction, selectCvSourceAction, updateCvLayoutAction } from "./actions";
-import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField, type SaveStatus } from "./cv-panels";
+import {
+  achievementPlacements, announcedPosition, clientCorrelationId, deriveSaveState, firstInvalidField, initialPoolOpen, isStaleConflict,
+} from "./cv-builder-state";
+import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField } from "./cv-panels";
 import { CvPreview } from "./cv-preview";
 import { CvSection, type EditorEntry, type SectionHandlers } from "./cv-section";
 import type { PoolBySection, PoolOption } from "./cv-view";
@@ -63,9 +66,13 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   const savedDraft = useMemo(() => draftFromSaved(doc, items), [doc, items]);
   const [sync, setSync] = useState<DraftSync>(() => ({ base: savedDraft, draft: savedDraft, unresolved: [] }));
   const [seenKey, setSeenKey] = useState(savedKey);
+  // Wording typed for items that were removed elsewhere cannot be saved; the count is shown, not lost silently.
+  const [droppedCount, setDroppedCount] = useState(0);
   // A newly loaded saved CV merges into the draft during render so the typed text is never dropped.
   if (seenKey !== savedKey) {
     setSeenKey(savedKey);
+    const dropped = droppedEdits({ base: sync.base, draft: sync.draft, saved: savedDraft }).length;
+    if (dropped > 0) setDroppedCount(dropped);
     setSync(syncDraft({ base: sync.base, draft: sync.draft, unresolved: sync.unresolved, saved: savedDraft }));
   }
 
@@ -80,7 +87,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   // A list opens for an empty section or a suggested record on first load, then only follows the user.
   const [poolOpen, setPoolOpen] = useState<Record<CvSectionKey, boolean>>(() => {
     const initial = toEditorEntries(doc, items);
-    return Object.fromEntries(CV_SECTION_KEYS.map((key) => [key, initial[key].length === 0 || pool[key].some((option) => option.sourceId === highlightId)])) as Record<CvSectionKey, boolean>;
+    return initialPoolOpen(CV_SECTION_KEYS, (key) => initial[key].length, (key) => pool[key].some((option) => option.sourceId === highlightId));
   });
   const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
   const busyRef = useRef(false);
@@ -91,12 +98,9 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   const entries = useMemo(() => toEditorEntries(doc, items), [doc, items]);
   const model = useMemo(() => buildCvPreviewModel({ document: doc, items }), [doc, items]);
   const problems = useMemo(() => validateDraft(sync.draft), [sync.draft]);
+  const placements = useMemo(() => achievementPlacements(entries), [entries]);
   const dirty = isDirty(sync.base, sync.draft);
-  const hasProblems = Object.keys(problems).length > 0;
-  // The panel stays while a rejected save still needs the user, and disappears once they edit again.
-  const showConflict = sync.unresolved.length > 0 || (conflict && dirty);
-  const status: SaveStatus = saving ? "saving" : sync.unresolved.length > 0 ? "conflict" : dirty ? "unsaved" : "saved";
-  const canSave = dirty && !hasProblems && sync.unresolved.length === 0 && !saving && !busy;
+  const { status, canSave, showConflict } = deriveSaveState({ saving, busy, dirty, conflict, unresolved: sync.unresolved, problems });
 
   useEffect(() => {
     if (dirty) markDirty();
@@ -121,7 +125,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
 
   function fail(state: ActionState) {
     if (state.status !== "error") return;
-    if (state.error.code === "CONFLICT" && state.error.messageKey === "error.conflict") {
+    if (isStaleConflict(state)) {
       setConflict(true);
       setNotice(null);
       startTransition(() => router.refresh());
@@ -153,7 +157,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
       return state;
     } catch {
       pendingFocus.current = null;
-      setNotice({ messageKey: "error.unavailable", correlationId: "" });
+      setNotice({ messageKey: "error.unavailable", correlationId: clientCorrelationId() });
       return null;
     } finally {
       busyRef.current = false;
@@ -163,6 +167,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
 
   const onDraftChange = (key: string, value: string) => {
     setConflict(false);
+    setDroppedCount(0);
     setSync((current) => ({ ...current, draft: { ...current.draft, [key]: value } }));
   };
 
@@ -193,7 +198,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     const move = computeItemMove(items, itemId, direction, doc.section_order);
     if (!move) return;
     const group = siblingsOf(itemId);
-    const position = group.findIndex((entry) => entry.itemId === itemId) + (direction === "up" ? 0 : 2);
+    const position = announcedPosition(group.findIndex((entry) => entry.itemId === itemId), direction);
     pendingFocus.current = focusMove(itemId, direction);
     void runOperation(
       reorderCvSectionAction,
@@ -255,14 +260,12 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     removeItem(target, false);
   };
 
-  const fieldElement = (key: string) =>
-    key === "title" ? "cv-title" : key === "summary" ? "cv-summary" : key.startsWith("profile.") ? `cv-${key.slice(8)}` : `cv-wording-input-${key.slice(5)}`;
-
   async function onSave() {
-    const invalid = Object.keys(problems)[0];
+    const invalid = firstInvalidField(problems);
     if (invalid) {
-      if (invalid.startsWith("item.")) setOpenEditors((current) => new Set(current).add(invalid.slice(5)));
-      window.setTimeout(() => window.document.getElementById(fieldElement(invalid))?.focus(), 0);
+      const { openItemId, elementId } = invalid;
+      if (openItemId) setOpenEditors((current) => new Set(current).add(openItemId));
+      window.setTimeout(() => window.document.getElementById(elementId)?.focus(), 0);
       return;
     }
     const input = toSaveInput(sync.base, sync.draft, revision);
@@ -280,13 +283,14 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
         if (typeof next === "number") setLocalRevision(next);
         setSync((current) => ({ ...current, base: { ...current.base, ...Object.fromEntries(sentKeys.map((key) => [key, current.draft[key] ?? ""])) } }));
         setConflict(false);
+        setDroppedCount(0);
         setAnnouncement(t(locale, "cv.announce.saved"));
         startTransition(() => router.refresh());
       } else {
         fail(state);
       }
     } catch {
-      setNotice({ messageKey: "error.unavailable", correlationId: "" });
+      setNotice({ messageKey: "error.unavailable", correlationId: clientCorrelationId() });
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -310,6 +314,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     problems,
     openEditors,
     highlightId,
+    placements,
     onToggleEditor: (itemId) => setOpenEditors((current) => {
       const next = new Set(current);
       if (next.has(itemId)) next.delete(itemId);
@@ -340,6 +345,11 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
           <InlineError correlationId={notice.correlationId || undefined}>
             <p>{t(locale, notice.messageKey)}</p>
           </InlineError>
+        ) : null}
+        {droppedCount > 0 ? (
+          <p className="ui-message space-y-2" role="status" data-testid="cv-dropped-notice">
+            {t(locale, "cv.notice.droppedWording", { count: droppedCount })}
+          </p>
         ) : null}
         {showConflict ? (
           <CvConflictPanel

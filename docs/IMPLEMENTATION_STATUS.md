@@ -1,5 +1,30 @@
 # WorkPulse Implementation Status
 
+## T19 — CV builder dan overrides, acceptance lokal — 1 Oktober 2026
+
+Status T19: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (Opus) pada HEAD `03207fb` tanpa temuan P0–P2 dan tujuh P3; F1–F7 diperbaiki reviewer di `58d1f25` atas instruksi pengguna (review ulang tidak independen penuh). Dependensi T18, T04, T08, T09, T12 **DONE**; Gate M3 PASSED. Rujukan: R09, F07 langkah 1–2, F03, S13, DB §5/§6.
+[Rencana](verification/T19-implementation-plan.md), [bukti](verification/T19-cv-builder-overrides.md), [gate review](verification/T19-gate-review.md), [decision 0025](decisions/0025-t19-cv-builder-overrides.md), receipt [Fase 0](verification/T19-phase0-baseline.md)–[5](verification/T19-phase5-integration-browser-regression.md).
+
+Yang selesai:
+
+- RPC `save_cv_edits` (judul, summary, `profile_snapshot.display_overrides`, `override_text` per item) dalam satu transaksi dan satu kenaikan revision; no-op tanpa write; `CV_OVERRIDE_UNSUPPORTED` untuk skill/certification; snapshot sumber dan record canonical tidak pernah ditulis.
+- Domain `src/domain/cv/{labels,resolve,preview,draft}.ts`: label/tanggal locale CV (UTC, tanpa placeholder), nilai efektif override, `buildCvPreviewModel` (basis T21/T22), draft/rekonsiliasi konflik/move.
+- Service `saveEdits`, `saveCvEditsAction`, correlation ID tunggal per action (menutup T18 F2).
+- UI S13 `/cv`: selection pool per section, parent otomatis, move aksesibel, locale CV, editor profil/summary/wording, Save eksplisit, panel konflik *Keep mine*/*Use saved*, dialog hapus parent, preview hanya dari data tersimpan, state loading/empty/error/unsaved/manual/deleted; tautan *Add to CV* dari detail achievement confirmed.
+- Perbaikan P3 gate: whitespace (F1), revoke grant helper internal (F2), aturan state editor sebagai modul murni teruji `cv-builder-state.ts` (F3), keterangan "On the CV under …" di pool achievements (F4), correlation ID untuk error klien (F5), notice wording yang dibuang karena item dihapus di sesi lain (F6), verifikasi apply migration dari nol (F7).
+
+File berubah: 2 migration, `cv_builder.test.sql`, `database.types.ts`, `src/domain/cv/{contracts,labels,resolve,preview,draft}.ts`, `src/features/cv/{cv-service,cv-errors,actions,cv-view,cv-builder-state,cv-builder,cv-section,cv-panels,cv-preview}.ts(x)`, `src/app/(workspace)/cv/{page,loading}.tsx`, `src/features/achievement/achievement-detail.tsx`, `src/app/globals.css`, `src/i18n/messages.ts`, 6 test unit baru (`cv-labels`, `cv-resolve`, `cv-preview`, `cv-draft`, `cv-builder-ui`, `cv-builder-state`) + `cv-fixtures.ts`, 3 diperluas (`cv-contracts`, `cv-service`, `cv-actions`), `tests/integration/cv-builder.test.ts`, `tests/e2e/cv-builder.spec.ts`, `playwright.cv.config.ts`, `package.json` (2 script), screenshot dan dokumen.
+
+Migration dan keputusan: `20261003090000_t19_cv_builder_overrides.sql`, `20261003100000_t19_cv_override_helper_grants.sql` (forward-only, tanpa reset, parity 29/29); decision 0025 (override terbatas, CV kosong tanpa auto-selection, override profil di `display_overrides`, preview dari saved — disetujui pengguna 30 September 2026; `display_name` 80 mengikuti profil).
+
+Checks (hasil aktual): gate `03207fb` — lint, typecheck, build, `worker:check`, `db:lint` exit 0; `git diff --check` exit 2 (F1); unit 86/626; pgTAP 13/978; integration cv-builder 7, cv 10, achievements 5, projects 7, activity 6, dashboard 4, import-commit 11, import-review 6, import 21, m2 8, m3 7, ai 13, ai-review 21, evidence 14, storage 1; E2E cv 7, achievements 4, projects 1, dashboard 1, auth 1, ui 1, activity 1, import 7, import-review 10, ai 2, ai-review 11, evidence 8, m2 1, m3 2. Setelah `58d1f25` — lint, typecheck, build, `git diff --check`, `db:lint`, `db:types` exit 0; unit 87/635; pgTAP 13/979; migration 29/29; `supabase db diff --local` tanpa perubahan; integration cv-builder 7, cv 10; E2E cv 8, achievements 4, m2 1, m3 2.
+
+Belum dijalankan: `test:e2e` gabungan, `test:ai:live`, stres race berskala; setelah `58d1f25` suite di luar CV/achievements/M2/M3 tidak diulang (perubahan terbatas pada S13, domain draft, i18n, grant helper).
+
+Risiko/batas: test komponen tanpa DOM (interaksi via E2E); flaky bawaan `activity-ui.spec.ts:356` pada run pertama pelaksana; race dua session satu proses Node. Bukan bukti production.
+
+Berikutnya: **T20 CV freshness dan deletion** (state changed/unconfirmed, Keep/Refresh/Replace, invalidasi revision CV saat sumber berubah, profile freshness), lalu T21/T22 export.
+
 ## T18 — CV schema dan selection, acceptance lokal — 30 September 2026
 
 Status T18: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (Opus) pada HEAD `1a56484` tanpa temuan P0–P2 dan tiga P3. Dependensi T09, T03, T08, T16, T17 **DONE**; Gate M3 PASSED. Rujukan: R09, F07 langkah 1–2, F03, S13 (backend), DB §1/§5/§6.
@@ -692,7 +717,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T16 | Import commit | DONE |
 | T17 | Import review UI | DONE |
 | T18 | CV schema dan selection | DONE |
-| T19 | CV builder dan overrides | TODO |
+| T19 | CV builder dan overrides | DONE |
 | T20 | CV freshness dan deletion | TODO |
 | T21 | Export backend | TODO |
 | T22 | Preview dan PDF QA | TODO |

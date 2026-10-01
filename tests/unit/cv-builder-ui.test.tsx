@@ -55,6 +55,9 @@ describe("T19 S13 CV builder", () => {
     expect(html).toContain('aria-label="Title 301 is already on the CV"');
     expect(html).toContain('aria-disabled="true"');
     expect(html).not.toContain("Draf saja");
+    // An added child achievement says where it is on the CV; a standalone one does not need to.
+    expect(html.match(/data-testid="cv-pool-placement"/g)).toHaveLength(1);
+    expect(html).toContain("On the CV under Skripsi Sistem Antrian");
   });
 
   it("labels every move control with the item or section name and disables the edges", () => {
