@@ -1,5 +1,43 @@
 # WorkPulse Implementation Status
 
+## T18 — CV schema dan selection, acceptance lokal — 30 September 2026
+
+Status T18: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (Opus) pada HEAD `1a56484` tanpa temuan P0–P2 dan tiga P3. Dependensi T09, T03, T08, T16, T17 **DONE**; Gate M3 PASSED. Rujukan: R09, F07 langkah 1–2, F03, S13 (backend), DB §1/§5/§6.
+[Rencana](verification/T18-implementation-plan.md), [bukti](verification/T18-cv-schema-selection.md), [gate review](verification/T18-gate-review.md), [decision 0024](decisions/0024-t18-cv-schema-selection.md), receipt [Fase 0](verification/T18-phase0-baseline.md)–[4](verification/T18-phase4-integration-regression.md).
+
+Yang selesai:
+
+- Migration `20261002090000_t18_cv_schema_selection.sql` (forward-only, tanpa reset, parity 27/27): `cv_documents` (`UNIQUE(user_id)`), `cv_items` (composite FK sumber `on delete set null`, unique per tipe, posisi deferrable), `cv_exports` (struktur saja), RLS select own tanpa grant write, `internal.cv_source_snapshot`, dan RPC `ensure_cv_document`, `select_cv_source`, `remove_cv_item`, `reorder_cv_section`, `update_cv_layout`.
+- Domain `src/domain/cv/` (contracts, aturan parent, `buildCvOutline`), service `cv-service.ts`, pemetaan error, dan server action (belum dirender; `/cv` tetap `WorkspaceUnavailable` sampai T19).
+- Confirm achievement tidak memasukkannya ke CV; hapus sumber lama tetap berhasil dan item menjadi `source_deleted` dengan snapshot utuh.
+
+File berubah: 1 migration, `cv_selection.test.sql`, `database.types.ts`, `src/domain/cv/{contracts,selection,outline}.ts`, `src/features/cv/{cv-service,cv-errors,actions}.ts`, `src/i18n/messages.ts`, 5 test unit, `tests/integration/cv-selection.test.ts`, `package.json` (script `test:integration:cv`), dokumen.
+
+Migration dan keputusan: satu migration; decision 0024 (parent wajib, duplikat = error, safety net hapus sumber, `cv_exports` struktur saja disetujui pengguna).
+
+Checks (hasil aktual): lint, typecheck, build, `worker:check`, `db:lint`, `git diff --check` exit 0; unit 81 file / 575; pgTAP 12 file / 909; integration cv 10, achievements 5, projects 7, activity 6, dashboard 4, import-commit 11, import-review 6, import 21, m2 8, m3 7, ai 13, ai-review 21, evidence 14, storage 1; E2E achievements 4, projects 1, dashboard 1, auth 1, ui 1, activity 1, import 7, import-review 10, ai 2, ai-review 11, evidence 8, m2 1, m3 2. Reviewer mengulang lint, typecheck, unit, build, `worker:check`, pgTAP, `db:lint`, integration cv/achievements/projects/import-commit/m2/m3, dan E2E m2/m3/achievements/activity dengan hasil sama.
+
+Belum dijalankan: `test:e2e` gabungan, `test:ai:live`; suite lain di luar daftar ulang reviewer hanya bersandar pada receipt pelaksana.
+
+Risiko/batas: `test:e2e:activity` gagal sekali pada run pertama pelaksana (lulus saat diulang, penyebab tidak terkonfirmasi). Race diuji dua session tanpa stres berskala. Bukan bukti production. P3: F1 flaky, F2 correlation ID di `actions.ts` (T19), F3 race tidak deterministik.
+
+Berikutnya: **T19 CV builder dan overrides** (UI S13, override wording, tombol *Add to CV*); freshness di T20, export di T21/T22.
+
+## Gate M3 — Assisted entry, integration review — 30 September 2026
+
+Status Gate M3: **PASSED** (acceptance lokal). Verdict awal pada HEAD `42bab36` adalah BELUM LULUS karena satu P2 (RV1). RV1 diperbaiki di `1da020a` atas persetujuan pengguna, lalu checks remediasi diulang dan semuanya exit 0 (unit 76/501, `test:integration:m3` 7/7, `test:e2e:import` 7/7, `test:e2e:m3` 2/2, lint, typecheck, build, `git diff --check`). Reviewer: Claude (Opus); review ulang tidak sepenuhnya independen. Kalimat gate: F01 import dan F02 assisted bersama malformed file, retry, consent withdrawal, AI unavailable, stale result. Dependensi T13–T17 **DONE**.
+[Laporan gate](verification/M3-gate-review.md), [rencana remediasi](verification/M3-review-remediation-plan.md).
+
+Yang dikerjakan: test lintas alur `tests/integration/m3-assisted-entry.test.ts` (7/7, script `test:integration:m3`) dan journey browser `tests/e2e/m3-assisted-journey.spec.ts` (2/2, script `test:e2e:m3`, `playwright.m3.config.ts` port 3011). Tanpa perubahan kode produk, tanpa migration.
+
+Hasil: 9 dari 10 kriteria PASS. Regresi penuh exit 0: lint, typecheck, unit 76/500, pgTAP 11/779, `db:lint`, `worker:check`, build, semua integration (m3 7, import 21, import-commit 11, import-review 6, ai 13, ai-review 21, activity 6, achievements 5, projects 7, dashboard 4, m2 8, storage 1, evidence 14), E2E m3 2, import 7, import-review 10, ai 2, ai-review 11, m2 1, auth 1, ui 1, activity 1, projects 1, achievements 4, dashboard 1. Pengecualian: `test:e2e:evidence` 7/8 dua kali, karena flaky bawaan `activity-ui.spec.ts:356` (N4, race hydration di test).
+
+Temuan: **RV1 (P2, fixed `1da020a`)**. Untuk batch `CONSENT_WITHDRAWN`, S02 dulu menulis "teks tidak dikirim", padahal teks sudah diterima provider. Sekarang tampil copy en/id tersendiri (`import.failed.CONSENT_WITHDRAWN`). File berubah: `src/features/import/import-start.tsx`, `src/i18n/messages.ts`, `tests/unit/import-start-ui.test.tsx`. P3: N1 (ai-worker skip tanpa fail, tidak terjangkau), N2 (copy S06 generik), N3 (stdout `drainAiWorker`), N4 (flaky).
+
+Belum dijalankan: smoke live `refine`/`extractImport`, stres race commit, staging/production. Bukti lokal saja.
+
+Berikutnya: **T18 CV schema dan selection** (milestone M4). Follow-up P3 N1–N4 tidak memblokir. [Handoff T18 single-agent](verification/T18-implementation-plan.md) untuk Claude Sonnet 5.5 tersedia (30 September 2026); T18 tetap **TODO**, hanya dokumen rencana yang ditambahkan.
+
 ## T17 — Import review UI dan onboarding lengkap, acceptance lokal — 30 September 2026
 
 Status T17: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (HEAD `58e0183`) menemukan 1 P2 (RV1: token commit menyerap revision dari tab lain) dan 9 P3; RV1, N1 dan N7 diperbaiki di `2c81c02` oleh reviewer atas instruksi pengguna, lalu review ulang tanpa P0–P2 (tidak independen penuh; ditopang test yang terbukti gagal tanpa perbaikan). Dependensi T16, T15, T04, T03, T12 **DONE**; Gate M2 PASSED. Rujukan: R02, F01, S02, S03, S04, S12, DB §4 (lewat RPC T16).
@@ -653,7 +691,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T15 | Import staging | DONE |
 | T16 | Import commit | DONE |
 | T17 | Import review UI | DONE |
-| T18 | CV schema dan selection | TODO |
+| T18 | CV schema dan selection | DONE |
 | T19 | CV builder dan overrides | TODO |
 | T20 | CV freshness dan deletion | TODO |
 | T21 | Export backend | TODO |

@@ -120,8 +120,25 @@ describe("T15 S02 import screen", () => {
   it("maps failure codes to specific messages with safe fallbacks", () => {
     expect(importFailureKey("SCANNED_PDF")).toBe("import.failed.SCANNED_PDF");
     expect(importFailureKey("AI_RATE_LIMITED")).toBe("import.failed.AI");
-    expect(importFailureKey("CONSENT_WITHDRAWN")).toBe("import.failed.CONSENT_REQUIRED");
+    expect(importFailureKey("CONSENT_REQUIRED")).toBe("import.failed.CONSENT_REQUIRED");
+    expect(importFailureKey("CONSENT_WITHDRAWN")).toBe("import.failed.CONSENT_WITHDRAWN");
     expect(importFailureKey("SOMETHING_NEW")).toBe("import.failed.GENERIC");
     expect(importFailureKey(null)).toBe("import.failed.GENERIC");
+  });
+
+  // Gate M3 RV1: CONSENT_WITHDRAWN is only recorded after the provider received the text,
+  // so the page must not claim the text was not sent.
+  it("tells the truth about a consent withdrawn while the text was being processed", () => {
+    const failed = { status: "failed", stage: "extracting", error_code: "CONSENT_WITHDRAWN", expires_at: "2026-09-30T00:00:00Z" } as const;
+    const en = render(batch(failed), { consent: false });
+    expect(en).toContain("AI processing was withdrawn while this file was being processed. The result was discarded and nothing was added.");
+    expect(en).not.toContain("was not sent");
+    expect(en).toContain("Allow AI processing to retry this import.");
+    expect(en).toMatch(/<button[^>]*disabled[^>]*>Retry/);
+    const id = render(batch(failed), { consent: false }, "id");
+    expect(id).toContain("Pemrosesan AI ditarik saat file ini sedang diproses. Hasilnya dibuang dan tidak ada data yang ditambahkan.");
+    expect(id).not.toContain("tidak dikirim");
+    const before = render(batch({ ...failed, error_code: "CONSENT_REQUIRED" }), { consent: false });
+    expect(before).toContain("AI processing is not allowed, so the text was not sent.");
   });
 });

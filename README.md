@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T17 done locally; Gate M2 passed; Gate M3 (assisted entry) next.** Auth/profile,
+Status: **T01–T18 done locally; Gates M2 and M3 passed; T19 (CV builder and overrides) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -12,7 +12,7 @@ checks, real ClamAV screening through the durable worker (T10), and the attachme
 Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
-production build checks pass locally; nothing is deployed. The master CV, export, and account deletion
+production build checks pass locally; nothing is deployed. The master CV schema and selection backend (T18) exist without UI; the CV builder, export, and account deletion
 remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
@@ -58,6 +58,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:ai-review` | T14 detection, refinement and review against local Supabase with the real worker and the explicit fake provider: request/apply/answer/skip/dismiss, stale and retry guards, answer-versus-apply race, two-account isolation, and no-leak checks (no network) |
 | `pnpm test:integration:import-commit` | T16 import commit against local Supabase, Storage and real ClamAV through the real T15 pipeline: PRD Indonesian-CV scenario, parallel commits, rollback, map ownership, onboarding through commit, races with update/cancel/delete, purge provenance, isolation, log hygiene |
 | `pnpm test:integration:import-review` | T17 S03 read model against local Supabase through the real T15 pipeline: groups/excerpts/revisions, map options owner-only, persisted choices, stale item saves, committed result equals real rows, isolation, log hygiene |
+| `pnpm test:integration:cv` | T18 master CV against local Supabase with real Auth: one CV under parallel first open, draft ineligibility, parent inclusion, duplicates, concurrent edits and source races, source deletion, two-account isolation, log hygiene |
 | `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
@@ -141,6 +142,8 @@ state. See [decision 0021](docs/decisions/0021-t15-import-staging.md).
 T16 adds the import commit backend: `update_import_item` persists each Create/Map/Skip choice and edit, `validate_import_batch` dry-runs the validation, and `commit_import_batch` commits every selected candidate in one atomic, idempotent transaction (foundation rows first, achievements as drafts unless explicitly confirmed, only the selected profile fields, onboarding completed through the commit for new users). Map only reuses the user's own records. See [decision 0022](docs/decisions/0022-t16-import-commit.md).
 
 T17 adds the S03 review screen at `/imports/<id>/review` (reachable before onboarding): grouped candidates with source excerpts, Create/Map/Skip saved immediately, field edits saved per candidate, per-achievement confirmation, conflict recovery that keeps local input, onboarding inside the commit, and the stored commit result with *Open dashboard*. Returning users reach S02 from the empty dashboard and Settings. No migration. See [decision 0023](docs/decisions/0023-t17-import-review-ui.md).
+
+T18 adds the master CV backend (no UI; `/cv` stays unavailable until T19): `cv_documents` (one per account), `cv_items` and structure-only `cv_exports`, with RLS select-own and no client write grants. Five RPCs (`ensure_cv_document`, `select_cv_source`, `remove_cv_item`, `reorder_cv_section`, `update_cv_layout`) guard every change with `expected_revision`; selecting a confirmed achievement also adds its project (else experience) parent; duplicates are rejected; deleting a source marks its item `source_deleted` and keeps the saved snapshot. Confirming an achievement does not add it to the CV. Domain rules and `buildCvOutline` live in `src/domain/cv/`, the service in `src/features/cv/`. See [decision 0024](docs/decisions/0024-t18-cv-schema-selection.md).
 
 ## Local database (Supabase)
 
