@@ -13,13 +13,13 @@
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| F1 | P3 | `git diff --check 2087200..HEAD` exit 2: blank line di EOF pada `playwright.cv.config.ts:41` dan `docs/verification/T19-phase3-service-action.md:13`. Receipt Fase 5 menyatakan `git diff --check` sudah dijalankan sebelum commit tanpa mencatat hasilnya. Hanya whitespace. | Rapikan di Fase 6 |
-| F2 | P3 | `internal.cv_profile_overrides_valid(jsonb)` (`20261003090000…sql:60`) tidak di-`revoke … from public`, sehingga `anon` tetap punya `execute` (dicek `has_function_privilege` = true). Fungsi ini `immutable` dan murni validasi tanpa akses data, jadi tidak ada kebocoran. Namun pola T18 adalah mencabut semua helper `internal`. | Follow-up (migration forward berikutnya, mis. T20) |
-| F3 | P3 | Test komponen `cv-builder-ui.test.tsx` hanya `renderToStaticMarkup` karena jsdom/testing-library tidak tersedia dan dependency baru dilarang. Perilaku interaktif §1.4/§1.9/§1.10/§1.11 dibuktikan lewat E2E (keyboard, dua konteks, dialog) dan unit murni (`syncDraft`, `reconcileDraft`, `computeItemMove`). Deviasi sudah dicatat receipt Fase 4. | Diterima |
-| F4 | P3 | UX: pool section *Achievements* juga mendaftar achievement kontekstual yang sudah tampil di bawah project (baris "Added") sementara ringkasan menulis "Available to add (0)" dan "0 selected" (terlihat di `T19-screenshots/cv-1440-light.png`). Tidak salah secara data, tetapi bisa membingungkan. | Pertimbangkan di T20/T22 |
-| F5 | P3 | Kegagalan jaringan/exception di klien (`cv-builder.tsx:154-157`, `:288-289`) menampilkan `error.unavailable` tanpa correlation ID karena memang tidak ada respons server. Error dari server tetap membawa kode + correlation ID. | Diterima |
-| F6 | P3 | Bila sesi lain menghapus item yang sedang diberi wording lokal, `reconcileDraft` membuang field item tersebut tanpa pemberitahuan (item memang sudah tidak ada). | Dicatat |
-| F7 | P3 | Receipt Fase 1 mencatat rollback manual migration yang gagal di DB lokal (drop objek + hapus baris `schema_migrations`, bukan `db reset`). Saya memverifikasi `md5(prosrc)` kedua fungsi di DB = isi file migration dan definisi constraint sesuai, sehingga state lokal setara apply bersih. Apply dari nol belum diuji di environment terpisah. | Dicatat |
+| F1 | P3 | `git diff --check 2087200..HEAD` exit 2: blank line di EOF pada `playwright.cv.config.ts:41` dan `docs/verification/T19-phase3-service-action.md:13`. Receipt Fase 5 menyatakan `git diff --check` sudah dijalankan sebelum commit tanpa mencatat hasilnya. Hanya whitespace. | Diperbaiki `58d1f25` (`git diff --check` exit 0) |
+| F2 | P3 | `internal.cv_profile_overrides_valid(jsonb)` (`20261003090000…sql:60`) tidak di-`revoke … from public`, sehingga `anon` tetap punya `execute` (dicek `has_function_privilege` = true). Fungsi ini `immutable` dan murni validasi tanpa akses data, jadi tidak ada kebocoran. Namun pola T18 adalah mencabut semua helper `internal`. | Diperbaiki `58d1f25`: migration `20261003100000_t19_cv_override_helper_grants.sql` mencabut execute dari public/anon/authenticated/service_role; assertion pgTAP baru (red → green) |
+| F3 | P3 | Test komponen `cv-builder-ui.test.tsx` hanya `renderToStaticMarkup` karena jsdom/testing-library tidak tersedia dan dependency baru dilarang. Perilaku interaktif §1.4/§1.9/§1.10/§1.11 dibuktikan lewat E2E (keyboard, dua konteks, dialog) dan unit murni (`syncDraft`, `reconcileDraft`, `computeItemMove`). Deviasi sudah dicatat receipt Fase 4. | Diperbaiki `58d1f25`: aturan state editor (status/Save, konflik, fokus field invalid, posisi announce, pool awal, placement) dipindah ke `cv-builder-state.ts` murni dengan `cv-builder-state.test.ts` (8 test); DOM interaktif tetap via E2E |
+| F4 | P3 | UX: pool section *Achievements* juga mendaftar achievement kontekstual yang sudah tampil di bawah project (baris "Added") sementara ringkasan menulis "Available to add (0)" dan "0 selected" (terlihat di `T19-screenshots/cv-1440-light.png`). Tidak salah secara data, tetapi bisa membingungkan. | Diperbaiki `58d1f25`: baris pool menulis "On the CV under {parent}" (unit markup + E2E) |
+| F5 | P3 | Kegagalan jaringan/exception di klien (`cv-builder.tsx:154-157`, `:288-289`) menampilkan `error.unavailable` tanpa correlation ID karena memang tidak ada respons server. Error dari server tetap membawa kode + correlation ID. | Diperbaiki `58d1f25`: `clientCorrelationId()` seperti pola S08 |
+| F6 | P3 | Bila sesi lain menghapus item yang sedang diberi wording lokal, `reconcileDraft` membuang field item tersebut tanpa pemberitahuan (item memang sudah tidak ada). | Diperbaiki `58d1f25`: `droppedEdits` + notice status `cv.notice.droppedWording` (unit + E2E dua sesi) |
+| F7 | P3 | Receipt Fase 1 mencatat rollback manual migration yang gagal di DB lokal (drop objek + hapus baris `schema_migrations`, bukan `db reset`). Saya memverifikasi `md5(prosrc)` kedua fungsi di DB = isi file migration dan definisi constraint sesuai, sehingga state lokal setara apply bersih. Apply dari nol belum diuji di environment terpisah. | Ditutup: `supabase db diff --local --schema public,internal` menerapkan 29 migration ke shadow DB dari nol → "No schema changes found" |
 
 ## Checklist §9 handoff
 
@@ -73,6 +73,10 @@ Tidak ada flaky pada run reviewer ini (termasuk `activity` dan `evidence` yang g
 ## Batas
 
 Keberhasilan lokal bukan bukti integrasi production. Freshness/changed/unconfirmed, Keep/Refresh/Replace dan invalidasi CV saat sumber berubah adalah T20; validasi dan request export T21; preview S14 dan PDF T22.
+
+## Setelah perbaikan P3 (`58d1f25`)
+
+`pnpm test` 87 file / 635, `lint`/`typecheck`/`build` exit 0, `db:test` 13 file / 979 PASS, `db:lint` bersih, `db:types` tanpa perubahan, migration 29/29, `git diff --check` exit 0, `test:integration:cv-builder` 7/7, `test:integration:cv` 10/10, `test:e2e:cv` 8 passed (test baru F6), `test:e2e:achievements` 4, `m2` 1, `m3` 2 passed; screenshot 360/1440 light/dark diregenerasi. Satu run `db:test` red sempat juga menggagalkan `evidence.test.sql` #7 karena jam dinding melompat (3187 detik wallclock, mesin tertidur); run berikutnya lulus tanpa perubahan.
 
 ## Langkah berikutnya
 

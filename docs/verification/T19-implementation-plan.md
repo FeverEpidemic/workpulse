@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca Â§8 (stop conditions) sebelum berimprovisasi. Semua nama tabel, kolom, fungsi, kode error, key i18n, dan path di dokumen ini **dibekukan**; jangan mengganti namanya.
 
 - Tanggal: 30 September 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status plan: **DONE** (1 Oktober 2026; gate review `T19-gate-review.md`, bukti `T19-cv-builder-overrides.md`).
 - Dependensi: T18 **DONE** (schema CV, lima RPC seleksi, domain `src/domain/cv`, `cv-service.ts`, tanpa UI; `docs/verification/T18-cv-schema-selection.md`) dan T04 **DONE** (design system, app frame). T09 (achievement), T08 (project), T12, Gate M3 **DONE/PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 5; Fase 6 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 1 bersifat opsional.
