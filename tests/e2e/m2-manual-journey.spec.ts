@@ -334,7 +334,10 @@ test("M2 manual journey: note → project → achievement → private evidence �
     await expectAiFree(page, "achievement with evidence");
     await attach(page, testInfo, "m2-achievement-evidence-1440-light.png");
     await page.goto("/dashboard");
-    await expect(page.getByText("No checks need attention.", { exact: true })).toBeVisible();
+    // T20: a confirmed achievement that is not on the CV is offered as its own CV check, so the list is no longer empty.
+    await expect(page.getByRole("link", { name: /confirmed achievements? (is|are) not on your CV/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /confirmed achievements? ha(s|ve) no ready evidence/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /completed projects? ha(s|ve) no outcome/ })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /confirmed achievements? ha(s|ve) no ready evidence/ })).toHaveCount(0);
 
     // 7. Activity evidence is not inherited; another confirmed Achievement in the same project still
