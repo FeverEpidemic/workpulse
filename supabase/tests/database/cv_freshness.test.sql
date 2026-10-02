@@ -447,6 +447,17 @@ select is(
 );
 select is(pg_temp.res(pg_temp.arr(pg_temp.pel('refresh'))), 'ok', 'the profile is refreshed again');
 
+-- An import commit writes the same profile columns (T16); the real function is run against a staged batch.
+insert into public.import_batches (id, user_id, idempotency_key, payload_hash, filename, mime_type, bytes, sha256, status, stage, page_count)
+values (pg_temp.u('1b01'), pg_temp.usr('a1'), pg_temp.u('1b02'), decode(repeat('ab', 32), 'hex'), 'cv.pdf', 'application/pdf', 1000, repeat('a', 64), 'review', 'done', 1);
+insert into public.import_items (user_id, batch_id, entity_type, ordinal, action, payload, source_excerpt)
+values (pg_temp.usr('a1'), pg_temp.u('1b01'), 'profile', 0, 'create',
+  jsonb_build_object('headline', 'Headline dari impor', 'selected_fields', jsonb_build_array('headline')), 'Headline dari impor');
+select is(pg_temp.pst(), 'fresh', 'the profile is fresh before the import commit');
+select is(pg_temp.try(format('select public.commit_import_batch(%L, 1)', pg_temp.u('1b01'))), 'ok', 'the import batch commits');
+select is(pg_temp.pst(), 'changed', 'a profile field written by an import commit marks the profile changed');
+select is(pg_temp.res(pg_temp.arr(pg_temp.pel('refresh'))), 'ok', 'the profile is refreshed after the import commit');
+select is(pg_temp.pst(), 'fresh', 'the profile is fresh again after refreshing the imported value');
 -- 10. A context change adds the new parent on refresh ---------------------------------------------
 
 select is(
