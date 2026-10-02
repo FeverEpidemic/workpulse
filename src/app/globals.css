@@ -2495,6 +2495,64 @@ a.dashboard-stat-card:hover,
   white-space: pre-wrap;
 }
 
+.cv-review-list {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cv-review-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cv-review-list a {
+  overflow-wrap: anywhere;
+}
+
+.cv-review-panel {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--color-border-default);
+  padding-top: var(--space-3);
+  min-width: 0;
+}
+
+.cv-review-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.cv-review-table th,
+.cv-review-table td {
+  border: 1px solid var(--color-border-default);
+  padding: var(--space-2);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.cv-review-table thead th {
+  background: var(--color-bg-subtle);
+  font-weight: 600;
+}
+
+.cv-review-table tbody th {
+  width: 24%;
+  font-weight: 600;
+}
+
+.cv-review-wording {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
 .cv-preview {
   display: grid;
   gap: var(--space-3);

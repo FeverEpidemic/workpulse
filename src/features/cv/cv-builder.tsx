@@ -5,21 +5,28 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState } fr
 
 import { InlineError } from "@/components/ui/inline-error";
 import { useUnsavedForm } from "@/components/ui/unsaved-changes";
-import { CV_SECTION_KEYS, CV_PROFILE_OVERRIDE_KEYS, type CvDocumentRow, type CvItemRow, type CvLocale, type CvSectionKey } from "@/domain/cv/contracts";
+import {
+  CV_SECTION_KEYS, CV_PROFILE_OVERRIDE_KEYS, type CvDocumentRow, type CvFreshnessRow, type CvItemRow, type CvLocale, type CvProfileLive, type CvSectionKey,
+} from "@/domain/cv/contracts";
 import {
   changedKeys, computeItemMove, computeSectionMove, draftFromSaved, droppedEdits, isDirty, resolveConflict, syncDraft, toSaveInput,
   validateDraft, type DraftSync,
 } from "@/domain/cv/draft";
+import { availableActions, bulkRefreshResolutions, diffProfileFields, indexFreshness, type ReviewChoice } from "@/domain/cv/freshness";
 import { buildCvOutline } from "@/domain/cv/outline";
 import { buildCvPreviewEntry, buildCvPreviewModel } from "@/domain/cv/preview";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 
-import { removeCvItemAction, reorderCvSectionAction, saveCvEditsAction, selectCvSourceAction, updateCvLayoutAction } from "./actions";
 import {
-  achievementPlacements, announcedPosition, clientCorrelationId, deriveSaveState, firstInvalidField, initialPoolOpen, isStaleConflict,
+  removeCvItemAction, reorderCvSectionAction, resolveCvFreshnessAction, saveCvEditsAction, selectCvSourceAction, updateCvLayoutAction,
+} from "./actions";
+import {
+  achievementPlacements, announcedPosition, BULK_FOCUS_CANDIDATES, choiceKeys, clientCorrelationId, deriveSaveState, firstInvalidField,
+  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, reviewFocusCandidates, reviewTargets, singleResolution,
 } from "./cv-builder-state";
-import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField } from "./cv-panels";
+import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField, type ProfileReview } from "./cv-panels";
+import { CvReviewSummary } from "./cv-review";
 import { CvPreview } from "./cv-preview";
 import { CvSection, type EditorEntry, type SectionHandlers } from "./cv-section";
 import type { PoolBySection, PoolOption } from "./cv-view";
@@ -29,6 +36,8 @@ export interface CvBuilderProps {
   document: CvDocumentRow;
   items: CvItemRow[];
   pool: PoolBySection;
+  /** Freshness of every item and of the profile (T20); computed by the database, never written when a record is edited. */
+  freshness?: CvFreshnessRow[];
   /** An unselected confirmed achievement to suggest (Add to CV); never added automatically. */
   highlightId: string | null;
 }
@@ -60,7 +69,7 @@ function toEditorEntries(document: CvDocumentRow, items: CvItemRow[]): Record<Cv
   return result;
 }
 
-export function CvBuilder({ locale, document: doc, items, pool, highlightId }: CvBuilderProps) {
+export function CvBuilder({ locale, document: doc, items, pool, highlightId, freshness = [] }: CvBuilderProps) {
   const router = useRouter();
   const savedKey = `${doc.revision}:${items.map((item) => `${item.id}@${item.revision}`).join(",")}`;
   const savedDraft = useMemo(() => draftFromSaved(doc, items), [doc, items]);
@@ -90,6 +99,9 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     return initialPoolOpen(CV_SECTION_KEYS, (key) => initial[key].length, (key) => pool[key].some((option) => option.sourceId === highlightId));
   });
   const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
+  // Review panels are closed until the user opens one; "profile" is the key of the profile panel.
+  const [openReviews, setOpenReviews] = useState<ReadonlySet<string>>(new Set());
+  const [infoNotice, setInfoNotice] = useState("");
   const busyRef = useRef(false);
   const pendingFocus = useRef<(() => void) | null>(null);
   const conflictRef = useRef<HTMLDivElement>(null);
@@ -100,6 +112,8 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   const problems = useMemo(() => validateDraft(sync.draft), [sync.draft]);
   const placements = useMemo(() => achievementPlacements(entries), [entries]);
   const dirty = isDirty(sync.base, sync.draft);
+  const dirtyKeys = useMemo(() => changedKeys(sync.base, sync.draft), [sync.base, sync.draft]);
+  const freshnessIndex = useMemo(() => indexFreshness(freshness), [freshness]);
   const { status, canSave, showConflict } = deriveSaveState({ saving, busy, dirty, conflict, unresolved: sync.unresolved, problems });
 
   useEffect(() => {
@@ -118,6 +132,15 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     if (showConflict) conflictRef.current?.focus();
   }, [showConflict]);
 
+  // The dashboard links to the list of achievements that are not on the CV yet; open it on arrival.
+  useEffect(() => {
+    if (window.location.hash !== "#cv-pool-achievements") return;
+    const list = window.document.getElementById("cv-pool-achievements");
+    // Opening the element fires its toggle event, which keeps the React state in step.
+    if (list instanceof HTMLDetailsElement) list.open = true;
+    list?.scrollIntoView({ block: "start" });
+  }, []);
+
   const headlineOf = useCallback((itemId: string) => {
     const row = items.find((item) => item.id === itemId);
     return row ? buildCvPreviewEntry(row, doc.locale, row.source_deleted).headline : itemId;
@@ -125,6 +148,13 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
 
   function fail(state: ActionState) {
     if (state.status !== "error") return;
+    if (isSourceChangedConflict(state)) {
+      // A record changed again while it was being reviewed: reload, keep every other draft, ask again.
+      setNotice({ messageKey: "cv.notice.sourceChangedAgain", correlationId: state.error.correlationId });
+      setOpenReviews(new Set());
+      startTransition(() => router.refresh());
+      return;
+    }
     if (isStaleConflict(state)) {
       setConflict(true);
       setNotice(null);
@@ -137,18 +167,19 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
   async function runOperation(
     action: (previous: ActionState, data: FormData) => Promise<ActionState>,
     data: FormData,
-    onSuccess: () => void,
+    onSuccess: (state: ActionState) => void,
   ): Promise<ActionState | null> {
     if (busyRef.current) return null;
     busyRef.current = true;
     setBusy(true);
     setNotice(null);
+    setInfoNotice("");
     try {
       const state = await action(IDLE_ACTION_STATE, data);
       if (state.status === "success") {
         const next = (state.data as { cvRevision?: number } | undefined)?.cvRevision;
         if (typeof next === "number") setLocalRevision(next);
-        onSuccess();
+        onSuccess(state);
         startTransition(() => router.refresh());
       } else {
         pendingFocus.current = null;
@@ -260,6 +291,93 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     removeItem(target, false);
   };
 
+  const focusFirst = (ids: readonly string[]) => () => {
+    for (const id of ids) {
+      const element = window.document.getElementById(id);
+      if (element) {
+        element.focus();
+        return;
+      }
+    }
+  };
+
+  const toggleReview = (key: string) => setOpenReviews((current) => {
+    const next = new Set(current);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    return next;
+  });
+
+  const afterResolution = (key: string, announcement: string, state: ActionState) => {
+    const added = (state.status === "success" ? (state.data as { addedParentItemIds?: string[] } | undefined)?.addedParentItemIds : undefined) ?? [];
+    const parentNote = added.length > 0 ? t(locale, "cv.notice.parentAdded", { count: added.length }) : "";
+    setOpenReviews((current) => {
+      const next = new Set(current);
+      next.delete(key);
+      return next;
+    });
+    setAnnouncement(parentNote ? `${announcement} ${parentNote}` : announcement);
+    setInfoNotice(parentNote);
+  };
+
+  /** One explicit choice for one item or for the profile; the revision sent is the live one the user is looking at. */
+  const onChoose = (target: { kind: "item" | "profile"; itemId: string | null }, choice: ReviewChoice) => {
+    const entry = target.kind === "profile" ? freshnessIndex.profile : freshnessIndex.items.get(target.itemId ?? "");
+    if (!entry) return;
+    const resolution = singleResolution(target, entry, choice);
+    if (!resolution) return;
+    const name = target.kind === "profile" ? t(locale, "cv.review.profileLabel") : headlineOf(target.itemId ?? "");
+    const sectionKey = target.itemId ? items.find((item) => item.id === target.itemId)?.section_key ?? null : null;
+    pendingFocus.current = focusFirst(reviewFocusCandidates(target, sectionKey));
+    void runOperation(
+      resolveCvFreshnessAction,
+      form({ expected_revision: String(revision), resolutions: JSON.stringify([resolution]) }),
+      (state) => afterResolution(target.kind === "profile" ? "profile" : target.itemId ?? "", t(locale, choiceKeys(choice.id).announce, { name }), state),
+    );
+  };
+
+  // Items whose wording is being edited are left out; a bulk refresh never runs over unsaved text.
+  const bulkResolutions = useMemo(
+    () => bulkRefreshResolutions(freshness, items).filter((resolution) => resolution.target !== "item" || !dirtyKeys.includes(`item.${resolution.item_id}`)),
+    [freshness, items, dirtyKeys],
+  );
+
+  const onBulk = () => {
+    if (bulkResolutions.length === 0) return;
+    pendingFocus.current = focusFirst(BULK_FOCUS_CANDIDATES);
+    const count = bulkResolutions.length;
+    void runOperation(
+      resolveCvFreshnessAction,
+      form({ expected_revision: String(revision), resolutions: JSON.stringify(bulkResolutions) }),
+      (state) => {
+        afterResolution("", t(locale, "cv.announce.refreshedAll", { count }), state);
+        setOpenReviews(new Set());
+      },
+    );
+  };
+
+  const profileEntry = freshnessIndex.profile;
+  const liveProfile = profileEntry?.liveSnapshot && !("source_type" in profileEntry.liveSnapshot) ? (profileEntry.liveSnapshot as CvProfileLive) : null;
+  const profileHasOverride = Object.keys(doc.profile_snapshot.display_overrides ?? {}).length > 0 || doc.summary_override !== null;
+  const profileReview: ProfileReview | null = profileEntry && profileEntry.state !== "fresh" ? {
+    state: profileEntry.state,
+    open: openReviews.has("profile"),
+    blocked: isReviewBlocked({ kind: "profile", itemId: null }, dirtyKeys),
+    busy,
+    hasOverride: profileHasOverride,
+    rows: liveProfile
+      ? diffProfileFields(doc.profile_snapshot, liveProfile).map((entry) => ({ label: t(locale, `cv.profile.${entry.field}` as MessageKey), saved: entry.saved, live: entry.live }))
+      : [],
+    choices: availableActions({ state: profileEntry.state, hasOverride: profileHasOverride, target: "profile" }),
+    onToggle: () => toggleReview("profile"),
+    onChoose: (choice) => onChoose({ kind: "profile", itemId: null }, choice),
+  } : null;
+
+  const summaryEntries = reviewTargets(freshness).map((target) => ({
+    ...target,
+    name: target.kind === "profile" ? t(locale, "cv.review.profileLabel") : headlineOf(target.itemId ?? ""),
+  }));
+
   async function onSave() {
     const invalid = firstInvalidField(problems);
     if (invalid) {
@@ -315,6 +433,12 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
     openEditors,
     highlightId,
     placements,
+    review: {
+      entries: freshnessIndex.items, cvLocale: doc.locale, open: openReviews, busy,
+      blocked: (itemId) => isReviewBlocked({ kind: "item", itemId }, dirtyKeys),
+      onToggle: toggleReview,
+      onChoose: (itemId, choice) => onChoose({ kind: "item", itemId }, choice),
+    },
     onToggleEditor: (itemId) => setOpenEditors((current) => {
       const next = new Set(current);
       if (next.has(itemId)) next.delete(itemId);
@@ -346,6 +470,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
             <p>{t(locale, notice.messageKey)}</p>
           </InlineError>
         ) : null}
+        {infoNotice ? <p className="ui-message" role="status" data-testid="cv-info-notice">{infoNotice}</p> : null}
         {droppedCount > 0 ? (
           <p className="ui-message space-y-2" role="status" data-testid="cv-dropped-notice">
             {t(locale, "cv.notice.droppedWording", { count: droppedCount })}
@@ -357,6 +482,9 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
             onResolve={(key, choice) => setSync((current) => resolveConflict(current, key, choice, savedDraft))}
           />
         ) : null}
+        {summaryEntries.length > 0 ? (
+          <CvReviewSummary locale={locale} entries={summaryEntries} bulkCount={bulkResolutions.length} busy={busy} onBulk={onBulk} />
+        ) : null}
         {totalSelected === 0 ? (
           <section className="cv-panel" aria-labelledby="cv-empty-title">
             <h2 id="cv-empty-title" className="cv-panel-heading">{t(locale, "cv.empty.title")}</h2>
@@ -367,7 +495,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId }: C
           locale={locale} cvLocale={doc.locale} order={doc.section_order} draft={sync.draft} problems={problems}
           onDraftChange={onDraftChange} onLocaleChange={onLocaleChange} onMoveSection={onMoveSection}
         />
-        <CvProfileEditor locale={locale} draft={sync.draft} sourceValues={sourceValues} problems={problems} onDraftChange={onDraftChange} />
+        <CvProfileEditor locale={locale} draft={sync.draft} sourceValues={sourceValues} problems={problems} onDraftChange={onDraftChange} review={profileReview} />
         {doc.section_order.map((key) => (
           <CvSection key={key} sectionKey={key} entries={entries[key]} pool={pool[key]} handlers={handlers(key)} />
         ))}

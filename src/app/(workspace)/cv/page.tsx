@@ -23,6 +23,7 @@ export default async function CvPage({ searchParams }: Props) {
 
   let loaded: Awaited<ReturnType<ReturnType<typeof createCvService>["getCv"]>> = null;
   let pool: ReturnType<typeof toPoolOptions> | null = null;
+  let freshness: Awaited<ReturnType<ReturnType<typeof createCvService>["getFreshness"]>> = [];
   let failure: CvServiceError | null = null;
   if (!context.client) {
     failure = new CvServiceError("UNAVAILABLE");
@@ -30,9 +31,11 @@ export default async function CvPage({ searchParams }: Props) {
     try {
       const service = createCvService({ supabase: context.client });
       await service.ensure();
-      const [cv, selectionPool] = await Promise.all([service.getCv(), service.getSelectionPool()]);
+      // Freshness fails closed: without it a changed record would look up to date.
+      const [cv, selectionPool, freshnessRows] = await Promise.all([service.getCv(), service.getSelectionPool(), service.getFreshness()]);
       loaded = cv;
       pool = toPoolOptions(selectionPool);
+      freshness = freshnessRows;
     } catch (error) {
       failure = toCvServiceError(error, crypto.randomUUID());
     }
@@ -60,6 +63,7 @@ export default async function CvPage({ searchParams }: Props) {
         document={loaded.document}
         items={loaded.items}
         pool={pool}
+        freshness={freshness}
         highlightId={resolveHighlight(pool, requested)}
       />
     </section>

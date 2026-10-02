@@ -3,12 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock("@/features/cv/actions", () => ({
-  removeCvItemAction: vi.fn(), reorderCvSectionAction: vi.fn(), saveCvEditsAction: vi.fn(), selectCvSourceAction: vi.fn(), updateCvLayoutAction: vi.fn(),
+  removeCvItemAction: vi.fn(), reorderCvSectionAction: vi.fn(), resolveCvFreshnessAction: vi.fn(), saveCvEditsAction: vi.fn(), selectCvSourceAction: vi.fn(), updateCvLayoutAction: vi.fn(),
 }));
 
+import type { CvFreshnessRow } from "@/domain/cv/contracts";
 import { buildCvPreviewModel } from "@/domain/cv/preview";
 import { CvBuilder } from "@/features/cv/cv-builder";
-import { CvConflictPanel, CvRemoveDialog } from "@/features/cv/cv-panels";
+import { CvConflictPanel, CvProfileEditor, CvRemoveDialog } from "@/features/cv/cv-panels";
+import { CvReviewPanel, CvReviewSummary } from "@/features/cv/cv-review";
 import { CvPreview } from "@/features/cv/cv-preview";
 import { EMPTY_POOL, resolveHighlight, toPoolOptions, type PoolBySection } from "@/features/cv/cv-view";
 
@@ -165,5 +167,164 @@ describe("T19 CV preview, panels and view helpers", () => {
     expect(options.experience[0]).toMatchObject({ sourceType: "experience", label: "Analis · PT Magang", selected: false });
     expect(options.achievements[0]).toMatchObject({ sourceType: "achievement", label: "Hasil", detail: "Bullet", selected: true });
     expect(JSON.stringify(options)).not.toContain("user_id");
+  });
+});
+
+describe("T20 S13 freshness review", () => {
+  const achievementLive = (title: string, bullet: string) => ({
+    schema_version: "cv-source.v1" as const, source_type: "achievement" as const, source_id: uuid(301), title, cv_bullet: bullet,
+    achieved_on: "2023-05-10", experience_id: null, project_id: uuid(101),
+  });
+  const rows = (): CvFreshnessRow[] => [
+    { target: "item", item_id: uuid(1), state: "changed", live_revision: 4, live_snapshot: { ...({ schema_version: "cv-source.v1", source_type: "education", source_id: uuid(201), institution: "Kampus Baru", qualification: "S1", field_of_study: "Informatika", description: null, start_date: "2019-01-01", start_precision: "year", end_date: "2023-01-01", end_precision: "year", is_current: false } as const) } },
+    { target: "item", item_id: uuid(2), state: "fresh", live_revision: 1, live_snapshot: null },
+    { target: "item", item_id: uuid(3), state: "kept", live_revision: 5, live_snapshot: achievementLive("Title 301", "Bullet baru") },
+    { target: "item", item_id: uuid(4), state: "unconfirmed", live_revision: 2, live_snapshot: null },
+    { target: "item", item_id: uuid(5), state: "deleted", live_revision: null, live_snapshot: null },
+    { target: "profile", item_id: null, state: "changed", live_revision: 6, live_snapshot: { display_name: "Ani Baru", headline: "Graduate", summary: "Source summary", contact_email: "ani@example.com", phone: null, location: null, website: null } },
+  ];
+
+  it("renders a text badge, a review button and a summary for every item that needs review, and nothing for fresh ones", () => {
+    const html = render({ freshness: rows(), items: graduateItems().map((item, index) => (index === 4 ? { ...item, source_deleted: true } : item)) });
+    expect(html).toContain("Source changed");
+    expect(html).toContain("Saved wording kept");
+    expect(html).toContain("Source unconfirmed");
+    expect(html).toContain('id="cv-review"');
+    // The profile, the changed, the unconfirmed and the deleted item need review; the kept and fresh ones do not.
+    expect(html).toContain("4 items need review");
+    expect(html).toContain('aria-label="Review change for S1, Informatika"');
+    expect(html).toContain('href="#cv-profile-heading"');
+    expect(html).toContain(`href="#cv-item-${uuid(1)}"`);
+    const secondItem = html.match(new RegExp(`<li[^>]*data-item-id="${uuid(2)}"[^>]*>`))?.[0] ?? "";
+    expect(secondItem).toContain('data-freshness="fresh"');
+    expect(html).not.toContain(`cv-review-open-${uuid(2)}`);
+  });
+
+  it("offers the bulk refresh only when a changed item has no manual wording", () => {
+    expect(render({ freshness: rows() })).toContain("Refresh all items without manual wording");
+    const withWording = graduateItems().map((item) => (item.id === uuid(1) ? { ...item, override_text: "Teks saya" } : item));
+    expect(render({ freshness: rows(), items: withWording })).not.toContain("Refresh all items without manual wording");
+    expect(render({ freshness: [] })).not.toContain('id="cv-review"');
+    expect(render({ freshness: [{ target: "item", item_id: uuid(1), state: "kept", live_revision: 3, live_snapshot: achievementLive("T", "B") }] })).not.toContain('id="cv-review"');
+  });
+
+  it("keeps every review panel closed until the user opens one, and the preview shows the saved CV only", () => {
+    const html = render({ freshness: rows() });
+    expect(html).not.toContain('data-testid="cv-review-panel"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("Bullet 301");
+    expect(html).not.toContain("Bullet baru");
+  });
+
+  it("gives the achievement pool a stable anchor for the dashboard link", () => {
+    expect(render()).toContain('id="cv-pool-achievements"');
+  });
+
+  const panel = (over: Partial<React.ComponentProps<typeof CvReviewPanel>> = {}) =>
+    renderToStaticMarkup(
+      <CvReviewPanel
+        locale="en" id="cv-review-x" name="Title 301" kind="item" state="changed" hasOverride={false} overrideText={null}
+        rows={[{ label: "Description", saved: "Bullet lama", live: "Bullet baru" }]} contextChanged={false}
+        choices={[{ id: "refresh", action: "refresh", primary: true }, { id: "keep_saved", action: "keep", primary: false }]}
+        blocked={false} busy={false} achievementId={null} onChoose={() => undefined} {...over}
+      />,
+    );
+
+  it("compares the saved and current version and labels the two primary choices for an item without wording", () => {
+    const html = panel();
+    expect(html).toContain("Saved on CV");
+    expect(html).toContain("Current source");
+    expect(html).toContain("Bullet lama");
+    expect(html).toContain("Bullet baru");
+    expect(html).toContain('aria-label="Refresh Title 301 from source"');
+    expect(html).toContain('aria-label="Keep saved wording for Title 301"');
+    expect(html).toContain("Refresh from source");
+    expect(html).toContain("Keep saved wording");
+    expect(html).not.toContain("Replace from source");
+  });
+
+  it("shows the user's own wording and offers Keep my wording first and Replace from source second", () => {
+    const html = panel({
+      hasOverride: true, overrideText: "Kalimat saya",
+      choices: [{ id: "keep_mine", action: "refresh", primary: true }, { id: "replace", action: "replace", primary: false }],
+    });
+    expect(html).toContain("Your wording");
+    expect(html).toContain("Kalimat saya");
+    expect(html.indexOf("Keep my wording")).toBeLessThan(html.indexOf("Replace from source"));
+    expect(html).toContain("Your own wording stays on the CV");
+    const primary = html.match(/<button[^>]*>Keep my wording<\/button>/)?.[0] ?? "";
+    expect(primary).toContain("button-primary");
+  });
+
+  it("disables the actions with a visible reason while unsaved wording exists", () => {
+    const html = panel({ blocked: true });
+    expect(html).toContain("Save or discard your wording first.");
+    expect(html.match(/<button[^>]*disabled/g)).toHaveLength(2);
+    expect(html).toContain('aria-describedby="cv-review-x-reason"');
+    expect(panel({ blocked: false })).not.toContain("Save or discard your wording first.");
+    expect(panel({ busy: true }).match(/<button[^>]*disabled/g)).toHaveLength(2);
+  });
+
+  it("explains a deleted source without offering a refresh and links an unconfirmed achievement to its detail page", () => {
+    const deleted = panel({ state: "deleted", choices: [], rows: [] });
+    expect(deleted).toContain("The record was deleted, so there is nothing to refresh.");
+    expect(deleted).not.toContain("<button");
+    const unconfirmed = panel({ state: "unconfirmed", choices: [], rows: [], achievementId: uuid(301) });
+    expect(unconfirmed).toContain(`href="/achievements/${uuid(301)}"`);
+    expect(unconfirmed).toContain("Open achievement");
+    expect(unconfirmed).not.toContain("<button");
+  });
+
+  it("notes a moved parent link when nothing visible differs, and shows a kept state without choices that overwrite", () => {
+    expect(panel({ rows: [], contextChanged: true })).toContain("The project or experience this record belongs to changed.");
+    const kept = panel({ state: "kept", choices: [{ id: "refresh", action: "refresh", primary: false }] });
+    expect(kept).toContain("You kept the saved wording for the current version");
+    expect(kept).not.toContain("Replace from source");
+    expect(kept).not.toContain("button-primary");
+  });
+
+  it("localizes the review text in Indonesian", () => {
+    const html = panel({ locale: "id" });
+    expect(html).toContain("Tersimpan di CV");
+    expect(html).toContain("Sumber terbaru");
+    expect(html).toContain("Perbarui dari sumber");
+  });
+
+  it("renders the summary with a count heading, per-entry links and the bulk action", () => {
+    const html = renderToStaticMarkup(
+      <CvReviewSummary
+        locale="en" busy={false} bulkCount={2} onBulk={() => undefined}
+        entries={[{ kind: "profile", itemId: null, state: "changed", name: "Profile" }, { kind: "item", itemId: uuid(1), state: "deleted", name: "S1" }]}
+      />,
+    );
+    expect(html).toContain("2 items need review");
+    expect(html).toContain('href="#cv-profile-heading"');
+    expect(html).toContain(`href="#cv-item-${uuid(1)}"`);
+    expect(html).toContain("Source deleted");
+    expect(html).toContain("Refresh all items without manual wording");
+    const one = renderToStaticMarkup(<CvReviewSummary locale="en" busy={false} bulkCount={0} onBulk={() => undefined} entries={[{ kind: "profile", itemId: null, state: "changed", name: "Profile" }]} />);
+    expect(one).toContain("1 item needs review");
+    expect(one).not.toContain("Refresh all items");
+  });
+
+  it("reviews the profile with the seven source fields and replaces overrides only by explicit choice", () => {
+    const html = renderToStaticMarkup(
+      <CvProfileEditor
+        locale="en" draft={{}} sourceValues={{}} problems={{}} onDraftChange={() => undefined}
+        review={{
+          state: "changed", open: true, blocked: false, busy: false, hasOverride: true,
+          rows: [{ label: "Name", saved: "Ani Contoh", live: "Ani Baru" }],
+          choices: [{ id: "keep_mine", action: "refresh", primary: true }, { id: "replace", action: "replace", primary: false }],
+          onToggle: () => undefined, onChoose: () => undefined,
+        }}
+      />,
+    );
+    expect(html).toContain("Source changed");
+    expect(html).toContain('id="cv-review-open-profile"');
+    expect(html).toContain("Ani Baru");
+    expect(html).toContain("Keep my wording");
+    expect(html).toContain("Replace from source");
+    const closed = renderToStaticMarkup(<CvProfileEditor locale="en" draft={{}} sourceValues={{}} problems={{}} onDraftChange={() => undefined} review={null} />);
+    expect(closed).not.toContain("cv-review-open-profile");
   });
 });

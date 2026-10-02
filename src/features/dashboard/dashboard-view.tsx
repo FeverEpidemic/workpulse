@@ -5,7 +5,7 @@ import { activityExcerpt, formatActivityDate } from "@/domain/activity/activity-
 import { dashboardLinks } from "@/domain/dashboard/links";
 import type { DashboardData } from "@/domain/dashboard/contracts";
 import type { Locale } from "@/i18n/messages";
-import { t } from "@/i18n/messages";
+import { t, type MessageKey } from "@/i18n/messages";
 
 function formatCount(count: number, locale: Locale): string {
   return new Intl.NumberFormat(locale === "id" ? "id-ID" : "en-US").format(count);
@@ -23,7 +23,7 @@ export function DashboardHeader({ locale, displayName }: { locale: Locale; displ
 
 function CheckLink({ href, label, count, locale }: { href: string; label: string; count: number; locale: Locale }) {
   const key = count === 1 ? `${label}One` : `${label}Other`;
-  return <li><Link href={href}>{t(locale, key as "dashboard.checkMissingEvidenceOne" | "dashboard.checkMissingEvidenceOther" | "dashboard.checkMissingOutcomeOne" | "dashboard.checkMissingOutcomeOther", { count: formatCount(count, locale) })}</Link></li>;
+  return <li><Link href={href}>{t(locale, key as MessageKey, { count: formatCount(count, locale) })}</Link></li>;
 }
 
 export function DashboardView({ data, displayName, locale }: { data: DashboardData; displayName: string; locale: Locale }) {
@@ -44,7 +44,7 @@ export function DashboardView({ data, displayName, locale }: { data: DashboardDa
     );
   }
 
-  const { summary } = data;
+  const { summary, cvReview } = data;
   const stats = [
     { label: t(locale, "dashboard.confirmedAchievements"), count: summary.confirmedAchievementCount, href: dashboardLinks.confirmedAchievements() },
     { label: t(locale, "dashboard.currentProjects"), count: summary.activeProjectCount, href: dashboardLinks.activeProjects() },
@@ -68,13 +68,19 @@ export function DashboardView({ data, displayName, locale }: { data: DashboardDa
 
       <section className="dashboard-section" aria-labelledby="dashboard-attention-title">
         <h2 id="dashboard-attention-title">{t(locale, "dashboard.needsAttention")}</h2>
-        {summary.missingEvidenceCount > 0 || summary.completedMissingOutcomeCount > 0 ? (
+        {summary.missingEvidenceCount > 0 || summary.completedMissingOutcomeCount > 0 || cvReview.reviewCount > 0 || cvReview.availableCount > 0 ? (
           <ul className="dashboard-check-list">
             {summary.missingEvidenceCount > 0 ? (
               <CheckLink href={dashboardLinks.missingEvidence()} label="dashboard.checkMissingEvidence" count={summary.missingEvidenceCount} locale={locale} />
             ) : null}
             {summary.completedMissingOutcomeCount > 0 ? (
               <CheckLink href={dashboardLinks.missingOutcome()} label="dashboard.checkMissingOutcome" count={summary.completedMissingOutcomeCount} locale={locale} />
+            ) : null}
+            {cvReview.reviewCount > 0 ? (
+              <CheckLink href={dashboardLinks.cvReview()} label="dashboard.checkCvReview" count={cvReview.reviewCount} locale={locale} />
+            ) : null}
+            {cvReview.availableCount > 0 ? (
+              <CheckLink href={dashboardLinks.cvAvailable()} label="dashboard.checkCvAvailable" count={cvReview.availableCount} locale={locale} />
             ) : null}
           </ul>
         ) : <p className="dashboard-status" role="status">{t(locale, "dashboard.noChecks")}</p>}

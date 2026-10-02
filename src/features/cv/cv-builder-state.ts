@@ -1,5 +1,7 @@
-import type { CvSectionKey } from "@/domain/cv/contracts";
+import type { CvFreshnessRow, CvFreshnessState, CvResolution, CvSectionKey } from "@/domain/cv/contracts";
 import type { DraftProblem } from "@/domain/cv/draft";
+import { needsReview, type FreshnessEntry, type ReviewChoice, type ReviewChoiceId } from "@/domain/cv/freshness";
+import type { MessageKey } from "@/i18n/messages";
 import type { ActionState } from "@/server/action-result";
 
 /**
@@ -94,3 +96,79 @@ export function achievementPlacements(sections: Readonly<Record<CvSectionKey, re
 export function clientCorrelationId(): string {
   return crypto.randomUUID();
 }
+
+/** True for the answer that reloads the CV because a record changed again while it was being reviewed. */
+export function isSourceChangedConflict(state: ActionState): boolean {
+  return state.status === "error" && state.error.code === "CONFLICT" && state.error.messageKey === "cv.error.sourceChanged";
+}
+
+/** A text badge for every state that needs attention or was acknowledged; fresh shows nothing. Never colour alone. */
+export function stateBadge(state: CvFreshnessState): { messageKey: MessageKey; variant: "warning" | "neutral" } | null {
+  switch (state) {
+    case "changed": return { messageKey: "cv.badge.sourceChanged", variant: "warning" };
+    case "kept": return { messageKey: "cv.badge.keptWording", variant: "neutral" };
+    case "deleted": return { messageKey: "cv.badge.sourceDeleted", variant: "warning" };
+    case "unconfirmed": return { messageKey: "cv.badge.sourceUnconfirmed", variant: "warning" };
+    default: return null;
+  }
+}
+
+export interface ReviewTarget {
+  kind: "item" | "profile";
+  itemId: string | null;
+  state: CvFreshnessState;
+}
+
+/** What the summary lists: a changed profile first (it sits at the top of the page), then items that need review. */
+export function reviewTargets(rows: readonly CvFreshnessRow[]): ReviewTarget[] {
+  const targets: ReviewTarget[] = [];
+  const profile = rows.find((row) => row.target === "profile");
+  if (profile && profile.state === "changed") targets.push({ kind: "profile", itemId: null, state: profile.state });
+  for (const row of rows) {
+    if (row.target === "item" && needsReview(row.state)) targets.push({ kind: "item", itemId: row.item_id, state: row.state });
+  }
+  return targets;
+}
+
+export function reviewSummaryKey(count: number): MessageKey {
+  return count === 1 ? "cv.review.summaryOne" : "cv.review.summaryOther";
+}
+
+/**
+ * Review actions stay off while the wording of the same target holds unsaved text (decision 0026, point 11),
+ * so a resolution never reloads over something the user is still typing.
+ */
+export function isReviewBlocked(target: { kind: "item" | "profile"; itemId: string | null }, dirtyKeys: readonly string[]): boolean {
+  if (target.kind === "item") return dirtyKeys.includes(`item.${target.itemId}`);
+  return dirtyKeys.some((key) => key === "summary" || key.startsWith("profile."));
+}
+
+/** One resolution for the live revision the user is looking at; null when the live revision is not known. */
+export function singleResolution(
+  target: { kind: "item" | "profile"; itemId: string | null },
+  entry: Pick<FreshnessEntry, "liveRevision">,
+  choice: ReviewChoice,
+): CvResolution | null {
+  if (entry.liveRevision === null) return null;
+  if (target.kind === "profile") return { target: "profile", source_revision: entry.liveRevision, action: choice.action };
+  if (target.itemId === null) return null;
+  return { target: "item", item_id: target.itemId, source_revision: entry.liveRevision, action: choice.action };
+}
+
+export function choiceKeys(id: ReviewChoiceId): { label: MessageKey; aria: MessageKey; announce: MessageKey } {
+  switch (id) {
+    case "refresh": return { label: "cv.action.refreshFromSource", aria: "cv.aria.refreshFromSource", announce: "cv.announce.refreshed" };
+    case "keep_saved": return { label: "cv.action.keepSaved", aria: "cv.aria.keepSaved", announce: "cv.announce.keptSaved" };
+    case "keep_mine": return { label: "cv.action.keepMine", aria: "cv.aria.keepMine", announce: "cv.announce.keptMine" };
+    case "replace": return { label: "cv.action.replaceFromSource", aria: "cv.aria.replaceFromSource", announce: "cv.announce.replaced" };
+  }
+}
+
+/** Element ids to try, in order, once the reloaded CV is on screen after a resolution. */
+export function reviewFocusCandidates(target: { kind: "item" | "profile"; itemId: string | null }, sectionKey: CvSectionKey | null): string[] {
+  if (target.kind === "profile") return ["cv-review-open-profile", "cv-review-heading", "cv-profile-heading"];
+  return [`cv-review-open-${target.itemId}`, "cv-review-heading", `cv-section-heading-${sectionKey}`];
+}
+
+/** After a bulk refresh the summary may be gone; focus then falls back to the first panel of the page. */
+export const BULK_FOCUS_CANDIDATES = ["cv-review-heading", "cv-settings-heading"] as const;
