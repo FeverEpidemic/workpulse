@@ -23,7 +23,7 @@ Belum dijalankan: `test:e2e` gabungan, `test:ai:live`, stres race berskala; sete
 
 Risiko/batas: test komponen tanpa DOM (interaksi via E2E); flaky bawaan `activity-ui.spec.ts:356` pada run pertama pelaksana; race dua session satu proses Node. Bukan bukti production.
 
-Berikutnya: **T20 CV freshness dan deletion** (state changed/unconfirmed, Keep/Refresh/Replace, invalidasi revision CV saat sumber berubah, profile freshness), lalu T21/T22 export.
+Berikutnya: **T20 CV freshness dan deletion** (state changed/unconfirmed, Keep/Refresh/Replace, invalidasi revision CV saat sumber berubah, profile freshness), lalu T21/T22 export. [Handoff T20 single-agent](verification/T20-implementation-plan.md) tersedia (2 Oktober 2026); T20 tetap **TODO** dan enam keputusan §2.4 menunggu persetujuan pengguna.
 
 ## T18 — CV schema dan selection, acceptance lokal — 30 September 2026
 
