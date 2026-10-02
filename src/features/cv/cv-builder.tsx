@@ -345,13 +345,16 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
   const onBulk = () => {
     if (bulkResolutions.length === 0) return;
     pendingFocus.current = focusFirst(BULK_FOCUS_CANDIDATES);
-    const count = bulkResolutions.length;
+    const resolutions = bulkResolutions;
+    const count = resolutions.length;
     void runOperation(
       resolveCvFreshnessAction,
-      form({ expected_revision: String(revision), resolutions: JSON.stringify(bulkResolutions) }),
+      form({ expected_revision: String(revision), resolutions: JSON.stringify(resolutions) }),
       (state) => {
         afterResolution("", t(locale, "cv.announce.refreshedAll", { count }), state);
-        setOpenReviews(new Set());
+        // Only the panels of the refreshed items close; a panel still waiting for a decision stays open.
+        const refreshed = new Set(resolutions.flatMap((resolution) => (resolution.target === "item" ? [resolution.item_id] : [])));
+        setOpenReviews((current) => new Set([...current].filter((key) => !refreshed.has(key))));
       },
     );
   };

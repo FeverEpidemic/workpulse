@@ -26,6 +26,7 @@
     "test:e2e:m3": "playwright test --config playwright.m3.config.ts tests/e2e/m3-assisted-journey.spec.ts",
     "test:e2e:ai-review": "playwright test --config playwright.ai-review.config.ts tests/e2e/ai-review.spec.ts",
     "test:e2e:import-review": "playwright test --config playwright.import-review.config.ts tests/e2e/import-review.spec.ts",
+    "test:e2e:cv-freshness": "playwright test --config playwright.cv-freshness.config.ts tests/e2e/cv-freshness.spec.ts",
     "test:e2e:cv": "playwright test --config playwright.cv.config.ts tests/e2e/cv-builder.spec.ts",
     "test:e2e:import": "playwright test --config playwright.import.config.ts tests/e2e/import-onboarding.spec.ts",
     "test:e2e:ai": "playwright test --config playwright.ai.config.ts tests/e2e/ai-consent.spec.ts",
