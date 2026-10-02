@@ -21,6 +21,7 @@ interface FakeOptions {
   skills?: { data: unknown; error: unknown | null };
   activity?: { data: unknown; error: unknown | null };
   projects?: { data: unknown; error: unknown | null };
+  cvReview?: { data: unknown; error: unknown | null };
 }
 
 function makeService(options: FakeOptions = {}) {
@@ -28,6 +29,7 @@ function makeService(options: FakeOptions = {}) {
   const rpcResponses: Record<string, { data: unknown; error: unknown | null }> = {
     get_dashboard_summary: options.summary ?? { data: [validSummary], error: null },
     list_demonstrated_skills: options.skills ?? { data: [], error: null },
+    get_cv_review_summary: options.cvReview ?? { data: [{ has_cv: true, review_count: 0, available_count: 0 }], error: null },
   };
   const rpc = vi.fn(async (name: string) => rpcResponses[name] ?? { data: null, error: null });
   const from = vi.fn((table: string) => {
@@ -95,4 +97,23 @@ describe("Dashboard service", () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalled();
   });
-});
+  it("maps the CV review summary into separate review and available counts", async () => {
+    const { service, rpc } = makeService({ cvReview: { data: [{ has_cv: true, review_count: 3, available_count: 2 }], error: null } });
+    const result = await service.getDashboard();
+    expect(result.cvReview).toEqual({ hasCv: true, reviewCount: 3, availableCount: 2 });
+    expect(rpc).toHaveBeenCalledWith("get_cv_review_summary");
+    const withoutCv = await makeService({ cvReview: { data: [{ has_cv: false, review_count: 0, available_count: 5 }], error: null } }).service.getDashboard();
+    expect(withoutCv.cvReview).toEqual({ hasCv: false, reviewCount: 0, availableCount: 5 });
+  });
+
+  it("treats a failing or malformed CV summary as unavailable and an empty one as signed out", async () => {
+    const failing = await rejectedDashboardError(makeService({ cvReview: { data: null, error: { message: "private database detail" } } }).service.getDashboard());
+    expect(failing.code).toBe("UNAVAILABLE");
+    expect(failing.message).not.toContain("private database detail");
+    const negative = await rejectedDashboardError(makeService({ cvReview: { data: [{ has_cv: true, review_count: -1, available_count: 0 }], error: null } }).service.getDashboard());
+    expect(negative.code).toBe("UNAVAILABLE");
+    const extra = await rejectedDashboardError(makeService({ cvReview: { data: [{ has_cv: true, review_count: 1, available_count: 0, title: "x" }], error: null } }).service.getDashboard());
+    expect(extra.code).toBe("UNAVAILABLE");
+    const empty = await rejectedDashboardError(makeService({ cvReview: { data: [], error: null } }).service.getDashboard());
+    expect(empty.code).toBe("UNAUTHENTICATED");
+  });});

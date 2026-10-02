@@ -2,7 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import { removeCvItemInput, reorderCvSectionInput, saveCvEditsInput, selectCvSourceInput, updateCvLayoutInput } from "@/domain/cv/contracts";
+import {
+  removeCvItemInput,
+  reorderCvSectionInput,
+  resolveCvFreshnessInput,
+  saveCvEditsInput,
+  selectCvSourceInput,
+  updateCvLayoutInput,
+} from "@/domain/cv/contracts";
 import { actionFailure, actionSuccess, type ActionState, type ErrorCode } from "@/server/action-result";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
@@ -13,6 +20,7 @@ function mapCode(code: CvServiceError["code"]): ErrorCode {
   switch (code) {
     case "VALIDATION":
     case "OVERRIDE_UNSUPPORTED":
+    case "RESOLUTION_INVALID":
     case "ONBOARDING_REQUIRED":
     case "SOURCE_INELIGIBLE": return "VALIDATION";
     case "UNAUTHENTICATED": return "UNAUTHENTICATED";
@@ -31,13 +39,15 @@ function failure(error: unknown, correlationId: string): ActionState {
   return state.status === "error" ? { status: "error", error: { ...state.error, correlationId: cvError.correlationId } } : state;
 }
 
-async function run<T>(operation: (service: CvService) => Promise<T>): Promise<ActionState> {
+/** Dashboard S04 shows CV checks, so a freshness resolution also refreshes it. */
+async function run<T>(operation: (service: CvService) => Promise<T>, alsoRevalidate: readonly string[] = []): Promise<ActionState> {
   // One ID per request: the service stamps its errors with it and failure() reuses it for anything else.
   const correlationId = crypto.randomUUID();
   try {
     const supabase = await createSupabaseServerClient();
     const data = await operation(createCvService({ supabase, correlationId }));
     revalidatePath("/cv");
+    for (const path of alsoRevalidate) revalidatePath(path);
     return actionSuccess(undefined, data);
   } catch (error) {
     return failure(error, correlationId);
@@ -120,4 +130,17 @@ export async function saveCvEditsAction(_previous: ActionState, formData: FormDa
   const parsed = saveCvEditsInput.safeParse({ ...edits, expected_revision: revisionOf(formData) });
   if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
   return run((service) => service.saveEdits(parsed.data));
+}
+
+/** Keep, refresh or replace changed sources; "resolutions" is a JSON array and the revision comes from its own field. */
+export async function resolveCvFreshnessAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  let resolutions: unknown;
+  try {
+    resolutions = JSON.parse(text(formData, "resolutions") ?? "");
+  } catch {
+    return actionFailure("VALIDATION", "error.validation");
+  }
+  const parsed = resolveCvFreshnessInput.safeParse({ expected_revision: revisionOf(formData), resolutions });
+  if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
+  return run((service) => service.resolveFreshness(parsed.data), ["/dashboard"]);
 }

@@ -19,8 +19,16 @@ export interface DashboardSkill {
   confirmedAchievementCount: number;
 }
 
+/** Two separate CV checks (PRD R03): items that need review, and confirmed achievements not on the CV. */
+export interface DashboardCvReview {
+  hasCv: boolean;
+  reviewCount: number;
+  availableCount: number;
+}
+
 export interface DashboardData {
   summary: DashboardSummary;
+  cvReview: DashboardCvReview;
   recentActivities: Pick<ActivityRow, "id" | "raw_text" | "occurred_on">[];
   activeProjects: Pick<ProjectRow, "id" | "title" | "updated_at">[];
   skills: DashboardSkill[];
