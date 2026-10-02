@@ -8,8 +8,12 @@ import {
   cvProfileSnapshotSchema,
   cvSourceSnapshotSchema,
   parseChildItemsDetail,
+  CV_FRESHNESS_STATES,
+  cvFreshnessRowSchema,
+  cvReviewSummarySchema,
   removeCvItemInput,
   reorderCvSectionInput,
+  resolveCvFreshnessInput,
   saveCvEditsInput,
   selectCvSourceInput,
   updateCvLayoutInput,
@@ -35,10 +39,11 @@ describe("T18 CV contracts", () => {
     });
   });
 
-  it("lists the thirteen database error codes (T19 adds CV_OVERRIDE_UNSUPPORTED)", () => {
+  it("lists the fifteen database error codes (T19 adds CV_OVERRIDE_UNSUPPORTED, T20 CV_SOURCE_CHANGED and CV_RESOLUTION_INVALID)", () => {
     expect([...CV_ERROR_CODES].sort()).toEqual([
       "AUTH_REQUIRED", "CV_CHILD_ITEMS_EXIST", "CV_ITEM_IMMUTABLE", "CV_ITEM_NOT_FOUND", "CV_NOT_FOUND", "CV_OVERRIDE_UNSUPPORTED", "CV_REORDER_INVALID",
-      "CV_SOURCE_DUPLICATE", "CV_SOURCE_INELIGIBLE", "CV_SOURCE_NOT_FOUND", "INVALID_CV_INPUT", "ONBOARDING_REQUIRED", "STALE_REVISION",
+      "CV_RESOLUTION_INVALID", "CV_SOURCE_CHANGED", "CV_SOURCE_DUPLICATE", "CV_SOURCE_INELIGIBLE", "CV_SOURCE_NOT_FOUND", "INVALID_CV_INPUT",
+      "ONBOARDING_REQUIRED", "STALE_REVISION",
     ]);
   });
 
@@ -169,5 +174,85 @@ describe("T19 CV edit contracts", () => {
     expect(cvProfileSnapshotSchema.safeParse({ ...base, display_overrides: { nickname: "x" } }).success).toBe(false);
     expect(cvProfileSnapshotSchema.safeParse({ ...base, extra: 1 }).success).toBe(false);
     expect(cvProfileSnapshotSchema.safeParse({ ...base, display_overrides: { website: "javascript:alert(1)" } }).success).toBe(false);
+  });
+});
+
+describe("T20 CV freshness contracts", () => {
+  const ITEM = "a5000000-0000-4000-8000-0000000000a1";
+  const ITEM2 = "a5000000-0000-4000-8000-0000000000a2";
+  const resolution = (overrides: Record<string, unknown> = {}) => ({ target: "item", item_id: ITEM, source_revision: 3, action: "refresh", ...overrides });
+  const profileSnapshot = { display_name: "Ani", headline: null, summary: null, contact_email: null, phone: null, location: null, website: null };
+  const achievement = {
+    schema_version: "cv-source.v1", source_type: "achievement", source_id: ITEM2, title: "Hasil", cv_bullet: "Membangun dasbor",
+    achieved_on: "2024-01-01", experience_id: null, project_id: null,
+  };
+
+  it("lists the five freshness states", () => {
+    expect([...CV_FRESHNESS_STATES]).toEqual(["fresh", "changed", "kept", "deleted", "unconfirmed"]);
+  });
+
+  describe("resolveCvFreshnessInput", () => {
+    it("accepts item and profile resolutions", () => {
+      const parsed = resolveCvFreshnessInput.safeParse({
+        expected_revision: 4,
+        resolutions: [resolution(), resolution({ item_id: ITEM2, action: "keep" }), { target: "profile", source_revision: 2, action: "replace" }],
+      });
+      expect(parsed.success).toBe(true);
+    });
+
+    it("limits the batch to 1-200 entries", () => {
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [] }).success).toBe(false);
+      const many = (count: number) => Array.from({ length: count }, (_, n) => resolution({ item_id: `a5000000-0000-4000-8000-${String(n).padStart(12, "0")}` }));
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: many(200) }).success).toBe(true);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: many(201) }).success).toBe(false);
+    });
+
+    it("rejects duplicate items, a second profile entry, unknown keys, actions and revisions below one", () => {
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [resolution(), resolution({ action: "keep" })] }).success).toBe(false);
+      const profile = { target: "profile", source_revision: 1, action: "keep" };
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [profile, { ...profile, action: "refresh" }] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [resolution({ extra: true })] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [{ ...profile, item_id: ITEM }] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [resolution({ action: "merge" })] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [resolution({ source_revision: 0 })] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 0, resolutions: [resolution()] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1, resolutions: [resolution({ item_id: "nope" })] }).success).toBe(false);
+      expect(resolveCvFreshnessInput.safeParse({ expected_revision: 1.5, resolutions: [resolution()] }).success).toBe(false);
+    });
+  });
+
+  describe("cvFreshnessRowSchema", () => {
+    it("accepts item and profile rows", () => {
+      expect(cvFreshnessRowSchema.safeParse({ target: "item", item_id: ITEM, state: "fresh", live_revision: 2, live_snapshot: null }).success).toBe(true);
+      expect(cvFreshnessRowSchema.safeParse({ target: "item", item_id: ITEM, state: "changed", live_revision: 3, live_snapshot: achievement }).success).toBe(true);
+      expect(cvFreshnessRowSchema.safeParse({ target: "item", item_id: ITEM, state: "deleted", live_revision: null, live_snapshot: null }).success).toBe(true);
+      expect(cvFreshnessRowSchema.safeParse({ target: "profile", item_id: null, state: "kept", live_revision: 5, live_snapshot: profileSnapshot }).success).toBe(true);
+      expect(cvFreshnessRowSchema.safeParse({ target: "profile", item_id: null, state: "fresh", live_revision: 5, live_snapshot: null }).success).toBe(true);
+    });
+
+    it("rejects unknown states, keys and snapshot shapes", () => {
+      const base = { target: "item", item_id: ITEM, state: "changed", live_revision: 3, live_snapshot: achievement };
+      expect(cvFreshnessRowSchema.safeParse({ ...base, state: "stale" }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ ...base, extra: 1 }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ ...base, live_snapshot: { ...achievement, raw_text: "private" } }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ ...base, item_id: null }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ target: "profile", item_id: ITEM, state: "changed", live_revision: 1, live_snapshot: profileSnapshot }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ target: "profile", item_id: null, state: "deleted", live_revision: 1, live_snapshot: null }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ target: "profile", item_id: null, state: "changed", live_revision: 1, live_snapshot: { ...profileSnapshot, display_overrides: {} } }).success).toBe(false);
+    });
+
+    it("requires a live snapshot for changed and kept rows only", () => {
+      expect(cvFreshnessRowSchema.safeParse({ target: "item", item_id: ITEM, state: "changed", live_revision: 3, live_snapshot: null }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ target: "item", item_id: ITEM, state: "kept", live_revision: 3, live_snapshot: null }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ target: "item", item_id: ITEM, state: "fresh", live_revision: 3, live_snapshot: achievement }).success).toBe(false);
+      expect(cvFreshnessRowSchema.safeParse({ target: "profile", item_id: null, state: "changed", live_revision: 3, live_snapshot: null }).success).toBe(false);
+    });
+  });
+
+  it("validates the review summary counters", () => {
+    expect(cvReviewSummarySchema.safeParse({ has_cv: true, review_count: 2, available_count: 0 }).success).toBe(true);
+    expect(cvReviewSummarySchema.safeParse({ has_cv: false, review_count: 0, available_count: 3 }).success).toBe(true);
+    expect(cvReviewSummarySchema.safeParse({ has_cv: true, review_count: -1, available_count: 0 }).success).toBe(false);
+    expect(cvReviewSummarySchema.safeParse({ has_cv: true, review_count: 1, available_count: 0, extra: 1 }).success).toBe(false);
   });
 });

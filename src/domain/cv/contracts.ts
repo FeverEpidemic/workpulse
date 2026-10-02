@@ -36,6 +36,8 @@ export const CV_ERROR_CODES = [
   "CV_REORDER_INVALID",
   "CV_ITEM_IMMUTABLE",
   "CV_OVERRIDE_UNSUPPORTED",
+  "CV_SOURCE_CHANGED",
+  "CV_RESOLUTION_INVALID",
 ] as const;
 export type CvErrorCode = (typeof CV_ERROR_CODES)[number];
 
@@ -252,6 +254,85 @@ export const saveCvEditsInput = z
     { message: "empty_edits" },
   );
 export type SaveCvEditsInput = z.infer<typeof saveCvEditsInput>;
+
+/** Freshness of an item or of the CV profile, computed by internal.cv_item_state / cv_profile_state (T20). */
+export const CV_FRESHNESS_STATES = ["fresh", "changed", "kept", "deleted", "unconfirmed"] as const;
+export type CvFreshnessState = (typeof CV_FRESHNESS_STATES)[number];
+
+/** keep = Keep saved wording, refresh = copy the live display fields, replace = refresh and drop the override. */
+export const CV_RESOLUTION_ACTIONS = ["keep", "refresh", "replace"] as const;
+export type CvResolutionAction = (typeof CV_RESOLUTION_ACTIONS)[number];
+
+/** The seven source fields of the CV profile (cv-profile.v1), read live. Overrides never appear here. */
+export const cvProfileLiveSchema = z.strictObject({
+  display_name: nullableText,
+  headline: nullableText,
+  summary: nullableText,
+  contact_email: nullableText,
+  phone: nullableText,
+  location: nullableText,
+  website: nullableText,
+});
+export type CvProfileLive = z.infer<typeof cvProfileLiveSchema>;
+
+const itemFreshnessRow = z.strictObject({
+  target: z.literal("item"),
+  item_id: z.uuid(),
+  state: z.enum(CV_FRESHNESS_STATES),
+  live_revision: revision.nullable(),
+  live_snapshot: cvSourceSnapshotSchema.nullable(),
+});
+const profileFreshnessRow = z.strictObject({
+  target: z.literal("profile"),
+  item_id: z.null(),
+  state: z.enum(["fresh", "changed", "kept"]),
+  live_revision: revision,
+  live_snapshot: cvProfileLiveSchema.nullable(),
+});
+
+/** One row of get_cv_freshness(); a live snapshot is present exactly for changed and kept rows. */
+export const cvFreshnessRowSchema = z.discriminatedUnion("target", [itemFreshnessRow, profileFreshnessRow]).refine(
+  (row) => (row.state === "changed" || row.state === "kept") === (row.live_snapshot !== null),
+  { message: "live_snapshot_state_mismatch" },
+);
+export type CvFreshnessRow = z.infer<typeof cvFreshnessRowSchema>;
+
+export const cvReviewSummarySchema = z.strictObject({
+  has_cv: z.boolean(),
+  review_count: z.number().int().min(0),
+  available_count: z.number().int().min(0),
+});
+export type CvReviewSummary = z.infer<typeof cvReviewSummarySchema>;
+
+const resolutionAction = z.enum(CV_RESOLUTION_ACTIONS);
+const itemResolution = z.strictObject({
+  target: z.literal("item"),
+  item_id: z.uuid(),
+  source_revision: revision,
+  action: resolutionAction,
+});
+const profileResolution = z.strictObject({
+  target: z.literal("profile"),
+  source_revision: revision,
+  action: resolutionAction,
+});
+export type CvResolution = z.infer<typeof itemResolution> | z.infer<typeof profileResolution>;
+
+/** Batch accepted by resolve_cv_freshness: 1-200 resolutions, at most one per item and one for the profile. */
+export const resolveCvFreshnessInput = z
+  .strictObject({
+    expected_revision: revision,
+    resolutions: z.array(z.discriminatedUnion("target", [itemResolution, profileResolution])).min(1).max(200),
+  })
+  .refine(
+    (value) => {
+      const ids = value.resolutions.flatMap((resolution) => (resolution.target === "item" ? [resolution.item_id] : []));
+      const profiles = value.resolutions.filter((resolution) => resolution.target === "profile").length;
+      return new Set(ids).size === ids.length && profiles <= 1;
+    },
+    { message: "duplicate_resolution" },
+  );
+export type ResolveCvFreshnessInput = z.infer<typeof resolveCvFreshnessInput>;
 
 /** The CV_CHILD_ITEMS_EXIST detail is a JSON array of item ids; anything else is rejected. */
 export function parseChildItemsDetail(detail: string | null | undefined): string[] | null {
