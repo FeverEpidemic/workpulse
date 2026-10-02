@@ -7,7 +7,7 @@
 - Dependensi: T19 **DONE** (S13 `/cv`, `save_cv_edits`, domain `labels/resolve/preview/draft`, `cv-builder-state.ts`; `docs/verification/T19-cv-builder-overrides.md`), T18 **DONE** (schema CV, lima RPC seleksi, safety net `source_deleted`), T12 **DONE** (dashboard S04, `get_dashboard_summary`). T03, T08, T09, T16, Gate M3 **DONE/PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5** (atau eksekutor lain yang ditunjuk pengguna). Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 6; Fase 7 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 1 dianjurkan karena fase itu mengubah fungsi delete milik T03/T08/T09.
-- Keputusan produk: §2.4 berisi enam keputusan yang **menunggu persetujuan pengguna**. Fase 0 berhenti sampai persetujuan tercatat (lihat §8).
+- Keputusan produk: pengguna **menyetujui** (2 Oktober 2026) keenam keputusan §2.4 (pemetaan aksi review, perubahan tak terlihat = fresh, sisipan lock pada fungsi delete, `select_cv_source` parent-dulu, dua check dashboard, aksi review nonaktif saat draft wording). Semuanya dibekukan; pelaksana tidak perlu menanyakannya ulang dan tidak perlu berhenti di akhir Fase 0 untuk persetujuan.
 - Acuan:
   - PRD R09 (*Source edits trigger a reviewable refresh*), *CV freshness contract* (selected source update → item changed; Refresh hanya untuk item tanpa override; item ber-override menampilkan wording lama dan perubahan sumber, pengguna memilih Keep wording atau Replace from source; deleted/unconfirmed memblokir export), R03 check *CV needs review*, release scenario *Edit a selected achievement after manual CV wording changes; refresh without losing the override. Delete its source and verify export is blocked until resolved.* (bagian freshness; blokir export = T21).
   - User Flow F07 langkah 5 (*review and refresh in S13; a valid stale item may be exported after the user explicitly chooses Keep saved wording; missing or unconfirmed sources must be removed or corrected*), F03 (edit confirmed → selected CV items changed; Reopen as draft menghapus eligibility; delete → CV source link invalid).
@@ -108,9 +108,9 @@ T20 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - Penanda *source changed* di S08 untuk activity/AI (milik T14) dan perubahan S07/S10.
 - Kolom atau tabel baru; drag-and-drop, bulk-add, target job, CV variants, AI, evidence di CV.
 
-### 2.4 Keputusan produk yang menunggu persetujuan pengguna
+### 2.4 Keputusan produk yang sudah disetujui pengguna (2 Oktober 2026)
 
-Pelaksana mencatat jawaban di receipt Fase 0. Tanpa persetujuan semua poin, **stop** setelah baseline.
+Keenamnya disetujui sesuai rekomendasi; catat persetujuan ini di receipt Fase 0 dan lanjutkan tanpa bertanya ulang. Bila implementasi menuntut penyimpangan dari salah satunya, **stop** (lihat §8).
 
 1. §2.2.3 pemetaan aksi: item tanpa override → *Refresh from source* / *Keep saved wording*; item ber-override → *Keep my wording* (refresh detail, override tetap) / *Replace from source*; plus *Refresh all items without manual wording*.
 2. §2.2.2 revision yang naik tanpa perubahan tampilan dianggap `fresh`; profil hanya membandingkan tujuh field tampilan.
@@ -203,7 +203,7 @@ Script baru:
   - `src/features/cv/{cv-service,cv-errors,actions,cv-builder,cv-section,cv-panels,cv-builder-state,cv-view}.ts(x)`, `src/domain/cv/{contracts,draft,resolve,labels,preview}.ts` (cara `syncDraft`, live region, fokus, `isDirty` per target).
   - Dashboard: `src/features/dashboard/*`, `src/domain/dashboard/*`, path halaman dashboard (`revalidatePath`), kunci i18n `dashboard.check*`, test unit dan E2E dashboard yang ada.
   - Port 3013 bebas (`grep -n "PORT" playwright.*.config.ts`) dan pola `playwright.cv.config.ts`.
-- [ ] Tanyakan/catat persetujuan pengguna atas §2.4. Bila belum disetujui, **stop** dan serahkan receipt.
+- [ ] Catat di receipt bahwa pengguna menyetujui §2.4 (2 Oktober 2026). Tidak perlu berhenti untuk persetujuan.
 - [ ] Tulis receipt Fase 0 `docs/verification/T20-phase0-baseline.md`. Commit `docs(t20): add phase 0 baseline receipt`.
 
 ### Fase 1 — Database (TDD pgTAP)
@@ -334,7 +334,8 @@ git diff --check
 
 Berhenti dan laporkan bukti, jangan berimprovisasi, bila:
 
-- Working tree tidak bersih di Fase 0, parity bukan 29/29, atau §2.4 belum disetujui pengguna.
+- Working tree tidak bersih di Fase 0, atau parity bukan 29/29.
+- Penyimpangan dari keputusan yang disetujui pengguna (§2.4). Laporkan alasan dan alternatif, tunggu keputusan.
 - Penyelesaian memerlukan `db reset`, rewrite file migration lama, kolom/tabel baru, atau perubahan RPC update sumber, `get_dashboard_summary`, atau RPC CV T18/T19 selain `select_cv_source` (§2.2.7).
 - Perubahan fungsi delete memerlukan lebih dari dua sisipan §3.1.5, mengubah nilai kembali/kode error, atau ada definisi delete yang lebih baru dari yang dicatat Fase 0.
 - Fase 0 menemukan jalur yang mengunci profil `for update` atau sumber dalam urutan yang bertentangan dengan §2.2.5 sehingga protokol lock tidak dapat dipenuhi tanpa mengubah RPC lain.
