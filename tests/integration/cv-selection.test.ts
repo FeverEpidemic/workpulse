@@ -344,11 +344,15 @@ describe("local master CV schema and selection integration", () => {
       selecting.reorder({ expected_revision: view.document.revision, section_key: "experience", item_ids: ordered.map((item) => item.id).reverse() }),
       account.clients[1]!.rpc("delete_experience", { p_experience_id: experienceIds[0]!, p_expected_revision: sourceRevision.data!.revision }),
     ]);
-    expect(outcomes.map((outcome) => outcome.status)).toEqual(["fulfilled", "fulfilled"]);
+    // T20: deleting a selected source now moves the CV revision in its own transaction, so a reorder that
+    // lost the race holds a stale revision and is rejected as a conflict; the delete itself always succeeds.
+    expect(outcomes[1]!.status).toBe("fulfilled");
+    const reordered = outcomes[0]!.status === "fulfilled";
+    if (!reordered) expect((outcomes[0]!.reason as CvServiceError).code).toBe("CONFLICT");
     const after = await cvView(account);
     const experienceItems = after.items.filter((item) => item.section_key === "experience").sort((a, b) => a.position - b.position);
     expect(experienceItems.map((item) => item.position)).toEqual([1, 2]);
-    expect(experienceItems.map((item) => item.id)).toEqual(ordered.map((item) => item.id).reverse());
+    expect(experienceItems.map((item) => item.id)).toEqual(reordered ? ordered.map((item) => item.id).reverse() : ordered.map((item) => item.id));
     expect(experienceItems.find((item) => item.id === ordered[0]!.id)).toMatchObject({ source_deleted: true, experience_id: null });
     expect(experienceItems.find((item) => item.id === ordered[1]!.id)).toMatchObject({ source_deleted: false, experience_id: experienceIds[1] });
   });

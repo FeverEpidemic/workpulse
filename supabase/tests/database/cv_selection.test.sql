@@ -747,14 +747,19 @@ select is(
 );
 -- Remove a parent whose source was deleted: the snapshot still identifies its children.
 select is(
-  pg_temp.try(format('select * from public.remove_cv_item(17, %L, false)',
+  -- T20: each source deletion above moved the CV revision, so the current revision replaces the literal 17.
+  pg_temp.try(format('select * from public.remove_cv_item(%s, %L, false)',
+    (select revision from public.cv_documents where user_id = '11818181-1818-4181-8181-181818181811'),
     (select id from public.cv_items where source_deleted and section_key = 'projects'))),
   'P0001|CV_CHILD_ITEMS_EXIST|' || (select jsonb_agg(id)::text from public.cv_items where achievement_id = 'a5000000-0000-4000-8000-000000000002'),
   'a deleted parent still resolves its children through the snapshot'
 );
 select ok(
-  (select cv_revision = 18 and cardinality(removed_item_ids) = 2
-   from public.remove_cv_item(17, (select id from public.cv_items where source_deleted and section_key = 'projects'), true)),
+  (select cv_revision = (select revision from public.cv_documents where user_id = '11818181-1818-4181-8181-181818181811') + 1
+      and cardinality(removed_item_ids) = 2
+   from public.remove_cv_item(
+     (select revision from public.cv_documents where user_id = '11818181-1818-4181-8181-181818181811'),
+     (select id from public.cv_items where source_deleted and section_key = 'projects'), true)),
   'a deleted parent can be removed together with its children'
 );
 
