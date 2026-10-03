@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi. Semua nama tabel, kolom, fungsi, kode error, key i18n, dan path di dokumen ini **dibekukan**; jangan mengganti namanya.
 
 - Tanggal: 2 Oktober 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status plan: **DONE** (3 Oktober 2026; [bukti](T20-cv-freshness-deletion.md), [gate review](T20-gate-review.md)).
 - Dependensi: T19 **DONE** (S13 `/cv`, `save_cv_edits`, domain `labels/resolve/preview/draft`, `cv-builder-state.ts`; `docs/verification/T19-cv-builder-overrides.md`), T18 **DONE** (schema CV, lima RPC seleksi, safety net `source_deleted`), T12 **DONE** (dashboard S04, `get_dashboard_summary`). T03, T08, T09, T16, Gate M3 **DONE/PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5** (atau eksekutor lain yang ditunjuk pengguna). Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 6; Fase 7 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 1 dianjurkan karena fase itu mengubah fungsi delete milik T03/T08/T09.

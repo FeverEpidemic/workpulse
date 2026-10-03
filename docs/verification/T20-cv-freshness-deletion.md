@@ -1,7 +1,7 @@
 # T20 CV freshness dan deletion — bukti acceptance
 
 - Tanggal: 3 Oktober 2026
-- Status: **lulus gate review** (acceptance lokal; tanpa P0–P2). Penandaan DONE di `IMPLEMENTATION_STATUS.md` menunggu closeout.
+- Status: **DONE** (acceptance lokal; gate review tanpa P0–P2; closeout 3 Oktober 2026).
 - Pelaksana: Claude Sonnet 5.5 (Fase 0–6); reviewer: Claude (Opus), gate review [`T20-gate-review.md`](T20-gate-review.md) dengan tujuh P3 (F1–F7) sebagai follow-up. Fase 7 (dokumen ini, decision 0026, README) ditulis reviewer.
 - Trace: PRD R03 (*CV needs review*), R09, *CV freshness contract*, release scenario *edit a selected achievement after manual CV wording changes; refresh without losing the override; delete its source* (bagian freshness; blokir export = T21); F03 (edit/reopen/delete achievement terpilih), F07 langkah 5; S04 (check CV), S13 (state *changed source*, *manual override*, *deleted source*, *unconfirmed source*; Keep/Replace); DB §2 (profil), §5 (freshness, acknowledgement, deletion consistency), §6 (atomic delete + invalidasi CV, *simultaneous CV edits*). Decision [0026](../decisions/0026-t20-cv-freshness-deletion.md). Receipt [Fase 0](T20-phase0-baseline.md), [1](T20-phase1-database.md), [2](T20-phase2-domain.md), [3](T20-phase3-service-dashboard.md), [4](T20-phase4-ui.md), [5](T20-phase5-integration.md), [6](T20-phase6-browser-regression.md).
 
