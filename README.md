@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T19 done locally; Gates M2 and M3 passed; T20 (CV freshness and deletion) next.** Auth/profile,
+Status: **T01–T20 done locally; Gates M2 and M3 passed; T21 (export backend) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -12,7 +12,7 @@ checks, real ClamAV screening through the durable worker (T10), and the attachme
 Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
-production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides) is implemented; CV freshness, export, and account deletion
+production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented; export and account deletion
 remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
@@ -60,6 +60,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:import-review` | T17 S03 read model against local Supabase through the real T15 pipeline: groups/excerpts/revisions, map options owner-only, persisted choices, stale item saves, committed result equals real rows, isolation, log hygiene |
 | `pnpm test:integration:cv` | T18 master CV against local Supabase with real Auth: one CV under parallel first open, draft ineligibility, parent inclusion, duplicates, concurrent edits and source races, source deletion, two-account isolation, log hygiene |
 | `pnpm test:integration:cv-builder` | T19 CV builder against local Supabase with real Auth: graduate journey with untouched canonical records, overrides kept out of snapshots, skill/certification refusal, concurrent text and structural edits, parent removal, isolation, deleted sources, log hygiene |
+| `pnpm test:integration:cv-freshness` | T20 CV freshness against local Supabase with real Auth: PRD edit-after-override release scenario (refresh keeps the override, keep per revision, delete invalidates in the same transaction), six source types, context relink, reopen/dismiss, profile freshness, four two-session race scenarios without deadlock, dashboard counts, isolation, log hygiene |
 | `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
@@ -74,6 +75,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:import` | S02 CV import: consent, keyboard file choice, leave-return, session expiry, failures, retry, cancel, duplicate warning, `id` locale, responsive and Axe checks; drains the worker (fake AI, fake renderer, real ClamAV) on port 3009 |
 | `pnpm test:e2e:import-review` | S03 import review: PRD Indonesian-CV release scenario (keyboard only), idempotent commit, refresh, partial extraction, two-tab conflicts and commit token, empty extraction, returning user, isolation/privacy, 360/1440 light/dark and Axe; drains the worker on port 3010 |
 | `pnpm test:e2e:cv` | S13 CV builder: graduate journey (keyboard moves, wording override, Save, reload), CV language, parent removal dialog, two-session conflict, wording dropped by a removal elsewhere, Add to CV, 360/1440 light/dark with Axe, reduced motion; port 3012 |
+| `pnpm test:e2e:cv-freshness` | S13 freshness review and S04 CV checks: Refresh, Keep saved wording, Keep my wording, Replace, deleted/unconfirmed sources, profile review, Refresh all without manual wording, actions off while wording is unsaved, dashboard links, keyboard/focus/live region, 360/1440 light/dark with Axe, reduced motion; port 3013 |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -148,6 +150,8 @@ T17 adds the S03 review screen at `/imports/<id>/review` (reachable before onboa
 T18 adds the master CV backend (no UI; `/cv` stays unavailable until T19): `cv_documents` (one per account), `cv_items` and structure-only `cv_exports`, with RLS select-own and no client write grants. Five RPCs (`ensure_cv_document`, `select_cv_source`, `remove_cv_item`, `reorder_cv_section`, `update_cv_layout`) guard every change with `expected_revision`; selecting a confirmed achievement also adds its project (else experience) parent; duplicates are rejected; deleting a source marks its item `source_deleted` and keeps the saved snapshot. Confirming an achievement does not add it to the CV. Domain rules and `buildCvOutline` live in `src/domain/cv/`, the service in `src/features/cv/`. See [decision 0024](docs/decisions/0024-t18-cv-schema-selection.md).
 
 T19 turns `/cv` (S13) into the builder: pick records per section (a child achievement brings its parent and renders under it once), move items and sections with labelled up/down buttons, choose the CV language (labels and dates only; source text is never translated), and edit the title, summary, contact display values and per-item wording. Structural changes save immediately; text edits save together through one explicit Save (`save_cv_edits`: one transaction, one revision step, no write for a no-op) and never touch source snapshots or canonical records. A stale save keeps the typed text and asks *Keep mine* / *Use saved* per field. The preview shows only the saved CV (`buildCvPreviewModel`, reused by export later). Confirmed achievements link to `/cv?highlight=<id>` (*Add to CV*), which suggests the record without adding it. See [decision 0025](docs/decisions/0025-t19-cv-builder-overrides.md).
+
+T20 adds CV freshness. Editing a selected record never writes the CV: the database computes each item's state (`fresh`, `changed`, `kept`, `deleted`, `unconfirmed`) and the profile's state from live source revisions and display snapshots (`get_cv_freshness`). In S13 a badge and a *Review change* panel compare the saved and current versions; the user chooses *Refresh from source* or *Keep saved wording* (bound to the reviewed revision), or, for an item with manual wording, *Keep my wording* (details refreshed, wording kept) or *Replace from source*. `resolve_cv_freshness` applies a batch in one transaction and one revision step and never clears wording except on Replace; *Refresh all items without manual wording* skips manual and unsaved wording. Deleting a selected source locks the CV first, marks the item `source_deleted` with its snapshot and wording kept, and bumps the CV revision in the same transaction. The dashboard shows two separate checks: CV items that need review and confirmed achievements not on the CV (`get_cv_review_summary`). Export blocking is T21. See [decision 0026](docs/decisions/0026-t20-cv-freshness-deletion.md).
 
 ## Local database (Supabase)
 

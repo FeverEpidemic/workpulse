@@ -12,4 +12,6 @@ export const dashboardLinks = {
   allActivity: () => "/activity",
   newActivity: () => "/activity/new",
   profile: () => "/settings/profile",
+  cvReview: () => "/cv#cv-review",
+  cvAvailable: () => "/cv#cv-pool-achievements",
 } as const;

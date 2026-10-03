@@ -15,6 +15,8 @@ export type CvServiceErrorCode =
   | "CHILD_ITEMS_EXIST"
   | "REORDER_INVALID"
   | "OVERRIDE_UNSUPPORTED"
+  | "SOURCE_CHANGED"
+  | "RESOLUTION_INVALID"
   | "UNAVAILABLE";
 
 export const CV_ERROR_MESSAGE_KEYS: Record<CvServiceErrorCode, MessageKey> = {
@@ -29,6 +31,8 @@ export const CV_ERROR_MESSAGE_KEYS: Record<CvServiceErrorCode, MessageKey> = {
   CHILD_ITEMS_EXIST: "cv.error.childItemsExist",
   REORDER_INVALID: "cv.error.reorderInvalid",
   OVERRIDE_UNSUPPORTED: "cv.error.overrideUnsupported",
+  SOURCE_CHANGED: "cv.error.sourceChanged",
+  RESOLUTION_INVALID: "cv.error.resolutionInvalid",
   UNAVAILABLE: "error.unavailable",
 };
 
@@ -68,6 +72,8 @@ export function mapCvDatabaseError(
     case "CV_SOURCE_DUPLICATE": return make("SOURCE_DUPLICATE");
     case "CV_REORDER_INVALID": return make("REORDER_INVALID");
     case "CV_OVERRIDE_UNSUPPORTED": return make("OVERRIDE_UNSUPPORTED");
+    case "CV_SOURCE_CHANGED": return make("SOURCE_CHANGED");
+    case "CV_RESOLUTION_INVALID": return make("RESOLUTION_INVALID");
     case "CV_CHILD_ITEMS_EXIST":
       return new CvServiceError("CHILD_ITEMS_EXIST", { correlationId, childItemIds: parseChildItemsDetail(error.details) ?? [] });
     default: break;

@@ -5,13 +5,16 @@ import * as z from "zod";
 
 import {
   cvDocumentRowSchema,
+  cvFreshnessRowSchema,
   cvItemRowSchema,
   removeCvItemInput,
   reorderCvSectionInput,
+  resolveCvFreshnessInput,
   saveCvEditsInput,
   selectCvSourceInput,
   updateCvLayoutInput,
   type CvDocumentRow,
+  type CvFreshnessRow,
   type CvItemRow,
 } from "@/domain/cv/contracts";
 import { buildCvOutline, type CvOutline } from "@/domain/cv/outline";
@@ -31,6 +34,7 @@ const selectReceiptSchema = z.object({
   parent_item_ids: z.array(z.uuid()),
 });
 const removeReceiptSchema = z.object({ cv_revision: z.number().int().min(1), removed_item_ids: z.array(z.uuid()) });
+const resolveReceiptSchema = z.object({ cv_revision: z.number().int().min(1), added_parent_item_ids: z.array(z.uuid()) });
 const revisionSchema = z.number().int().min(1);
 
 export interface CvView {
@@ -233,6 +237,41 @@ export function createCvService(deps: { supabase: Client; correlationId?: string
         const revision = revisionSchema.safeParse(data);
         if (!revision.success) throw fail("UNAVAILABLE");
         return { cvRevision: revision.data };
+      });
+    },
+
+    /**
+     * Freshness of every item and of the CV profile, computed in the database from live source revisions.
+     * Reading never writes; the live snapshots carry display fields only.
+     */
+    getFreshness(): Promise<CvFreshnessRow[]> {
+      return guarded(async () => {
+        await requireActorId();
+        const { data, error } = await supabase.rpc("get_cv_freshness");
+        if (error) throw fail("UNAVAILABLE");
+        const rows = z.array(cvFreshnessRowSchema).safeParse(data ?? []);
+        if (!rows.success) throw fail("UNAVAILABLE");
+        return rows.data;
+      });
+    },
+
+    /**
+     * Keep, refresh or replace changed sources in one transaction and one revision step. Refresh never
+     * touches wording overrides; replace is the only action that clears them.
+     */
+    resolveFreshness(input: unknown): Promise<{ cvRevision: number; addedParentItemIds: string[] }> {
+      return guarded(async () => {
+        const parsed = resolveCvFreshnessInput.safeParse(input);
+        if (!parsed.success) throw fail("VALIDATION");
+        await requireActorId();
+        const { data, error } = await supabase.rpc("resolve_cv_freshness", {
+          p_expected_revision: parsed.data.expected_revision,
+          p_resolutions: parsed.data.resolutions,
+        });
+        if (error) throw mapCvDatabaseError(error, correlationId);
+        const receipt = resolveReceiptSchema.safeParse(first(data));
+        if (!receipt.success) throw fail("UNAVAILABLE");
+        return { cvRevision: receipt.data.cv_revision, addedParentItemIds: receipt.data.added_parent_item_ids };
       });
     },
 

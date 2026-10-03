@@ -283,3 +283,76 @@ describe("T19 CV saveEdits", () => {
     await expect(service(bad.client).saveEdits({ expected_revision: 1, title: "x" })).rejects.toMatchObject({ code: "UNAVAILABLE" });
   });
 });
+
+describe("T20 CV freshness service", () => {
+  const ITEM_RESOLUTION = { target: "item", item_id: ID_A, source_revision: 4, action: "refresh" } as const;
+  const achievement = {
+    schema_version: "cv-source.v1", source_type: "achievement", source_id: ID_B, title: "Hasil", cv_bullet: "Kalimat baru",
+    achieved_on: "2024-01-01", experience_id: null, project_id: null,
+  };
+
+  it("reads the freshness rows of the caller only with the session-owned RPC", async () => {
+    const rows = [
+      { target: "item", item_id: ID_A, state: "changed", live_revision: 4, live_snapshot: achievement },
+      { target: "profile", item_id: null, state: "fresh", live_revision: 2, live_snapshot: null },
+    ];
+    const { client, rpc } = fakeClient({ rpc: async () => ({ data: rows, error: null }) });
+    await expect(service(client).getFreshness()).resolves.toEqual(rows);
+    expect(rpc).toHaveBeenCalledWith("get_cv_freshness");
+  });
+
+  it("reports an anonymous caller, an RPC failure and malformed rows without leaking text", async () => {
+    const anonymous = fakeClient({ user: null });
+    await expect(service(anonymous.client).getFreshness()).rejects.toMatchObject({ code: "UNAUTHENTICATED", correlationId: CORRELATION });
+    expect(anonymous.rpc).not.toHaveBeenCalled();
+    const failing = fakeClient({ rpc: async () => ({ data: null, error: { code: "XX000", message: `boom ${SENTINEL}` } }) });
+    const error = await service(failing.client).getFreshness().catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code: "UNAVAILABLE", correlationId: CORRELATION });
+    expect(JSON.stringify(error)).not.toContain(SENTINEL);
+    const malformed = fakeClient({ rpc: async () => ({ data: [{ target: "item", item_id: ID_A, state: "stale", live_revision: 1, live_snapshot: null }], error: null }) });
+    await expect(service(malformed.client).getFreshness()).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    const empty = fakeClient({ rpc: async () => ({ data: null, error: null }) });
+    await expect(service(empty.client).getFreshness()).resolves.toEqual([]);
+  });
+
+  it("resolves a batch with the session-owned RPC arguments and returns the receipt", async () => {
+    const { client, rpc } = fakeClient({ rpc: async () => ({ data: [{ cv_revision: 9, added_parent_item_ids: [ID_B] }], error: null }) });
+    await expect(
+      service(client).resolveFreshness({ expected_revision: 8, resolutions: [ITEM_RESOLUTION, { target: "profile", source_revision: 3, action: "keep" }] }),
+    ).resolves.toEqual({ cvRevision: 9, addedParentItemIds: [ID_B] });
+    expect(rpc).toHaveBeenCalledWith("resolve_cv_freshness", {
+      p_expected_revision: 8,
+      p_resolutions: [ITEM_RESOLUTION, { target: "profile", source_revision: 3, action: "keep" }],
+    });
+  });
+
+  it("rejects invalid input before any database call", async () => {
+    const { client, rpc } = fakeClient();
+    const svc = service(client);
+    await expect(svc.resolveFreshness({ expected_revision: 1, resolutions: [] })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(svc.resolveFreshness({ expected_revision: 0, resolutions: [ITEM_RESOLUTION] })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(svc.resolveFreshness({ expected_revision: 1, resolutions: [ITEM_RESOLUTION, { ...ITEM_RESOLUTION, action: "keep" }] })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(svc.resolveFreshness({ expected_revision: 1, resolutions: [{ ...ITEM_RESOLUTION, user_id: USER }] })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["CV_SOURCE_CHANGED", "SOURCE_CHANGED", "cv.error.sourceChanged"],
+    ["CV_RESOLUTION_INVALID", "RESOLUTION_INVALID", "cv.error.resolutionInvalid"],
+    ["CV_SOURCE_INELIGIBLE", "SOURCE_INELIGIBLE", "cv.error.sourceIneligible"],
+    ["CV_ITEM_NOT_FOUND", "NOT_FOUND", "error.notFound"],
+    ["CV_SOURCE_NOT_FOUND", "SOURCE_NOT_FOUND", "cv.error.sourceNotFound"],
+    ["STALE_REVISION", "CONFLICT", "error.conflict"],
+    ["INVALID_CV_INPUT", "VALIDATION", "error.validation"],
+  ])("maps %s to %s with a correlation id", async (message, code, messageKey) => {
+    const { client } = fakeClient({ rpc: async () => ({ data: null, error: { code: "P0001", message, details: SENTINEL } }) });
+    const error = await service(client).resolveFreshness({ expected_revision: 1, resolutions: [ITEM_RESOLUTION] }).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code, messageKey, correlationId: CORRELATION });
+    expect(JSON.stringify(error)).not.toContain(SENTINEL);
+  });
+
+  it("reports a malformed receipt as unavailable", async () => {
+    const { client } = fakeClient({ rpc: async () => ({ data: [{ cv_revision: 9 }], error: null }) });
+    await expect(service(client).resolveFreshness({ expected_revision: 1, resolutions: [ITEM_RESOLUTION] })).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  });
+});

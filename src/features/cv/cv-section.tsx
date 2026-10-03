@@ -6,14 +6,16 @@ import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field-control";
-import type { CvSectionKey } from "@/domain/cv/contracts";
+import type { CvLocale, CvSectionKey } from "@/domain/cv/contracts";
 import { itemKey, type CvDraft, type DraftProblem } from "@/domain/cv/draft";
+import { availableActions, diffDisplayFields, type FreshnessEntry, type ReviewChoice } from "@/domain/cv/freshness";
 import type { CvPreviewEntry } from "@/domain/cv/preview";
 import { supportsOverride, sourceItemText } from "@/domain/cv/resolve";
 import type { CvItemRow } from "@/domain/cv/contracts";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 
 import { FieldProblem } from "./cv-panels";
+import { CvReviewPanel, CvReviewToggle, CvStateBadge } from "./cv-review";
 import type { PoolOption } from "./cv-view";
 
 export interface EditorEntry extends CvPreviewEntry {
@@ -24,6 +26,18 @@ export interface EditorEntry extends CvPreviewEntry {
   last: boolean;
 }
 
+/** Freshness review of an item: what the database says, which panels are open, and what choosing does. */
+export interface ReviewHandlers {
+  entries: ReadonlyMap<string, FreshnessEntry>;
+  /** Dates in the comparison follow the CV locale, not the interface locale. */
+  cvLocale: CvLocale;
+  open: ReadonlySet<string>;
+  busy: boolean;
+  blocked: (itemId: string) => boolean;
+  onToggle: (itemId: string) => void;
+  onChoose: (itemId: string, choice: ReviewChoice) => void;
+}
+
 export interface SectionHandlers {
   locale: Locale;
   draft: CvDraft;
@@ -32,6 +46,7 @@ export interface SectionHandlers {
   highlightId: string | null;
   /** Selected achievements rendered under a parent entry, with that parent's headline. */
   placements: Readonly<Record<string, string>>;
+  review: ReviewHandlers;
   onToggleEditor: (itemId: string) => void;
   onDraftChange: (key: string, value: string) => void;
   onAdd: (option: PoolOption) => void;
@@ -51,19 +66,34 @@ function ItemRow({ entry, handlers, nested }: { entry: EditorEntry; handlers: Se
   const source = sourceItemText(entry.row.source_snapshot);
   const manual = value.trim() !== "" || entry.hasOverride;
   const meta = [entry.subline, entry.dates].filter(Boolean).join(" · ");
+  const { review } = handlers;
+  const live = review.entries.get(entry.itemId);
+  const state = live?.state ?? "fresh";
+  const reviewable = state !== "fresh";
+  const reviewOpen = reviewable && review.open.has(entry.itemId);
+  const liveSnapshot = live?.liveSnapshot && "source_type" in live.liveSnapshot ? live.liveSnapshot : null;
+  const diff = liveSnapshot ? diffDisplayFields(entry.row.source_snapshot, liveSnapshot, review.cvLocale) : { fields: [], contextChanged: false };
+  const sourceSnapshot = entry.row.source_snapshot;
   return (
-    <li className={nested ? "cv-item cv-item-child" : "cv-item"} data-testid="cv-item" data-item-id={entry.itemId}>
+    <li id={`cv-item-${entry.itemId}`} className={nested ? "cv-item cv-item-child" : "cv-item"} data-testid="cv-item" data-item-id={entry.itemId} data-freshness={state}>
       <div className="cv-item-main">
         <div className="cv-item-text">
           <p className="cv-item-title">
             <span id={`cv-item-name-${entry.itemId}`}>{name}</span>
             {manual ? <Badge variant="neutral">{t(locale, "cv.badge.manual")}</Badge> : null}
             {entry.deleted ? <Badge variant="warning">{t(locale, "cv.badge.sourceDeleted")}</Badge> : null}
+            {state !== "deleted" ? <CvStateBadge locale={locale} state={state} /> : null}
           </p>
           {meta ? <p className="field-help">{meta}</p> : null}
           {entry.deleted ? <p className="field-help">{t(locale, "cv.item.deletedHelp")}</p> : null}
         </div>
         <div className="cv-row-actions">
+          {reviewable ? (
+            <CvReviewToggle
+              locale={locale} id={`cv-review-open-${entry.itemId}`} panelId={`cv-review-${entry.itemId}`} name={name}
+              open={reviewOpen} onToggle={() => review.onToggle(entry.itemId)}
+            />
+          ) : null}
           {editable ? (
             <Button
               variant="secondary" aria-expanded={editing} aria-controls={`cv-wording-${entry.itemId}`}
@@ -86,6 +116,18 @@ function ItemRow({ entry, handlers, nested }: { entry: EditorEntry; handlers: Se
           ><Trash2 aria-hidden="true" size={16} /></IconButton>
         </div>
       </div>
+      {reviewOpen ? (
+        <CvReviewPanel
+          locale={locale} id={`cv-review-${entry.itemId}`} name={name} kind="item" state={state}
+          hasOverride={entry.row.override_text !== null} overrideText={entry.row.override_text}
+          rows={diff.fields.map((field) => ({ label: t(locale, `cv.review.field.${field.field}` as MessageKey), saved: field.saved, live: field.live }))}
+          contextChanged={diff.contextChanged}
+          choices={availableActions({ state, hasOverride: entry.row.override_text !== null, target: "item" })}
+          blocked={review.blocked(entry.itemId)} busy={review.busy}
+          achievementId={sourceSnapshot.source_type === "achievement" ? sourceSnapshot.source_id : null}
+          onChoose={(choice) => review.onChoose(entry.itemId, choice)}
+        />
+      ) : null}
       {editing ? (
         <div id={`cv-wording-${entry.itemId}`} className="cv-wording">
           <label className="field-label" htmlFor={`cv-wording-input-${entry.itemId}`}>{t(locale, "cv.item.wordingLabel", { name })}
@@ -169,7 +211,7 @@ export function CvSection({
           {entries.map((entry) => <ItemRow key={entry.itemId} entry={entry} handlers={handlers} nested={false} />)}
         </ul>
       )}
-      <details className="cv-pool" open={handlers.poolOpen} onToggle={(event) => handlers.onTogglePool(event.currentTarget.open)}>
+      <details id={`cv-pool-${sectionKey}`} className="cv-pool" open={handlers.poolOpen} onToggle={(event) => handlers.onTogglePool(event.currentTarget.open)}>
         <summary>{t(locale, "cv.section.available", { count: available })}</summary>
         {pool.length === 0 ? <p className="field-help">{t(locale, "cv.section.poolEmpty")}</p> : (
           <ul className="cv-pool-list">

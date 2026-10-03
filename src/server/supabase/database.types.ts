@@ -1917,6 +1917,24 @@ export type Database = {
           scope: string
         }[]
       }
+      get_cv_freshness: {
+        Args: never
+        Returns: {
+          item_id: string
+          live_revision: number
+          live_snapshot: Json
+          state: string
+          target: string
+        }[]
+      }
+      get_cv_review_summary: {
+        Args: never
+        Returns: {
+          available_count: number
+          has_cv: boolean
+          review_count: number
+        }[]
+      }
       get_dashboard_summary: {
         Args: never
         Returns: {
@@ -2160,6 +2178,13 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      resolve_cv_freshness: {
+        Args: { p_expected_revision: number; p_resolutions: Json }
+        Returns: {
+          added_parent_item_ids: string[]
+          cv_revision: number
         }[]
       }
       retry_ai_job: {

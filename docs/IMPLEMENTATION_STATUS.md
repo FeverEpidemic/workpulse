@@ -1,5 +1,30 @@
 # WorkPulse Implementation Status
 
+## T20 — CV freshness dan deletion, acceptance lokal — 3 Oktober 2026
+
+Status T20: **DONE** (acceptance lokal) — seluruh 18 poin acceptance §1 terbukti lokal. Pelaksana Claude Sonnet 5.5 (Fase 0–6); gate review Claude (Opus) pada HEAD `8b1d4e9` tanpa temuan P0–P2 dan tujuh P3 (F1–F7, follow-up/diterima); Fase 7 ditulis reviewer. Dependensi T19, T18, T12, T03, T08, T09, T16 **DONE**; Gate M3 PASSED. Rujukan: R03, R09, F03, F07 langkah 5, S04, S13, DB §2/§5/§6.
+[Rencana](verification/T20-implementation-plan.md), [bukti](verification/T20-cv-freshness-deletion.md), [gate review](verification/T20-gate-review.md), [decision 0026](decisions/0026-t20-cv-freshness-deletion.md), receipt [Fase 0](verification/T20-phase0-baseline.md)–[6](verification/T20-phase6-browser-regression.md).
+
+Yang selesai:
+
+- Freshness dihitung saat dibaca: `internal.cv_item_state` (deleted > unconfirmed > fresh > kept > changed; revision naik tanpa perubahan tampilan = fresh) dan `internal.cv_profile_state` (tujuh field tampilan) sebagai satu definisi untuk T21. Edit sumber tidak menulis `cv_items`/`cv_documents`; RPC update sumber tidak diubah.
+- RPC `get_cv_freshness`, `get_cv_review_summary`, dan `resolve_cv_freshness` (keep/refresh/replace dalam satu transaksi dan satu revision; refresh tidak menyentuh override; keep terikat revision live; parent baru ditambahkan saat konteks achievement berubah). Kode baru `CV_SOURCE_CHANGED`, `CV_RESOLUTION_INVALID`.
+- Jalur delete sumber (`delete_experience`, `delete_project`, `delete_achievement`, `internal.delete_foundation_record`) mengunci CV lebih dulu lewat `internal.cv_lock_for_source_change` dan menaikkan revision CV dalam transaksi delete bila item terdampak; `select_cv_source` mengunci parent sebelum achievement. Nilai kembali dan kode error lama identik.
+- Domain `src/domain/cv/freshness.ts`, service `getFreshness`/`resolveFreshness`, `resolveCvFreshnessAction` (revalidate `/cv` dan `/dashboard`).
+- UI S13: badge teks per state, ringkasan `#cv-review`, panel *Review change* (Saved on CV vs Current source), *Refresh from source*/*Keep saved wording*/*Keep my wording*/*Replace from source*, *Refresh all items without manual wording*, aksi nonaktif selama wording target belum disimpan, reload saat `CV_SOURCE_CHANGED`. Dashboard S04: dua check terpisah (item perlu review, achievement confirmed belum di CV).
+
+File berubah: migration `20261004090000_t20_cv_freshness_deletion.sql`, `cv_freshness.test.sql` (+ penyesuaian `cv_selection.test.sql`), `database.types.ts`, `src/domain/cv/{contracts,freshness}.ts`, `src/domain/dashboard/{contracts,links}.ts`, `src/features/cv/{cv-service,cv-errors,actions,cv-builder,cv-builder-state,cv-section,cv-panels,cv-review}.ts(x)`, `src/features/dashboard/{dashboard-service.ts,dashboard-view.tsx}`, `src/app/(workspace)/cv/page.tsx`, `src/app/globals.css`, `src/i18n/messages.ts`, unit (`cv-freshness`, `dashboard-view` baru; enam diperluas), `tests/integration/cv-freshness.test.ts` (+ penyesuaian `cv-selection.test.ts`), `tests/e2e/cv-freshness.spec.ts` (+ penyesuaian `m2-manual-journey.spec.ts`), `playwright.cv-freshness.config.ts` (port 3013), `package.json` (2 script), README, screenshot dan dokumen.
+
+Migration dan keputusan: `20261004090000_t20_cv_freshness_deletion.sql` (forward-only, tanpa tabel/kolom baru, tanpa reset, parity 30/30); decision 0026 (enam keputusan produk §2.4 disetujui pengguna 2 Oktober 2026; protokol lock profil → dokumen → item → sumber kanonik experience → project → achievement → education → skill → certification). Tiga suite lama disesuaikan sebagai konsekuensi keputusan yang disetujui, tanpa pelemahan (gate F5).
+
+Checks (hasil aktual, reviewer pada `8b1d4e9`): lint, typecheck, build, `worker:check`, `db:lint`, `db:types` (tanpa diff), `git diff --check` exit 0; unit 89/706; pgTAP 14/1115; migration 30/30; `supabase db diff --local` dari nol tanpa perubahan; integration cv-freshness 11, cv-builder 7, cv 10, achievements 5, projects 7, activity 6, dashboard 4, import-commit 11, import-review 6, import 21, m2 8, m3 7, ai 13, ai-review 21, evidence 14, storage 1; E2E cv-freshness 10 (dua run), cv 8, achievements 4, projects 1, dashboard 1, auth 1, ui 1, activity 1, import 7, import-review 10, ai 2, ai-review 11, evidence 8, m2 1, m3 2. Tanpa flaky.
+
+Belum dijalankan: `test:e2e` gabungan, `test:ai:live` (T20 tanpa AI), stres race berskala, pengukuran performa freshness (T24), staging/production.
+
+Risiko/batas: P3 terbuka — F1 fokus hilang setelah `CV_SOURCE_CHANGED`, F2 tabel review kurang terbaca di 360 px, F3 copy unconfirmed/`parentAdded`, F4 assertion ganda di spec M2, F6 biaya baca freshness per item. Race diuji dua session nyata ×3 putaran pada satu proses Node. Bukan bukti production.
+
+Berikutnya: **T21 Export backend** (validasi export memakai `internal.cv_item_state`/`cv_profile_state` di bawah lock dengan urutan decision 0026; `changed`/`deleted`/`unconfirmed`/profil `changed` memblokir, `kept` lolos; snapshot immutable dan enqueue dalam satu transaksi), lalu T22 S14/PDF.
+
 ## T19 — CV builder dan overrides, acceptance lokal — 1 Oktober 2026
 
 Status T19: **DONE** (acceptance lokal) — seluruh acceptance §1 terbukti lokal. Gate review Claude (Opus) pada HEAD `03207fb` tanpa temuan P0–P2 dan tujuh P3; F1–F7 diperbaiki reviewer di `58d1f25` atas instruksi pengguna (review ulang tidak independen penuh). Dependensi T18, T04, T08, T09, T12 **DONE**; Gate M3 PASSED. Rujukan: R09, F07 langkah 1–2, F03, S13, DB §5/§6.
@@ -23,7 +48,7 @@ Belum dijalankan: `test:e2e` gabungan, `test:ai:live`, stres race berskala; sete
 
 Risiko/batas: test komponen tanpa DOM (interaksi via E2E); flaky bawaan `activity-ui.spec.ts:356` pada run pertama pelaksana; race dua session satu proses Node. Bukan bukti production.
 
-Berikutnya: **T20 CV freshness dan deletion** (state changed/unconfirmed, Keep/Refresh/Replace, invalidasi revision CV saat sumber berubah, profile freshness), lalu T21/T22 export.
+Berikutnya: **T20 CV freshness dan deletion** (state changed/unconfirmed, Keep/Refresh/Replace, invalidasi revision CV saat sumber berubah, profile freshness), lalu T21/T22 export. [Handoff T20 single-agent](verification/T20-implementation-plan.md) tersedia (2 Oktober 2026); enam keputusan §2.4 disetujui pengguna (2 Oktober 2026). T20 kini **DONE** (lihat entry 3 Oktober 2026).
 
 ## T18 — CV schema dan selection, acceptance lokal — 30 September 2026
 
@@ -718,7 +743,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T17 | Import review UI | DONE |
 | T18 | CV schema dan selection | DONE |
 | T19 | CV builder dan overrides | DONE |
-| T20 | CV freshness dan deletion | TODO |
+| T20 | CV freshness dan deletion | DONE |
 | T21 | Export backend | TODO |
 | T22 | Preview dan PDF QA | TODO |
 | T23 | Account deletion dan retention | TODO |

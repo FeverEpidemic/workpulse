@@ -14,6 +14,7 @@ import {
   ensureCvAction,
   removeCvItemAction,
   reorderCvSectionAction,
+  resolveCvFreshnessAction,
   saveCvEditsAction,
   selectCvSourceAction,
   updateCvLayoutAction,
@@ -172,6 +173,63 @@ describe("T19 CV save action and correlation ids", () => {
     rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "STALE_REVISION" } });
     const stale = await selectCvSourceAction(IDLE, form({ expected_revision: "1", source_type: "skill", source_id: SOURCE }));
     expect(stale).toMatchObject({ status: "error", error: { correlationId: service } });
+    spy.mockRestore();
+  });
+});
+describe("T20 CV freshness action", () => {
+  const ITEM = "a7000000-0000-4000-8000-0000000000f1";
+  const RESOLUTIONS = [{ target: "item", item_id: ITEM, source_revision: 4, action: "refresh" }, { target: "profile", source_revision: 2, action: "keep" }];
+
+  beforeEach(() => {
+    revalidatePath.mockReset();
+    rpc.mockReset();
+    getUser.mockReset();
+    getUser.mockResolvedValue({ data: { user: { id: USER } }, error: null });
+  });
+
+  it("resolves the batch, reports parent items and revalidates /cv and the dashboard after success only", async () => {
+    rpc.mockResolvedValue({ data: [{ cv_revision: 7, added_parent_item_ids: [ITEM] }], error: null });
+    const state = await resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify(RESOLUTIONS) }));
+    expect(state).toMatchObject({ status: "success", data: { cvRevision: 7, addedParentItemIds: [ITEM] } });
+    expect(rpc).toHaveBeenCalledWith("resolve_cv_freshness", { p_expected_revision: 6, p_resolutions: RESOLUTIONS });
+    expect(revalidatePath).toHaveBeenCalledWith("/cv");
+    expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("rejects malformed payloads without a database call or revalidation", async () => {
+    const results = await Promise.all([
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: "not json" })),
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: "{}" })),
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: "[]" })),
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "abc", resolutions: JSON.stringify(RESOLUTIONS) })),
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "6" })),
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify([{ ...RESOLUTIONS[0], user_id: USER }]) })),
+      resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify([{ ...RESOLUTIONS[0], action: "merge" }]) })),
+    ]);
+    for (const state of results) expect(state).toMatchObject({ status: "error", error: { code: "VALIDATION" } });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("maps a changed source to a conflict the editor can reload from, and an invalid resolution to validation", async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "CV_SOURCE_CHANGED" } });
+    const changed = await resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify(RESOLUTIONS) }));
+    expect(changed).toMatchObject({ status: "error", error: { code: "CONFLICT", messageKey: "cv.error.sourceChanged" } });
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "CV_RESOLUTION_INVALID" } });
+    const invalid = await resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify(RESOLUTIONS) }));
+    expect(invalid).toMatchObject({ status: "error", error: { code: "VALIDATION", messageKey: "cv.error.resolutionInvalid" } });
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "STALE_REVISION" } });
+    const stale = await resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify(RESOLUTIONS) }));
+    expect(stale).toMatchObject({ status: "error", error: { code: "CONFLICT", messageKey: "error.conflict" } });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("uses the service correlation id for the returned error", async () => {
+    const service = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const spy = vi.spyOn(crypto, "randomUUID").mockReturnValueOnce(service).mockReturnValue("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    rpc.mockResolvedValue({ data: null, error: { code: "P0001", message: "CV_SOURCE_CHANGED" } });
+    const state = await resolveCvFreshnessAction(IDLE, form({ expected_revision: "6", resolutions: JSON.stringify(RESOLUTIONS) }));
+    expect(state).toMatchObject({ status: "error", error: { correlationId: service } });
     spy.mockRestore();
   });
 });

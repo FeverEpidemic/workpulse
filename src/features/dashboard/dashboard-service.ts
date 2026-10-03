@@ -8,6 +8,7 @@ import {
 } from "@supabase/supabase-js";
 import * as z from "zod";
 
+import { cvReviewSummarySchema } from "@/domain/cv/contracts";
 import {
   DASHBOARD_RECENT_LIMIT,
   DASHBOARD_SKILL_LIMIT,
@@ -114,8 +115,9 @@ export function createDashboardService(client: DashboardClient) {
     async getDashboard(): Promise<DashboardData> {
       return withBoundary(async () => {
         const actorId = await requireActorId();
-        const [summaryResult, skillsResult, activityResult, projectResult] = await Promise.all([
+        const [summaryResult, cvReviewResult, skillsResult, activityResult, projectResult] = await Promise.all([
           client.rpc("get_dashboard_summary"),
+          client.rpc("get_cv_review_summary"),
           client.rpc("list_demonstrated_skills", { p_limit: DASHBOARD_SKILL_LIMIT }),
           client.from("activities")
             .select("id, raw_text, occurred_on")
@@ -132,7 +134,7 @@ export function createDashboardService(client: DashboardClient) {
             .limit(DASHBOARD_RECENT_LIMIT),
         ]);
 
-        if (summaryResult.error || skillsResult.error || activityResult.error || projectResult.error) {
+        if (summaryResult.error || cvReviewResult.error || skillsResult.error || activityResult.error || projectResult.error) {
           throw new DashboardServiceError("UNAVAILABLE");
         }
 
@@ -141,6 +143,10 @@ export function createDashboardService(client: DashboardClient) {
         if (summaryRows.data.length === 0) throw new DashboardServiceError("UNAUTHENTICATED");
         const summaryRow = summaryRows.data[0];
         if (!summaryRow) throw new DashboardServiceError("UNAVAILABLE");
+        const cvReviewRows = z.array(cvReviewSummarySchema).safeParse(cvReviewResult.data);
+        if (!cvReviewRows.success || cvReviewRows.data.length > 1) throw new DashboardServiceError("UNAVAILABLE");
+        const cvReviewRow = cvReviewRows.data[0];
+        if (!cvReviewRow) throw new DashboardServiceError("UNAUTHENTICATED");
         const skills = z.array(skillRowSchema).safeParse(skillsResult.data);
         const activities = z.array(recentActivitySchema).safeParse(activityResult.data ?? []);
         const projects = z.array(activeProjectSchema).safeParse(projectResult.data ?? []);
@@ -148,6 +154,7 @@ export function createDashboardService(client: DashboardClient) {
 
         return {
           summary: mapSummary(summaryRow),
+          cvReview: { hasCv: cvReviewRow.has_cv, reviewCount: cvReviewRow.review_count, availableCount: cvReviewRow.available_count },
           recentActivities: activities.data as Pick<ActivityRow, "id" | "raw_text" | "occurred_on">[],
           activeProjects: projects.data as Pick<ProjectRow, "id" | "title" | "updated_at">[],
           skills: skills.data.map((skill) => ({

@@ -8,11 +8,13 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input, Select, Textarea } from "@/components/ui/field-control";
 import { RevisionConflict } from "@/components/ui/revision-conflict";
-import { CV_LOCALES, CV_PROFILE_OVERRIDE_KEYS, type CvLocale, type CvSectionKey } from "@/domain/cv/contracts";
+import { CV_LOCALES, CV_PROFILE_OVERRIDE_KEYS, type CvFreshnessState, type CvLocale, type CvSectionKey } from "@/domain/cv/contracts";
 import { profileKey, SUMMARY_KEY, TITLE_KEY, type CvDraft, type DraftProblem } from "@/domain/cv/draft";
+import type { ReviewChoice } from "@/domain/cv/freshness";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 
 import type { SaveStatus } from "./cv-builder-state";
+import { CvReviewPanel, CvReviewToggle, CvStateBadge, type ReviewRow } from "./cv-review";
 
 const problemKey = (problem: DraftProblem): MessageKey =>
   problem === "required" ? "cv.validation.required" : problem === "too_long" ? "cv.validation.tooLong" : "cv.validation.invalid";
@@ -53,7 +55,7 @@ export function CvSettings({
 }) {
   return (
     <section className="cv-panel" aria-labelledby="cv-settings-heading">
-      <h2 id="cv-settings-heading" className="cv-panel-heading">{t(locale, "cv.settings.heading")}</h2>
+      <h2 id="cv-settings-heading" tabIndex={-1} className="cv-panel-heading">{t(locale, "cv.settings.heading")}</h2>
       <div className="cv-fields">
         <label className="field-label" htmlFor="cv-title">{t(locale, "cv.settings.title")}
           <Input
@@ -97,8 +99,21 @@ export function CvSettings({
   );
 }
 
+/** Freshness review of the copied profile: the same choices as an item, with the profile display overrides as the wording. */
+export interface ProfileReview {
+  state: CvFreshnessState;
+  open: boolean;
+  blocked: boolean;
+  busy: boolean;
+  hasOverride: boolean;
+  rows: ReviewRow[];
+  choices: ReviewChoice[];
+  onToggle: () => void;
+  onChoose: (choice: ReviewChoice) => void;
+}
+
 export function CvProfileEditor({
-  locale, draft, sourceValues, problems, onDraftChange,
+  locale, draft, sourceValues, problems, onDraftChange, review = null,
 }: {
   locale: Locale;
   draft: CvDraft;
@@ -106,10 +121,29 @@ export function CvProfileEditor({
   sourceValues: Record<string, string | null>;
   problems: Record<string, DraftProblem>;
   onDraftChange: (key: string, value: string) => void;
+  review?: ProfileReview | null;
 }) {
+  const reviewable = review !== null && review.state !== "fresh";
+  const reviewName = t(locale, "cv.review.profileLabel");
   return (
-    <section className="cv-panel" aria-labelledby="cv-profile-heading">
-      <h2 id="cv-profile-heading" className="cv-panel-heading">{t(locale, "cv.profile.heading")}</h2>
+    <section className="cv-panel" aria-labelledby="cv-profile-heading" data-freshness={review?.state ?? "fresh"}>
+      <h2 id="cv-profile-heading" tabIndex={-1} className="cv-panel-heading">{t(locale, "cv.profile.heading")}</h2>
+      {reviewable ? (
+        <div className="cv-row-actions">
+          <CvStateBadge locale={locale} state={review.state} />
+          <CvReviewToggle
+            locale={locale} id="cv-review-open-profile" panelId="cv-review-profile" name={reviewName}
+            open={review.open} onToggle={review.onToggle}
+          />
+        </div>
+      ) : null}
+      {reviewable && review.open ? (
+        <CvReviewPanel
+          locale={locale} id="cv-review-profile" name={reviewName} kind="profile" state={review.state}
+          hasOverride={review.hasOverride} overrideText={null} rows={review.rows} contextChanged={false}
+          choices={review.choices} blocked={review.blocked} busy={review.busy} achievementId={null} onChoose={review.onChoose}
+        />
+      ) : null}
       <p className="field-help">{t(locale, "cv.profile.help")}</p>
       <div className="cv-fields">
         {CV_PROFILE_OVERRIDE_KEYS.map((key) => {
