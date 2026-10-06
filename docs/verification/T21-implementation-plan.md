@@ -4,6 +4,7 @@
 
 - Tanggal: 6 Oktober 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE — 6 Oktober 2026** (Fase 0–7 pelaksana; gate review RV1 diperbaiki di `663ec9d`; Fase 8 dan closeout oleh reviewer; bukti `T21-cv-export-backend.md`).
 - Dependensi: T20 **DONE** (`internal.cv_item_state`/`internal.cv_profile_state`, protokol lock decision 0026, jalur delete mengunci CV lebih dulu; `docs/verification/T20-cv-freshness-deletion.md`), T19 **DONE** (`buildCvPreviewModel`, `save_cv_edits`), T18 **DONE** (`cv_exports` struktur saja, decision 0024 poin 12), T05 **DONE** (bucket privat `workpulse-private`, kategori `export`, `internal.storage_jobs`), T13 **DONE** (pola durable job: claim atomik, lease 120 detik, attempt token, CAS completion). Pola worker storage cleanup T15 **DONE**; Gate M3 **PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 7; Fase 8 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 1 dianjurkan (protokol lock request export dan state machine job).
@@ -269,10 +270,10 @@ Script baru:
 
 ### Fase 8 — Draft dokumen (setelah gate Claude dan perbaikan P0–P2)
 
-- [ ] `docs/decisions/0027-t21-cv-export-backend.md`: keputusan §2.2 poin 1–19 dan persetujuan §2.4, kode error baru, protokol lock request/retry/worker, state machine, alternatif yang ditolak (snapshot berupa model render, membaca sumber live di worker, retry otomatis, objek per export id, Chromium di proses worker, mengubah flag container T15, menulis CV saat export gagal), seam T22 (S14 memakai `get_cv_export_readiness`, `listExports`, action request/retry/download, `buildExportRenderModel` untuk preview yang sama, blocker → `/cv#cv-review` dan `#cv-item-<id>`; QA visual dan `tests/pdf/`) dan T23 (objek export saat penghapusan akun, event export terminal).
-- [ ] `docs/verification/T21-cv-export-backend.md`: pass/fail/warning/tidak dijalankan, trace ke R10, F07, S14 (batas), DB §4/§5/§6 dan setiap poin §1.
-- [ ] Finalisasi `docs/verification/T21-pdf-renderer-runbook.md`; README (export backend, renderer PDF, script baru, tabel quality gates). `AGENTS.md` dan salinannya di `docs/` tetap identik bila disentuh (biasanya oleh `workpulse-task-closeout`).
-- [ ] Jangan mengubah bagian authoritative `IMPLEMENTATION_STATUS.md` dan jangan mengklaim DONE.
+- [x] `docs/decisions/0027-t21-cv-export-backend.md`: keputusan §2.2 poin 1–19 dan persetujuan §2.4, kode error baru, protokol lock request/retry/worker, state machine, alternatif yang ditolak (snapshot berupa model render, membaca sumber live di worker, retry otomatis, objek per export id, Chromium di proses worker, mengubah flag container T15, menulis CV saat export gagal), seam T22 (S14 memakai `get_cv_export_readiness`, `listExports`, action request/retry/download, `buildExportRenderModel` untuk preview yang sama, blocker → `/cv#cv-review` dan `#cv-item-<id>`; QA visual dan `tests/pdf/`) dan T23 (objek export saat penghapusan akun, event export terminal).
+- [x] `docs/verification/T21-cv-export-backend.md`: pass/fail/warning/tidak dijalankan, trace ke R10, F07, S14 (batas), DB §4/§5/§6 dan setiap poin §1.
+- [x] Finalisasi `docs/verification/T21-pdf-renderer-runbook.md`; README (export backend, renderer PDF, script baru, tabel quality gates). `AGENTS.md` dan salinannya di `docs/` tetap identik bila disentuh (biasanya oleh `workpulse-task-closeout`).
+- [x] Jangan mengubah bagian authoritative `IMPLEMENTATION_STATUS.md` dan jangan mengklaim DONE.
 
 ## 6. Fixture
 

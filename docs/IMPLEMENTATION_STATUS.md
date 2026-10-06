@@ -1,5 +1,70 @@
 # WorkPulse Implementation Status
 
+## T21 — Immutable export backend, acceptance lokal — 6 Oktober 2026
+
+Status T21: **DONE** (acceptance lokal) — seluruh 19 poin acceptance §1 terbukti lokal.
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0–7). Gate review Claude (Opus) pada HEAD `c0f5d41` menemukan satu P2 (RV1: cek nama di worker menolak PDF sah bernama Han/Arab/Ibrani/Devanagari) dan delapan P3 (N1–N8).
+- RV1 dan N1 diperbaiki reviewer di `663ec9d` atas instruksi pengguna. Review ulang lulus tanpa P0–P2, tetapi tidak independen penuh; ditopang test yang terbukti gagal tanpa perbaikan.
+- Fase 8 ditulis reviewer.
+- Dependensi T20, T19, T18, T05, T13, T15 **DONE**; Gate M3 PASSED.
+- Rujukan: R10, F07 langkah 3–6, S14 (batas T22), DB §4/§5/§6.
+
+[Rencana](verification/T21-implementation-plan.md), [bukti](verification/T21-cv-export-backend.md), [gate review dan remediasi](verification/T21-review-remediation-plan.md), [decision 0027](decisions/0027-t21-cv-export-backend.md), [runbook renderer PDF](verification/T21-pdf-renderer-runbook.md), receipt [Fase 0](verification/T21-phase0-baseline.md)–[7](verification/T21-phase7-regression.md), [7b](verification/T21-phase7b-remediation.md).
+
+Yang selesai:
+
+- **Readiness.** Satu definisi kesiapan `internal.cv_export_blockers`, memakai `cv_item_state`/`cv_profile_state` T20. Kodenya `NAME_REQUIRED`, `CONTENT_REQUIRED`, `ITEM_CHANGED`/`ITEM_DELETED`/`ITEM_UNCONFIRMED` (dengan `item_id`), dan `PROFILE_CHANGED`; `kept` lolos. Dipakai `get_cv_export_readiness` dan `request_cv_export`.
+- **Request.** `request_cv_export` berjalan dalam satu transaksi: profil → dokumen → idempotency → revision → sumber `for share` kanonik → blocker → dedup → insert snapshot immutable `cv-export.v1` (data CV tersimpan, tanpa field privat). Satu export aktif per CV; key sama dengan revision lain → `IDEMPOTENCY_KEY_REUSED`.
+- **Job.** Durable job dengan claim atomik, lease 120 detik, token per attempt, dan CAS complete/fail. Lease lewat → `EXPORT_TIMEOUT`. Retry eksplisit snapshot sama, maksimal tiga attempt; kode permanen tidak bisa di-retry. Trigger `CV_EXPORT_IMMUTABLE` menjaga snapshot.
+- **Worker.** Pass `cv-export` dan `export-cleanup` hanya membaca snapshot. Template `single_column_v1` (escape, tanpa script/resource/hyperlink/evidence) dirender oleh `GotenbergPdfRenderer` di container terisolasi `workpulse-t21-pdf`; mode default `unavailable`, fake hanya dev/test. Output diverifikasi: `%PDF-`, ≤ 10 MiB, 1–20 halaman, dan nama tampak lewat parser thread `pdf-export`, dengan aturan aksara RV1. Objek disimpan di `<user>/export/<token>`.
+- **Retensi dan unduhan.** Retensi 24 jam memakai `expire_cv_exports` + storage job kategori `export` + `reconcile_orphan_export_objects`. Unduhan hanya untuk pemilik, signed URL 300 detik.
+- **Aplikasi.** Service `export-service.ts` dan tiga server action (tanpa UI), kode error dan i18n en/id `cv.export.*`.
+
+File berubah:
+
+- Database: migration `20261005090000_t21_cv_export_backend.sql`, `cv_export.test.sql`, `database.types.ts`.
+- Domain dan server: `src/domain/cv/{contracts,export}.ts`, `src/server/export/{cv-print-template,pdf-renderer}.ts`, `src/server/documents/{parse-in-thread,parser-thread,pdf-text}.ts` (aditif).
+- Fitur dan i18n: `src/features/cv/{export-service,cv-errors,actions}.ts`, `src/i18n/messages.ts`.
+- Worker: `workers/{export-worker,supabase-export-gateway,run,bootstrap}.ts`.
+- Test unit: sembilan file baru (`cv-export-{domain,service,actions,i18n}`, `cv-print-template`, `pdf-renderer`, `export-worker`, `export-pdf-verify`, `export-name-match`), plus perluasan `cv-contracts`, `cv-fixtures`, `worker-bootstrap`.
+- Test integration: `tests/integration/cv-export{,-renderer-real}.test.ts` dan `cv-export-support.ts`.
+- Konfigurasi: `package.json` (`test:integration:cv-export`), `.env.example`.
+- Dokumen: README, decision, runbook, dan dokumen verifikasi.
+
+Migration dan keputusan: `20261005090000_t21_cv_export_backend.sql` (forward-only, parity 31/31, 22 fungsi bernama baru, tanpa perubahan fungsi T18–T20 atau grant `cv_exports`, tanpa reset). Decision 0027 mencatat lima keputusan produk §2.4 yang disetujui pengguna 6 Oktober 2026, dedup setelah validasi, jenis parser `pdf-export`, aturan cek nama RV1, dan P3 yang diterima.
+
+Checks (hasil aktual):
+
+- **Reviewer:**
+  - Gate dasar: lint, typecheck, build, `worker:check` exit 0. Unit 97/836 di `c0f5d41` → **98/845** setelah remediasi. pgTAP 15/1290. `db:lint` bersih, types tanpa drift, migration 31/31, `git diff --check 5ebf1b2..HEAD` bersih.
+  - Integration: cv-export 23 → **27** setelah remediasi; cv-freshness 11, cv-builder 7, cv 10, achievements 5, projects 7, import 21, import-commit 11, m3 7.
+  - E2E: m2 1, m3 2, cv 8, cv-freshness 10.
+  - Probe nama dengan Chromium nyata (22 nama) dan probe skill/certification.
+- **Pelaksana (Fase 7):** 17 suite integration (175 test) dan 15 suite E2E (68 test) exit 0, tanpa flaky.
+
+Belum dijalankan: `test:e2e` gabungan, `test:ai:live` (T21 tanpa AI), stres race berskala (pelaksana menjalankan 40 putaran), p95 render (T24), QA PDF visual dan `tests/pdf/` (T22), staging/production. Reviewer tidak mengulang integration/E2E domain yang tidak disentuh; untuk suite itu berlaku hasil pelaksana Fase 7.
+
+Risiko/batas: P3 terbuka (detail di decision 0027):
+
+- N2: retry snapshot lama dapat mencetak sumber yang sudah dihapus; snapshot tidak dipurge.
+- N3: pemilik dapat membaca kolom snapshot/key miliknya lewat PostgREST; bucket tertutup untuk browser.
+- N4: teks PDF Han/Arab/Ibrani/Devanagari kurang searchable.
+- N5: rute LibreOffice di container renderer masih terbuka.
+- N6: export yang dipakai ulang bisa hampir kedaluwarsa.
+- N7: biaya reconcile.
+- N8: trim NBSP berbeda antara SQL dan TS.
+
+Race diuji dua koneksi nyata, 5 skenario × 3 putaran. Renderer adalah container lokal. Bukan bukti production.
+
+Berikutnya: **T22 Preview dan PDF QA**.
+
+- S14 `/cv/preview` memakai `getReadiness`, `listExports`, action request/retry/download, dan `buildExportRenderModel`.
+- Blocker ditautkan ke `/cv#cv-review` atau `#cv-item-<id>`.
+- *Retry* hanya untuk revision saat ini, selain itu *Regenerate* (N2, N6).
+- Polling status dan nama file unduhan.
+- QA visual/Unicode PDF di `tests/pdf/` (N4).
+
 ## T20 — CV freshness dan deletion, acceptance lokal — 3 Oktober 2026
 
 Status T20: **DONE** (acceptance lokal) — seluruh 18 poin acceptance §1 terbukti lokal. Pelaksana Claude Sonnet 5.5 (Fase 0–6); gate review Claude (Opus) pada HEAD `8b1d4e9` tanpa temuan P0–P2 dan tujuh P3 (F1–F7, follow-up/diterima); Fase 7 ditulis reviewer. Dependensi T19, T18, T12, T03, T08, T09, T16 **DONE**; Gate M3 PASSED. Rujukan: R03, R09, F03, F07 langkah 5, S04, S13, DB §2/§5/§6.
@@ -744,7 +809,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T18 | CV schema dan selection | DONE |
 | T19 | CV builder dan overrides | DONE |
 | T20 | CV freshness dan deletion | DONE |
-| T21 | Export backend | TODO |
+| T21 | Export backend | DONE |
 | T22 | Preview dan PDF QA | TODO |
 | T23 | Account deletion dan retention | TODO |
 | T24 | Instrumentation dan performance | TODO |

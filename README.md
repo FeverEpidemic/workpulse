@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T20 done locally; Gates M2 and M3 passed; T21 (export backend) next.** Auth/profile,
+Status: **T01–T21 done locally; Gates M2 and M3 passed; T22 (S14 preview and PDF QA) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -12,8 +12,8 @@ checks, real ClamAV screening through the durable worker (T10), and the attachme
 Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
-production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented; export and account deletion
-remain deferred to their feature tasks. See
+production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented, and T21 adds the PDF export
+backend (no UI yet); the S14 preview page and account deletion remain deferred to their feature tasks. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -61,6 +61,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:cv` | T18 master CV against local Supabase with real Auth: one CV under parallel first open, draft ineligibility, parent inclusion, duplicates, concurrent edits and source races, source deletion, two-account isolation, log hygiene |
 | `pnpm test:integration:cv-builder` | T19 CV builder against local Supabase with real Auth: graduate journey with untouched canonical records, overrides kept out of snapshots, skill/certification refusal, concurrent text and structural edits, parent removal, isolation, deleted sources, log hygiene |
 | `pnpm test:integration:cv-freshness` | T20 CV freshness against local Supabase with real Auth: PRD edit-after-override release scenario (refresh keeps the override, keep per revision, delete invalidates in the same transaction), six source types, context relink, reopen/dismiss, profile freshness, four two-session race scenarios without deadlock, dashboard counts, isolation, log hygiene |
+| `pnpm test:integration:cv-export` | T21 CV export against local Supabase, Storage and the real worker: readiness, PRD delete-source and graduate scenarios, snapshot isolation from later edits, five request-versus-mutation races, dedup/idempotency, lease loss, render failure and retry, 24-hour expiry and cleanup, orphans, deleting accounts, owner-only signed download, log hygiene; plus a real Chromium renderer suite (A4, searchable en/id text, multipage, non-Latin names) that fails loudly without `workpulse-t21-pdf` ([PDF renderer runbook](docs/verification/T21-pdf-renderer-runbook.md)) |
 | `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
@@ -152,6 +153,14 @@ T18 adds the master CV backend (no UI; `/cv` stays unavailable until T19): `cv_d
 T19 turns `/cv` (S13) into the builder: pick records per section (a child achievement brings its parent and renders under it once), move items and sections with labelled up/down buttons, choose the CV language (labels and dates only; source text is never translated), and edit the title, summary, contact display values and per-item wording. Structural changes save immediately; text edits save together through one explicit Save (`save_cv_edits`: one transaction, one revision step, no write for a no-op) and never touch source snapshots or canonical records. A stale save keeps the typed text and asks *Keep mine* / *Use saved* per field. The preview shows only the saved CV (`buildCvPreviewModel`, reused by export later). Confirmed achievements link to `/cv?highlight=<id>` (*Add to CV*), which suggests the record without adding it. See [decision 0025](docs/decisions/0025-t19-cv-builder-overrides.md).
 
 T20 adds CV freshness. Editing a selected record never writes the CV: the database computes each item's state (`fresh`, `changed`, `kept`, `deleted`, `unconfirmed`) and the profile's state from live source revisions and display snapshots (`get_cv_freshness`). In S13 a badge and a *Review change* panel compare the saved and current versions; the user chooses *Refresh from source* or *Keep saved wording* (bound to the reviewed revision), or, for an item with manual wording, *Keep my wording* (details refreshed, wording kept) or *Replace from source*. `resolve_cv_freshness` applies a batch in one transaction and one revision step and never clears wording except on Replace; *Refresh all items without manual wording* skips manual and unsaved wording. Deleting a selected source locks the CV first, marks the item `source_deleted` with its snapshot and wording kept, and bumps the CV revision in the same transaction. The dashboard shows two separate checks: CV items that need review and confirmed achievements not on the CV (`get_cv_review_summary`). Export blocking is T21. See [decision 0026](docs/decisions/0026-t20-cv-freshness-deletion.md).
+
+T21 adds the CV export backend (no UI; S14 is T22).
+- **Request.** `request_cv_export` locks the CV and every selected source in the canonical order, checks readiness (a name, at least one experience/project/education/achievement, no changed, deleted or unconfirmed item, no changed profile; *kept* items pass) and, in the same transaction, stores an immutable `cv-export.v1` snapshot of the saved CV and queues the job. It is idempotent per key and revision, with at most one active export per CV.
+- **Worker.** The worker's `cv-export` pass claims with a 120-second lease and an attempt token. It reads only the snapshot, renders the `single_column_v1` HTML print template through an isolated Gotenberg Chromium container (`WORKPULSE_PDF_RENDERER_MODE`, default `unavailable`; see the [PDF renderer runbook](docs/verification/T21-pdf-renderer-runbook.md)), and checks `%PDF-`, ≤ 10 MiB, 1–20 pages and the searchable name in the parser thread. It then uploads to `<user>/export/<attempt token>` and completes by compare-and-set.
+- **Failure and retry.** A failure never touches the CV; `retry_cv_export` re-queues the same snapshot, for at most three attempts.
+- **Download and expiry.** A finished PDF can be downloaded for 24 hours through a signed URL of at most five minutes; then `export-cleanup` deletes the object, and a new request revalidates.
+
+See [decision 0027](docs/decisions/0027-t21-cv-export-backend.md).
 
 ## Local database (Supabase)
 

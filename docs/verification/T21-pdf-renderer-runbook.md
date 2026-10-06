@@ -1,8 +1,8 @@
 # T21 CV PDF renderer runbook (Gotenberg / Chromium)
 
-Draft from the Phase 0 probe (6 October 2026). This runbook covers the isolated renderer that turns the CV print
-template (HTML) into an A4 PDF for export (R10/F07, plan §2/§8). It does not deploy hosted staging or production.
-Finalized in Phase 8 after the gate review.
+Final (6 October 2026, Phase 8 after the gate review; decision 0027). This runbook covers the isolated renderer that
+turns the CV print template (HTML) into an A4 PDF for export (R10/F07, plan §2/§8). It does not deploy hosted staging
+or production.
 
 ## Local renderer
 
@@ -37,7 +37,23 @@ Fonts: the image ships `Noto Sans` (Regular, Bold, Italic, Bold Italic under `/u
 | `printBackground` | `false` | the template has no backgrounds |
 
 The response is the PDF (`%PDF-`). The worker caps it at 10 MiB, requires the `%PDF-` signature, and verifies page
-count (1-20) and extracted text in the isolated parser thread before uploading anything.
+count (1-20) and extracted text in the isolated parser thread (`pdf-export` kind) before uploading anything.
+
+Text check (decision 0027 point 17, gate review RV1):
+
+- A name written only in Latin, Greek or Cyrillic must appear as written (NFKC, whitespace collapsed).
+- Other scripts are accepted forward, reversed, or word by word, or else when every printed section heading is in
+  the text. This covers how Chromium prints them:
+
+  | Script | How it comes out of the PDF |
+  | --- | --- |
+  | Han | radicals: `小` → U+2F29, `龙` → U+2EF0 |
+  | Arabic | presentation forms in visual order |
+  | Hebrew | words in visual order |
+  | Devanagari | lossy |
+
+- Searchable text is verified for Latin (Indonesian and Vietnamese included), Greek, Cyrillic, Thai and Hangul. For
+  the other scripts it is a known limitation of the renderer and fonts; Unicode PDF QA belongs to T22.
 
 ## Probe results (Phase 0)
 
@@ -65,7 +81,9 @@ WORKPULSE_PDF_RENDER_TIMEOUT_MS=60000
 Default mode is `unavailable`: export jobs then fail with the retriable `RENDERER_UNAVAILABLE`, the CV stays
 untouched, and the user can retry. `fake` is refused outside `NODE_ENV=development|test` and the worker summary marks it
 as `pdfRenderer: "explicit-test-fake"`. A bad URL or an out-of-range timeout (1,000-90,000 ms) fails closed to
-`unavailable`.
+`unavailable`. The worker additionally aborts a render after 80 seconds (`EXPORT_RENDER_BUDGET_MS`), so that
+verification, upload and completion still fit in the 120 second lease; values of `WORKPULSE_PDF_RENDER_TIMEOUT_MS`
+above 80,000 therefore have no further effect.
 
 ## Verification
 
@@ -74,7 +92,9 @@ pnpm test:integration:cv-export
 ```
 
 `tests/integration/cv-export-renderer-real.test.ts` fails loudly when the renderer is not reachable; it never falls
-back to the fake.
+back to the fake. Load `.env.local`, `SUPABASE_SECRET_KEY` and `WORKPULSE_PDF_GOTENBERG_URL=http://127.0.0.1:13401`
+in the same shell command as the suite. Local result at closeout: 2 files / 27 tests (7 against the real renderer: en
+and id CVs, a multipage CV, Han/Arabic/Devanagari names, an unreachable renderer).
 
 ## Staging notes
 
@@ -82,6 +102,10 @@ back to the fake.
 - Run the container without outbound internet in staging; the template needs no network access.
 - `--chromium-disable-javascript=true` and the file allow-list are defense in depth: the template contains no script
   and no external resource by construction (unit-tested).
+- The local container still exposes the LibreOffice and PDF-engine routes (`/health` reports `libreoffice: up`); the
+  export only uses `/forms/chromium/convert/html`. For staging (T25), disable the unused routes with the flags of the
+  pinned image (`--libreoffice-disable-routes`, `--pdfengines-disable-routes`; both listed by `gotenberg --help` of
+  digest `sha256:f29984bd…c769`, not yet exercised locally) and keep the T15 DOCX renderer a separate container.
 - Record image digest, Gotenberg version, memory limit, and observed render latency in the staging evidence.
 - Local results do not prove staging isolation or production behavior (T25).
 
