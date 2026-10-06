@@ -65,6 +65,8 @@ Berikutnya: **T22 Preview dan PDF QA**.
 - Polling status dan nama file unduhan.
 - QA visual/Unicode PDF di `tests/pdf/` (N4).
 
+[Handoff T22 single-agent](verification/T22-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5). Enam keputusan §2.4 menunggu persetujuan pengguna. T22 tetap **TODO**.
+
 ## T20 — CV freshness dan deletion, acceptance lokal — 3 Oktober 2026
 
 Status T20: **DONE** (acceptance lokal) — seluruh 18 poin acceptance §1 terbukti lokal. Pelaksana Claude Sonnet 5.5 (Fase 0–6); gate review Claude (Opus) pada HEAD `8b1d4e9` tanpa temuan P0–P2 dan tujuh P3 (F1–F7, follow-up/diterima); Fase 7 ditulis reviewer. Dependensi T19, T18, T12, T03, T08, T09, T16 **DONE**; Gate M3 PASSED. Rujukan: R03, R09, F03, F07 langkah 5, S04, S13, DB §2/§5/§6.
