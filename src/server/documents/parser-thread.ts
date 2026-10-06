@@ -10,7 +10,7 @@ console.warn = silent;
 console.error = silent;
 console.debug = silent;
 
-type Job = { kind: "pdf" | "docx" | "pdf-pages"; bytes: Uint8Array };
+type Job = { kind: "pdf" | "docx" | "pdf-pages" | "pdf-export"; bytes: Uint8Array };
 
 async function run(job: Job) {
   if (job.kind === "docx") {
@@ -25,8 +25,10 @@ async function run(job: Job) {
       return { status: "error", code: error instanceof OoxmlZipError && error.code === "TOO_LARGE" ? "FILE_TOO_LARGE" : "CORRUPT_FILE" };
     }
   }
-  const { countPdfPages, extractPdfText } = await import("./pdf-text.ts");
-  const result = job.kind === "pdf-pages" ? await countPdfPages(job.bytes) : await extractPdfText(job.bytes);
+  const { countPdfPages, extractPdfText, readExportPdf } = await import("./pdf-text.ts");
+  const result = job.kind === "pdf-pages"
+    ? await countPdfPages(job.bytes)
+    : job.kind === "pdf-export" ? await readExportPdf(job.bytes) : await extractPdfText(job.bytes);
   return result.status === "ok" && job.kind === "pdf-pages" ? { status: "ok", text: null, pageCount: result.pageCount } : result;
 }
 

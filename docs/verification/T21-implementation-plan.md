@@ -233,8 +233,8 @@ Script baru:
 
 ### Fase 4 — Worker (TDD unit dengan fake gateway)
 
-- [ ] Test gagal lebih dulu (`export-worker`): jalur sukses (claim → input → render → verifikasi → upload key `<user>/export/<token>` → complete); snapshot invalid → `EXPORT_SNAPSHOT_INVALID`; renderer gagal → kode renderer; halaman > 20 → `EXPORT_TOO_LONG`; teks tanpa nama → `EXPORT_RENDER_INVALID`; upload gagal → `STORAGE_UNAVAILABLE`; input tanpa baris (stale/deleting) → tidak render; complete `stale` → hapus objek sendiri; housekeeping dipanggil; cleanup retry/backoff; ringkasan tanpa teks/key/nama; satu job gagal tidak menghentikan job lain; bootstrap mendaftarkan `cv-export` dan `export-cleanup`.
-- [ ] Implementasi worker, gateway, `run.ts`, `bootstrap.ts`, `.env.example`. `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm worker:check`. Commit `feat(t21): add CV export worker`, receipt Fase 4.
+- [x] Test gagal lebih dulu (`export-worker`): jalur sukses (claim → input → render → verifikasi → upload key `<user>/export/<token>` → complete); snapshot invalid → `EXPORT_SNAPSHOT_INVALID`; renderer gagal → kode renderer; halaman > 20 → `EXPORT_TOO_LONG`; teks tanpa nama → `EXPORT_RENDER_INVALID`; upload gagal → `STORAGE_UNAVAILABLE`; input tanpa baris (stale/deleting) → tidak render; complete `stale` → hapus objek sendiri; housekeeping dipanggil; cleanup retry/backoff; ringkasan tanpa teks/key/nama; satu job gagal tidak menghentikan job lain; bootstrap mendaftarkan `cv-export` dan `export-cleanup`.
+- [x] Implementasi worker, gateway, `run.ts`, `bootstrap.ts`, `.env.example`. `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm worker:check`. Commit `feat(t21): add CV export worker`, receipt Fase 4.
 
 ### Fase 5 — Service dan action (TDD unit)
 
