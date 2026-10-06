@@ -65,7 +65,7 @@ Berikutnya: **T22 Preview dan PDF QA**.
 - Polling status dan nama file unduhan.
 - QA visual/Unicode PDF di `tests/pdf/` (N4).
 
-[Handoff T22 single-agent](verification/T22-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5). Enam keputusan §2.4 menunggu persetujuan pengguna. T22 tetap **TODO**.
+[Handoff T22 single-agent](verification/T22-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5). Enam keputusan §2.4 disetujui pengguna (6 Oktober 2026). T22 tetap **TODO**.
 
 ## T20 — CV freshness dan deletion, acceptance lokal — 3 Oktober 2026
 

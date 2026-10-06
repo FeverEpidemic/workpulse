@@ -15,8 +15,8 @@
   - T05 **DONE**: `PrivateStorageService`.
   - Gate M3 **PASSED**.
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
-- Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 7; Fase 8 (draft dokumen) dikerjakan setelah gate. Checkpoint setelah Fase 0 **wajib**: probe pdf.js di browser dan persetujuan §2.4.
-- Keputusan produk: enam keputusan di §2.4 **menunggu persetujuan pengguna**. Pelaksana berhenti di akhir Fase 0 sampai persetujuan tercatat.
+- Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 7; Fase 8 (draft dokumen) dikerjakan setelah gate. Checkpoint Claude setelah Fase 0 dianjurkan (hasil probe pdf.js dan probe page break).
+- Keputusan produk: pengguna **menyetujui** (6 Oktober 2026, "Setuju semua") keenam keputusan §2.4 sesuai rekomendasi. Semuanya dibekukan; pelaksana tidak perlu menanyakannya ulang dan tidak perlu berhenti di akhir Fase 0 untuk persetujuan. Probe Fase 0 tetap wajib dan stop condition-nya tetap berlaku.
 - Acuan:
   - **PRD:** R10 (*Export the saved CV revision as searchable A4 text with correct page breaks. Failure preserves the draft and supports retry. Evidence is not embedded or linked.*), *CV freshness contract* (deleted/unconfirmed memblokir export; PDF yang sudah diunduh tidak berubah), aturan durable job, release scenario *graduate … export a useful CV*, *delete its source and verify export is blocked until resolved*, *Validate PDF text extraction, Indonesian characters, long bullets, and multipage output*, kriteria M4 *Source provenance survives editing and export; layout fixtures pass*.
   - **User Flow F07** langkah 4–6.
@@ -245,9 +245,9 @@ T22 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - **Tidak diubah:** RPC T18–T21, kolom/tabel, `request_cv_export`/`retry_cv_export`, worker export, verifikasi nama RV1. Perubahan semacam itu → **stop**.
 - **Bukan v0.1:** template lain, variant CV, target job, AI, evidence di PDF, hyperlink, foto, warna aksen, watermark, editor di S14, berbagi publik, unduhan tanpa login.
 
-### 2.4 Keputusan produk yang memerlukan persetujuan pengguna
+### 2.4 Keputusan produk yang sudah disetujui pengguna (6 Oktober 2026)
 
-Rekomendasi tertulis di bawah. Pelaksana mencatat jawaban pengguna di receipt Fase 0 dan **berhenti** sampai keenamnya disetujui atau diganti.
+Keenamnya disetujui sesuai rekomendasi. Catat persetujuan ini di receipt Fase 0 dan lanjutkan tanpa bertanya ulang. Bila implementasi menuntut penyimpangan dari salah satunya, **stop** (lihat §8).
 
 1. **Sumber batas halaman** (§2.2.1–2): halaman PDF nyata dirender pdf.js di browser setelah export, dan HTML tersimpan sebelum export. Alternatif:
    - estimasi page break di HTML (tidak akurat);
@@ -360,7 +360,7 @@ Script baru:
 
   Bila worker tidak dapat dibundel, **stop** dan laporkan alternatif (salinan worker versi terpin di `public/` dengan alasan, atau pendekatan lain). Hapus halaman uji setelah probe.
 - [ ] **Probe page break.** Dengan template saat ini, render 24 varian filler (heading section bergeser di sekitar dasar halaman) ke renderer nyata dan analisis dengan pdf.js (baris terakhir per halaman). Catat apakah heading yatim atau entry terbelah terjadi. Ini menentukan kebutuhan §2.2.11; bila terjadi, pilihan aturan CSS dicatat untuk Fase 4.
-- [ ] Ajukan §2.4 ke pengguna dan catat jawabannya. Tulis receipt Fase 0 `docs/verification/T22-phase0-baseline.md`. Commit `docs(t22): add phase 0 baseline receipt`. **Stop sampai §2.4 disetujui.**
+- [ ] Catat di receipt bahwa pengguna menyetujui §2.4 (6 Oktober 2026). Tulis receipt Fase 0 `docs/verification/T22-phase0-baseline.md`. Commit `docs(t22): add phase 0 baseline receipt`. Lanjut ke Fase 1 bila tidak ada stop condition.
 
 ### Fase 1 — Domain murni (TDD unit)
 
@@ -530,7 +530,7 @@ Aturan menjalankan suite:
 Berhenti dan laporkan bukti, jangan berimprovisasi, bila:
 
 - Working tree tidak bersih di Fase 0, atau parity bukan 31/31.
-- §2.4 belum disetujui di akhir Fase 0, atau implementasi menuntut penyimpangan dari keputusan yang disetujui.
+- Implementasi menuntut penyimpangan dari keputusan §2.4 yang disetujui.
 - Probe pdf.js gagal: worker tidak dapat dibundel, CORS Storage ditolak, atau canvas kosong.
 - Penyelesaian memerlukan migration, perubahan RPC/SQL T18–T21, perubahan worker export atau aturan cek nama RV1, atau `db reset`.
 - Perbaikan page break membutuhkan perubahan di luar aturan break/spacing template (font, struktur, model) atau perubahan perilaku preview S13.
