@@ -238,11 +238,11 @@ Script baru:
 
 ### Fase 5 — Service dan action (TDD unit)
 
-- [ ] Test gagal lebih dulu:
+- [x] Test gagal lebih dulu:
   - `cv-export-service`: readiness dan daftar divalidasi Zod; setiap kode DB → kode service + `messageKey` + `correlationId`; `CV_EXPORT_BLOCKED` membawa blocker dari `detail` (detail rusak → blocker kosong, tetap `EXPORT_BLOCKED`); `issueDownload` memakai TTL 300 dan tidak mengembalikan object key; pesan error tanpa sentinel.
   - `cv-actions`: validasi input tiga action; `revalidatePath('/cv')` hanya setelah request/retry sukses; correlation ID error = ID service.
   - Parity kunci i18n en/id.
-- [ ] Implementasi §3.4. `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`. Commit `feat(t21): add CV export service and actions`, receipt Fase 5.
+- [x] Implementasi §3.4. `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`. Commit `feat(t21): add CV export service and actions`, receipt Fase 5.
 
 ### Fase 6 — Integration nyata
 

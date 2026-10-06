@@ -3,18 +3,23 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  downloadCvExportInput,
   removeCvItemInput,
   reorderCvSectionInput,
+  requestCvExportInput,
   resolveCvFreshnessInput,
+  retryCvExportInput,
   saveCvEditsInput,
   selectCvSourceInput,
   updateCvLayoutInput,
 } from "@/domain/cv/contracts";
 import { actionFailure, actionSuccess, type ActionState, type ErrorCode } from "@/server/action-result";
+import { createRequestPrivateStorageService } from "@/server/storage/request-service";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 import { CvServiceError, toCvServiceError } from "./cv-errors";
 import { createCvService, type CvService } from "./cv-service";
+import { createCvExportService, type CvExportService } from "./export-service";
 
 function mapCode(code: CvServiceError["code"]): ErrorCode {
   switch (code) {
@@ -22,9 +27,11 @@ function mapCode(code: CvServiceError["code"]): ErrorCode {
     case "OVERRIDE_UNSUPPORTED":
     case "RESOLUTION_INVALID":
     case "ONBOARDING_REQUIRED":
+    case "EXPORT_BLOCKED":
     case "SOURCE_INELIGIBLE": return "VALIDATION";
     case "UNAUTHENTICATED": return "UNAUTHENTICATED";
     case "NOT_FOUND":
+    case "EXPORT_NOT_FOUND":
     case "SOURCE_NOT_FOUND": return "NOT_FOUND";
     case "UNAVAILABLE": return "UNAVAILABLE";
     default: return "CONFLICT";
@@ -34,7 +41,9 @@ function mapCode(code: CvServiceError["code"]): ErrorCode {
 /** Codes, message keys and item ids only; the service correlation ID is kept so support can match logs. */
 function failure(error: unknown, correlationId: string): ActionState {
   const cvError = toCvServiceError(error, correlationId);
-  const details = cvError.code === "CHILD_ITEMS_EXIST" ? { latestRecord: { childItemIds: cvError.childItemIds } } : {};
+  const details = cvError.code === "CHILD_ITEMS_EXIST"
+    ? { latestRecord: { childItemIds: cvError.childItemIds } }
+    : cvError.code === "EXPORT_BLOCKED" ? { latestRecord: { blockers: cvError.blockers } } : {};
   const state = actionFailure(mapCode(cvError.code), cvError.messageKey, details);
   return state.status === "error" ? { status: "error", error: { ...state.error, correlationId: cvError.correlationId } } : state;
 }
@@ -48,6 +57,19 @@ async function run<T>(operation: (service: CvService) => Promise<T>, alsoRevalid
     const data = await operation(createCvService({ supabase, correlationId }));
     revalidatePath("/cv");
     for (const path of alsoRevalidate) revalidatePath(path);
+    return actionSuccess(undefined, data);
+  } catch (error) {
+    return failure(error, correlationId);
+  }
+}
+
+/** Export actions: one correlation ID per request; /cv is revalidated only when the action changed a saved export. */
+async function runExport<T>(operation: (service: CvExportService) => Promise<T>, revalidate: boolean): Promise<ActionState> {
+  const correlationId = crypto.randomUUID();
+  try {
+    const supabase = await createSupabaseServerClient();
+    const data = await operation(createCvExportService({ supabase, getStorage: createRequestPrivateStorageService, correlationId }));
+    if (revalidate) revalidatePath("/cv");
     return actionSuccess(undefined, data);
   } catch (error) {
     return failure(error, correlationId);
@@ -143,4 +165,25 @@ export async function resolveCvFreshnessAction(_previous: ActionState, formData:
   const parsed = resolveCvFreshnessInput.safeParse({ expected_revision: revisionOf(formData), resolutions });
   if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
   return run((service) => service.resolveFreshness(parsed.data), ["/dashboard"]);
+}
+
+/** Request a PDF export of the saved CV revision; the client supplies the idempotency key of this click. */
+export async function requestCvExportAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = requestCvExportInput.safeParse({ expected_revision: revisionOf(formData), idempotency_key: text(formData, "idempotency_key") });
+  if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
+  return runExport((service) => service.requestExport(parsed.data), true);
+}
+
+/** Explicit retry of a failed export with the same snapshot. */
+export async function retryCvExportAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = retryCvExportInput.safeParse({ export_id: text(formData, "export_id") });
+  if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
+  return runExport((service) => service.retryExport(parsed.data), true);
+}
+
+/** A short-lived signed URL for a finished export; nothing is saved, so nothing is revalidated. */
+export async function issueCvExportDownloadAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = downloadCvExportInput.safeParse({ export_id: text(formData, "export_id") });
+  if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
+  return runExport((service) => service.issueDownload(parsed.data), false);
 }
