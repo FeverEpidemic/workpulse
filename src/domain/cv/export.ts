@@ -85,6 +85,37 @@ export function effectiveExportName(snapshot: Pick<CvExportSnapshot, "profile_sn
   return name === "" ? null : name;
 }
 
+const RELIABLE_NAME_LETTER = /[\p{Script=Latin}\p{Script=Greek}\p{Script=Cyrillic}]/u;
+const LETTER = /\p{L}/u;
+
+const collapse = (value: string) => value.normalize("NFKC").replace(/\s+/gu, " ").trim();
+const squeeze = (value: string) => value.normalize("NFKC").replace(/\s+/gu, "");
+const reversed = (value: string) => Array.from(value).reverse().join("");
+
+/**
+ * Whether the text extracted from a rendered export shows the effective name (decision 0027, gate review RV1).
+ * Latin, Greek and Cyrillic names must appear as written (NFKC, whitespace collapsed). Other scripts may come out of
+ * Chromium in visual order (Arabic, Hebrew), as radicals (Han) or lossy (Devanagari): such a name is accepted when it
+ * appears forward or reversed, word by word, or else when every rendered section heading (always en/id labels) is in
+ * the text, which still proves the PDF carries searchable text.
+ */
+export function exportTextShowsName(text: string, name: string, headings: readonly string[]): boolean {
+  const strict = collapse(name);
+  if (strict === "") return false;
+  if (collapse(text).includes(strict)) return true;
+  const letters = Array.from(name.normalize("NFKC")).filter((char) => LETTER.test(char));
+  if (letters.every((char) => RELIABLE_NAME_LETTER.test(char))) return false;
+
+  const haystack = squeeze(text);
+  if (haystack === "") return false;
+  const whole = squeeze(name);
+  if (haystack.includes(whole) || haystack.includes(reversed(whole))) return true;
+  const words = collapse(name).split(" ").map(squeeze).filter((word) => word !== "");
+  if (words.every((word) => haystack.includes(word) || haystack.includes(reversed(word)))) return true;
+  const required = headings.map(squeeze).filter((heading) => heading !== "");
+  return required.length > 0 && required.every((heading) => haystack.includes(heading));
+}
+
 /** Worker codes that a retry cannot fix (mirrors internal.is_permanent_export_error). */
 export function isPermanentExportError(code: string | null | undefined): boolean {
   return code === "EXPORT_SNAPSHOT_INVALID" || code === "EXPORT_TOO_LONG" || code === "ACCOUNT_DELETING";

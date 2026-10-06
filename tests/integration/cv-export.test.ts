@@ -176,6 +176,31 @@ describe("local CV export backend integration", () => {
     // A nameless CV cannot be built through the RPCs (onboarding requires a name); pgTAP proves NAME_REQUIRED.
   }, LONG_TIMEOUT);
 
+  it("exports selected skills, certifications and an achievement with skills; the credential URL is never printed (gate review N1)", async () => {
+    const { account } = await readyAccount("skills-certs");
+    await select(account, "skill", await createSkill(account, "Analisis Data"));
+    const certification = await account.clients[0]!.rpc("create_certification_idempotent", {
+      p_operation_key: randomUUID(), p_name: "Sertifikasi Uji", p_issuer: "Lembaga Uji",
+      p_credential_url: "https://credentials.example.org/abc", p_issued_date: "2025-03-01", p_issued_precision: "month",
+    });
+    await select(account, "certification", required(certification.data?.[0]?.id, certification.error, "certification"));
+    const service = account.achievements[0]!;
+    const created = await service.createAchievement({ operationKey: randomUUID(), activityId: null, projectId: null, experienceId: null });
+    const changes = { title: "Capaian Berskill", contribution: "Kontribusi uji", scope: "", outcome: "Hasil uji", cvBullet: "Bullet berskill uji", achievedOn: "2026-09-20", metrics: [] };
+    const draft = await service.saveAchievement({ achievementId: created.achievementId, expectedRevision: 1, action: "save_draft", changes, skillNames: ["Kepemimpinan"] });
+    await service.saveAchievement({ achievementId: created.achievementId, expectedRevision: draft.revision, action: "confirm", changes, skillNames: ["Kepemimpinan"] });
+    await select(account, "achievement", created.achievementId);
+
+    expect((await account.exports[0]!.getReadiness()).ready).toBe(true);
+    const requested = await request(account);
+    expect(await drain()).toMatchObject({ succeeded: 1, failed: {} });
+    const pdf = await pdfOf(requested.exportId);
+    expect(pdf.text).toContain("Analisis Data");
+    expect(pdf.text).toContain("Sertifikasi Uji");
+    expect(pdf.text).toContain("Bullet berskill uji");
+    expect(pdf.text).not.toContain("credentials.example.org");
+  }, LONG_TIMEOUT);
+
   it("renders the snapshot, not the career rows: an edit after the request does not reach the PDF", async () => {
     const { account, achievement, bullet } = await readyAccount("snapshot");
     const requested = await request(account);

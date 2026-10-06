@@ -171,6 +171,24 @@ describe("local CV export with the real Chromium renderer", () => {
     expect(text.indexOf(normalize(NAME))).toBe(0);
   }, LONG_TIMEOUT);
 
+  it.each([
+    ["Han", "李小龙"],
+    ["Arabic", "محمد عبدالله"],
+    ["Devanagari", "प्रिया शर्मा"],
+  ])("exports a CV whose name is written in %s script (gate review RV1)", async (_script, name) => {
+    const account = await createAccount(`real-name-${_script.toLowerCase()}`, { displayName: name });
+    await account.cv[0]!.ensure();
+    await select(account, "education", await createEducation(account, "Universitas Gadjah Mada"));
+    await select(account, "experience", await createExperience(account, "PT Contoh Nusantara"));
+    const { info, pdf, boxes } = await exportAndRead(account);
+    expectA4(boxes);
+    expect(pdf.pageCount).toBe(info.page_count);
+    const text = normalize(pdf.text);
+    expect(text).toContain("Universitas Gadjah Mada");
+    expect(text).toContain("Education");
+    expect(text).toContain("Experience");
+  }, LONG_TIMEOUT);
+
   it("never falls back to the fake renderer: an unreachable renderer fails the job and stores nothing", async () => {
     const { account } = await accountWithCv("real-down", "en");
     const down = resolvePdfRenderer({ mode: "gotenberg", baseUrl: "http://127.0.0.1:9", nodeEnv: "test", timeoutMs: 2_000 });

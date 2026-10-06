@@ -1,19 +1,22 @@
 # Rencana Remediasi Review T21 — Immutable export backend
 
-Status plan: **OPEN** — menunggu persetujuan pengguna atas verdict dan klasifikasi, lalu eksekusi RV1.
+Status plan: **DONE — 6 Oktober 2026** (RV1 dan N1 ditutup; bukti `T21-phase7b-remediation.md`).
+
+- Persetujuan pengguna (6 Oktober 2026, "Setuju semua, kamu kerjakan RV1 sendiri"): verdict, klasifikasi RV1 dan N1–N8, serta pendekatan perbaikan §2. Remediasi dikerjakan reviewer sendiri.
+- **Review ulang (6 Oktober 2026): LULUS — tidak ada P0–P2 terbuka.** Test RV1 terbukti gagal sebelum perbaikan (unit; Chromium nyata 3/3 `succeeded: 0`) dan lulus sesudahnya. Checks §3 semuanya exit 0: unit 98/845, `test:integration:cv-export` 27. Review ulang tidak independen penuh karena reviewer juga mengerjakan perbaikannya. Lanjut Fase 8, lalu closeout.
 
 - Tanggal: 6 Oktober 2026.
 - Reviewer: Claude (Opus), gate review read-only setelah Fase 7 (`T21-implementation-plan.md` §9–§10).
 - HEAD yang direview: `c0f5d41` (branch `claude/clever-archimedes-gbu7qd`, baseline `5ebf1b2`, sepuluh commit T21 `d8ac9ff..c0f5d41`).
-- Verdict: **BELUM LULUS — 1 temuan P2 terbuka (RV1).** Tidak ada P0 atau P1. T21 tetap **PARTIAL** (bagian authoritative `IMPLEMENTATION_STATUS.md` tidak diubah sampai review ulang).
+- Verdict awal (HEAD `c0f5d41`): **BELUM LULUS — 1 temuan P2 terbuka (RV1).** Tidak ada P0 atau P1. T21 tetap **PARTIAL** (bagian authoritative `IMPLEMENTATION_STATUS.md` tidak diubah sampai review ulang).
 - Eksekutor remediasi: satu agent, tanpa sub-agent, TDD (test gagal → perbaikan minimal → lulus). Tanpa migration, tanpa perubahan RPC/SQL T18–T21, tanpa `db reset`, tanpa dependency baru. Setelah review ulang lulus, lanjut Fase 8 plan (decision 0027, `T21-cv-export-backend.md`, runbook final, README).
 
 ## 1. Ringkasan temuan
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | Verifikasi nama di worker menolak PDF sah untuk nama beraksara CJK, Arab, Ibrani, Devanagari, atau berkarakter kompatibilitas (ligatur): setiap attempt dan setiap request baru berakhir `EXPORT_RENDER_INVALID`, sehingga pengguna tersebut tidak pernah dapat mengekspor | OPEN |
-| N1 | P3 | Tidak ada export sukses di integration yang memuat item skill atau certification; snapshot worker strict sehingga mismatch SQL↔Zod untuk dua tipe ini akan menjadi kegagalan permanen tanpa terdeteksi. Probe reviewer (fake + Chromium nyata) lulus dan URL kredensial tidak tercetak | Kerjakan bersama RV1 (test saja) |
+| RV1 | P2 | Verifikasi nama di worker menolak PDF sah untuk nama beraksara CJK, Arab, Ibrani, Devanagari, atau berkarakter kompatibilitas (ligatur): setiap attempt dan setiap request baru berakhir `EXPORT_RENDER_INVALID`, sehingga pengguna tersebut tidak pernah dapat mengekspor | FIXED (`T21-phase7b-remediation.md`) |
+| N1 | P3 | Tidak ada export sukses di integration yang memuat item skill atau certification; snapshot worker strict sehingga mismatch SQL↔Zod untuk dua tipe ini akan menjadi kegagalan permanen tanpa terdeteksi. Probe reviewer (fake + Chromium nyata) lulus dan URL kredensial tidak tercetak | FIXED (test integration ditambah) |
 | N2 | P3 | Retry export lama tidak memvalidasi ulang (sesuai keputusan §2.2.9/§2.4.4 yang disetujui), termasuk setelah sumber di dalam snapshot dihapus; PDF baru dapat memuat teks sumber yang sudah dihapus. Baris `cv_exports` (dan snapshot-nya) tidak pernah dipurge, hanya objeknya | Diterima; catat di decision 0027. T22: tawarkan *Retry* hanya bila `cv_revision` export = revision CV saat ini, selain itu *Regenerate*. T23: tinjau retensi snapshot |
 | N3 | P3 | Pemilik dapat membaca `snapshot`, `object_key`, `attempt_token`, `idempotency_key` export miliknya lewat PostgREST (grant select T18 dipertahankan). Policy restriktif `workpulse_private_server_only` (`20260917134500_t05_storage_policy_hardening.sql`) menutup bucket untuk `anon`/`authenticated`, jadi key tidak berguna tanpa signed URL; kalimat §2.2.13 "object key tidak pernah sampai ke browser" hanya berlaku di lapisan aplikasi | Diterima; catat di decision 0027 (grant kolom = perubahan grant T18, di luar scope) |
 | N4 | P3 | Kualitas teks PDF untuk aksara non-Latin tertentu: CJK diekstrak sebagai radikal Kangxi (`小` → `⼩`), Arab/Ibrani dalam urutan visual, Devanagari kehilangan karakter. Ini batas ToUnicode Chromium/font image, bukan bug template | T22 (QA PDF Unicode) mencatat cakupan "searchable text": terverifikasi untuk Latin (termasuk Indonesia/Vietnam), Yunani, Sirilik, Thai, Hangul |

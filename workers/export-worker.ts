@@ -1,4 +1,11 @@
-import { CV_EXPORT_MAX_BYTES, CV_EXPORT_MAX_PAGES, buildExportRenderModel, cvExportSnapshotSchema, effectiveExportName } from "../src/domain/cv/export.ts";
+import {
+  CV_EXPORT_MAX_BYTES,
+  CV_EXPORT_MAX_PAGES,
+  buildExportRenderModel,
+  cvExportSnapshotSchema,
+  effectiveExportName,
+  exportTextShowsName,
+} from "../src/domain/cv/export.ts";
 import type { CvExportErrorCode } from "../src/domain/cv/contracts.ts";
 import type { ParseKind, ParseResult } from "../src/server/documents/parse-in-thread.ts";
 import { renderCvPrintHtml } from "../src/server/export/cv-print-template.ts";
@@ -83,11 +90,6 @@ function backoffIso(now: () => Date, attempt: number, capMs: number): string {
   return new Date(now().getTime() + Math.min(1_000 * 2 ** Math.max(0, Math.min(attempt - 1, 20)), capMs)).toISOString();
 }
 
-/** NFC and collapsed whitespace, so a name that the PDF wraps across lines or composes differently still matches. */
-function normalizeForMatch(value: string): string {
-  return value.normalize("NFC").replace(/\s+/g, " ").trim();
-}
-
 type Outcome = "succeeded" | "failed" | "stale";
 
 async function processJob(job: ExportJob, options: ExportWorkerOptions, summary: ExportWorkerSummary): Promise<Outcome> {
@@ -117,8 +119,12 @@ async function processJob(job: ExportJob, options: ExportWorkerOptions, summary:
   const name = effectiveExportName(parsed.data);
   if (name === null) return fail("EXPORT_SNAPSHOT_INVALID");
   let html: string;
+  let headings: string[];
   try {
-    html = renderCvPrintHtml(buildExportRenderModel(parsed.data));
+    const model = buildExportRenderModel(parsed.data);
+    html = renderCvPrintHtml(model);
+    // The sections the template prints (it skips sections whose entries are all deleted).
+    headings = model.sections.filter((section) => section.entries.some((entry) => !entry.deleted)).map((section) => section.heading);
   } catch {
     return fail("EXPORT_SNAPSHOT_INVALID");
   }
@@ -140,7 +146,7 @@ async function processJob(job: ExportJob, options: ExportWorkerOptions, summary:
   const checked = await options.parse("pdf-export", pdf);
   if (checked.status === "error" || checked.pageCount === null || checked.pageCount < 1) return fail("EXPORT_RENDER_INVALID");
   if (checked.pageCount > CV_EXPORT_MAX_PAGES) return fail("EXPORT_TOO_LONG");
-  if (!normalizeForMatch(checked.text ?? "").includes(normalizeForMatch(name))) return fail("EXPORT_RENDER_INVALID");
+  if (!exportTextShowsName(checked.text ?? "", name, headings)) return fail("EXPORT_RENDER_INVALID");
 
   // One object per attempt: a worker from an older lease can never own the key of the current attempt.
   const objectKey = `${job.user_id}/export/${job.attempt_token}`;

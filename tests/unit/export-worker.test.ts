@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { CV_EXPORT_MAX_BYTES } from "@/domain/cv/export";
+import { CV_EXPORT_MAX_BYTES, buildExportRenderModel, cvExportSnapshotSchema } from "@/domain/cv/export";
 import { ExplicitTestFakePdfRenderer, type PdfRenderer, type PdfRenderResult } from "@/server/export/pdf-renderer";
 import {
   runExportWorkerOnce,
@@ -245,6 +245,29 @@ describe("T21 export worker: failures keep the CV and use safe codes", () => {
       parse: parseReturning({ status: "ok", text: "Siti\nNurhaliza   Ç.  Ñuñez\nPengalaman", pageCount: 1 }),
     }));
     expect(h.calls.complete).toHaveLength(1);
+  });
+
+  it("accepts a non-Latin name that the renderer prints as radicals when every section heading is searchable (RV1)", async () => {
+    const snapshot = exportSnapshotFrom(documentRow({ profile_snapshot: { ...documentRow().profile_snapshot, display_name: "李小龙" } }), graduateItems());
+    const headings = buildExportRenderModel(cvExportSnapshotSchema.parse(snapshot)).sections
+      .filter((section) => section.entries.some((entry) => !entry.deleted))
+      .map((section) => section.heading);
+    expect(headings.length).toBeGreaterThan(0);
+    const input = (found: ExportJob) => ({ snapshot, cv_revision: found.cv_revision });
+    const accepted = harness({ input });
+    await runExportWorkerOnce(options(accepted, {
+      renderer: rendererReturning({ status: "ok", pdf: pdfBytes() }),
+      parse: parseReturning({ status: "ok", text: ["李⼩⻰", ...headings].join("\n"), pageCount: 1 }),
+    }));
+    expect(accepted.calls.fail).toEqual([]);
+    expect(accepted.calls.complete).toHaveLength(1);
+    // A heading missing from the text still fails: nothing proves the PDF is searchable.
+    const missing = harness({ input });
+    await failedWith(missing, {
+      renderer: rendererReturning({ status: "ok", pdf: pdfBytes() }),
+      parse: parseReturning({ status: "ok", text: ["李⼩⻰", ...headings.slice(1)].join("\n"), pageCount: 1 }),
+    });
+    expect(missing.calls.fail.map((call) => call.errorCode)).toEqual(["EXPORT_RENDER_INVALID"]);
   });
 
   it("fails with STORAGE_UNAVAILABLE when the upload fails and never completes", async () => {
