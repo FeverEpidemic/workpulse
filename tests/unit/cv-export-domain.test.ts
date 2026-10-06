@@ -14,36 +14,7 @@ import {
   isPermanentExportError,
 } from "@/domain/cv/export";
 
-import {
-  achievementSnapshot, certificationSnapshot, documentRow, educationSnapshot, exportSnapshotFrom, experienceSnapshot, graduateItems,
-  itemRow, projectSnapshot, skillSnapshot, uuid,
-} from "./cv-fixtures";
-
-/** A rich CV: partial dates, nested and standalone achievements, overrides, summary and display overrides. */
-function richCv(locale: "en" | "id") {
-  const experience = uuid(110);
-  const project = uuid(111);
-  const document = documentRow({
-    locale,
-    title: "CV Siti",
-    summary_override: "Ringkasan buatan sendiri",
-    profile_snapshot: {
-      schema_version: "cv-profile.v1", display_name: "Siti Nurhaliza Ç. Ñuñez", headline: "Analis", summary: "Ringkasan sumber",
-      contact_email: "siti@example.com", phone: null, location: "Jakarta", website: null,
-      display_overrides: { headline: "Analis Data Senior", website: "https://siti.example.com" },
-    },
-  });
-  const items = [
-    itemRow(uuid(1), "experience", 1, experienceSnapshot(experience, { start_date: "2021-04-01", start_precision: "month", end_date: null, end_precision: null, is_current: true })),
-    itemRow(uuid(2), "projects", 1, projectSnapshot(project, { experience_id: experience, start_date: "2022-01-01", start_precision: "year", end_date: "2023-06-01", end_precision: "month", is_current: false })),
-    itemRow(uuid(3), "achievements", 1, achievementSnapshot(uuid(301), { project_id: project, cv_bullet: "Pengelolaan anggaran Rp1,5 miliar — “tepat waktu”" })),
-    itemRow(uuid(4), "achievements", 2, achievementSnapshot(uuid(302), { achieved_on: "2023-12-05" }), { override_text: "Bullet yang ditulis ulang" }),
-    itemRow(uuid(5), "education", 1, educationSnapshot(uuid(201))),
-    itemRow(uuid(6), "skills", 1, skillSnapshot(uuid(401), "SQL")),
-    itemRow(uuid(7), "certifications", 1, certificationSnapshot(uuid(501))),
-  ];
-  return { document, items };
-}
+import { achievementSnapshot, documentRow, exportSnapshotFrom, graduateItems, richCvFixture as richCv, uuid } from "./cv-fixtures";
 
 describe("T21 export snapshot schema", () => {
   it("accepts the snapshot of a saved CV", () => {

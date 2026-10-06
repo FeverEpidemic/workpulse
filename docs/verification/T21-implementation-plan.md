@@ -226,10 +226,10 @@ Script baru:
 
 ### Fase 3 — Template dan PdfRenderer (TDD unit)
 
-- [ ] Test gagal lebih dulu:
+- [x] Test gagal lebih dulu:
   - `cv-print-template`: escape (`<script>`, `&`, kutip) di setiap field; tanpa `<script>`/`http`/`src=`/`url(` eksternal; `lang` sesuai locale; heading section sesuai `CV_LABELS`; semua entry dan child model muncul tepat sekali; tanpa field di luar model (mis. `credential_url`); aturan CSS `@page` A4 dan `break-*` ada.
   - `pdf-renderer`: resolve default unavailable; fake ditolak di production; URL invalid/timeout di luar batas → unavailable; Gotenberg mengirim satu part `index.html` dan field A4 yang tercatat di Fase 0 (fetch palsu); respons non-OK → `RENDERER_UNAVAILABLE`, abort timeout → `RENDERER_TIMEOUT`, bukan `%PDF-`/terlalu besar → `EXPORT_RENDER_INVALID`; fake menghasilkan PDF yang lolos `parseInThread("pdf")`.
-- [ ] Implementasi §3.3 (template + renderer). `pnpm test`, `pnpm typecheck`, `pnpm lint`. Commit `feat(t21): add single-column print template and PDF renderer adapter`, receipt Fase 3.
+- [x] Implementasi §3.3 (template + renderer). `pnpm test`, `pnpm typecheck`, `pnpm lint`. Commit `feat(t21): add single-column print template and PDF renderer adapter`, receipt Fase 3.
 
 ### Fase 4 — Worker (TDD unit dengan fake gateway)
 
