@@ -246,7 +246,7 @@ Script baru:
 
 ### Fase 6 — Integration nyata
 
-- [ ] `tests/integration/cv-export.test.ts` (setup seperti `cv-freshness.test.ts`: admin, owner A/B nyata, onboarding dan sumber lewat RPC nyata, Storage lokal nyata, worker lewat `runExportWorkerOnce` dengan gateway Supabase nyata dan renderer **fake** kecuali disebut lain). Skenario wajib:
+- [x] `tests/integration/cv-export.test.ts` (setup seperti `cv-freshness.test.ts`: admin, owner A/B nyata, onboarding dan sumber lewat RPC nyata, Storage lokal nyata, worker lewat `runExportWorkerOnce` dengan gateway Supabase nyata dan renderer **fake** kecuali disebut lain). Skenario wajib:
   1. Jalur utama: CV siap → readiness ready → request → worker → `succeeded` → objek ada di `<user>/export/<token>` → `issueDownload` menghasilkan URL yang mengunduh `%PDF-` dengan TTL ≤ 300.
   2. Release scenario PRD: achievement terpilih ber-override → edit sumber → readiness `ITEM_CHANGED`, request `CV_EXPORT_BLOCKED` → Keep saved wording (`resolve_cv_freshness` keep) → export lolos dengan wording override → delete achievement → `ITEM_DELETED` diblokir → remove item → lolos.
   3. Graduate (PRD): tanpa experience, dengan education + project akademik + achievement confirmed → export sukses; akun dengan skill saja → `CONTENT_REQUIRED`; nama override kosong dan snapshot kosong tidak mungkin dibuat lewat RPC → dibuktikan di pgTAP saja (catat).
@@ -258,8 +258,8 @@ Script baru:
   9. Kedaluwarsa (§1.12): majukan `expires_at` lewat admin → worker housekeeping mengantre dan cleanup menghapus objek → unduhan `CV_EXPORT_EXPIRED` → request baru revision sama membuat export baru.
   10. Orphan (§1.14): objek `export` tanpa baris berumur ≥ ambang → diantrekan dan dihapus.
   11. Ownership, deleting, log hygiene (§1.13, §1.15, §1.19): B tidak melihat/me-retry/mengunduh export A (`CV_EXPORT_NOT_FOUND`); akun deleting di tengah job → `ACCOUNT_DELETING`; sentinel `WP-PRIVATE-CV-SENTINEL-<uuid>` (nama, override, bullet, judul) tidak muncul di error/`detail`/respons service/ringkasan worker.
-- [ ] `tests/integration/cv-export-renderer-real.test.ts` (renderer Gotenberg nyata dari env `WORKPULSE_PDF_GOTENBERG_URL`; gagal keras bila tidak terjangkau, tanpa fallback fake): fixture en dan id dengan karakter Indonesia dan bullet panjang → request → worker → unduh objek → `pdfjs-dist` di test: MediaBox A4 ± 1 pt, teks memuat nama efektif, heading locale, override, bullet Indonesia; fixture panjang → > 1 halaman dan ≤ 20; teks tidak memuat ID item, object key, atau kata `evidence` dari data uji.
-- [ ] Tambah script `test:integration:cv-export`, jalankan. Commit `test(t21): add CV export integration suites`, receipt Fase 6.
+- [x] `tests/integration/cv-export-renderer-real.test.ts` (renderer Gotenberg nyata dari env `WORKPULSE_PDF_GOTENBERG_URL`; gagal keras bila tidak terjangkau, tanpa fallback fake): fixture en dan id dengan karakter Indonesia dan bullet panjang → request → worker → unduh objek → `pdfjs-dist` di test: MediaBox A4 ± 1 pt, teks memuat nama efektif, heading locale, override, bullet Indonesia; fixture panjang → > 1 halaman dan ≤ 20; teks tidak memuat ID item, object key, atau kata `evidence` dari data uji.
+- [x] Tambah script `test:integration:cv-export`, jalankan. Commit `test(t21): add CV export integration suites`, receipt Fase 6.
 
 ### Fase 7 — Regresi penuh
 
