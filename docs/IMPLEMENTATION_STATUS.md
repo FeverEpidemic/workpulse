@@ -23,7 +23,7 @@ Belum dijalankan: `test:e2e` gabungan, `test:ai:live` (T20 tanpa AI), stres race
 
 Risiko/batas: P3 terbuka — F1 fokus hilang setelah `CV_SOURCE_CHANGED`, F2 tabel review kurang terbaca di 360 px, F3 copy unconfirmed/`parentAdded`, F4 assertion ganda di spec M2, F6 biaya baca freshness per item. Race diuji dua session nyata ×3 putaran pada satu proses Node. Bukan bukti production.
 
-Berikutnya: **T21 Export backend** (validasi export memakai `internal.cv_item_state`/`cv_profile_state` di bawah lock dengan urutan decision 0026; `changed`/`deleted`/`unconfirmed`/profil `changed` memblokir, `kept` lolos; snapshot immutable dan enqueue dalam satu transaksi), lalu T22 S14/PDF. [Handoff T21 single-agent](verification/T21-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5); lima keputusan §2.4 menunggu persetujuan pengguna. T21 tetap **TODO**.
+Berikutnya: **T21 Export backend** (validasi export memakai `internal.cv_item_state`/`cv_profile_state` di bawah lock dengan urutan decision 0026; `changed`/`deleted`/`unconfirmed`/profil `changed` memblokir, `kept` lolos; snapshot immutable dan enqueue dalam satu transaksi), lalu T22 S14/PDF. [Handoff T21 single-agent](verification/T21-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5); lima keputusan §2.4 disetujui pengguna (6 Oktober 2026). T21 tetap **TODO**.
 
 ## T19 — CV builder dan overrides, acceptance lokal — 1 Oktober 2026
 
