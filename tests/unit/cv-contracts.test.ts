@@ -11,9 +11,17 @@ import {
   CV_FRESHNESS_STATES,
   cvFreshnessRowSchema,
   cvReviewSummarySchema,
+  CV_EXPORT_BLOCKER_CODES,
+  CV_EXPORT_ERROR_CODES,
+  CV_EXPORT_STATUSES,
+  cvExportReadinessSchema,
+  cvExportRowSchema,
+  downloadCvExportInput,
   removeCvItemInput,
   reorderCvSectionInput,
+  requestCvExportInput,
   resolveCvFreshnessInput,
+  retryCvExportInput,
   saveCvEditsInput,
   selectCvSourceInput,
   updateCvLayoutInput,
@@ -39,11 +47,12 @@ describe("T18 CV contracts", () => {
     });
   });
 
-  it("lists the fifteen database error codes (T19 adds CV_OVERRIDE_UNSUPPORTED, T20 CV_SOURCE_CHANGED and CV_RESOLUTION_INVALID)", () => {
+  it("lists the database error codes (T19 adds CV_OVERRIDE_UNSUPPORTED, T20 CV_SOURCE_CHANGED and CV_RESOLUTION_INVALID, T21 the export codes)", () => {
     expect([...CV_ERROR_CODES].sort()).toEqual([
-      "AUTH_REQUIRED", "CV_CHILD_ITEMS_EXIST", "CV_ITEM_IMMUTABLE", "CV_ITEM_NOT_FOUND", "CV_NOT_FOUND", "CV_OVERRIDE_UNSUPPORTED", "CV_REORDER_INVALID",
-      "CV_RESOLUTION_INVALID", "CV_SOURCE_CHANGED", "CV_SOURCE_DUPLICATE", "CV_SOURCE_INELIGIBLE", "CV_SOURCE_NOT_FOUND", "INVALID_CV_INPUT",
-      "ONBOARDING_REQUIRED", "STALE_REVISION",
+      "AUTH_REQUIRED", "CV_CHILD_ITEMS_EXIST", "CV_EXPORT_BLOCKED", "CV_EXPORT_EXPIRED", "CV_EXPORT_IMMUTABLE", "CV_EXPORT_IN_PROGRESS",
+      "CV_EXPORT_NOT_FOUND", "CV_EXPORT_NOT_READY", "CV_EXPORT_NOT_RETRYABLE", "CV_ITEM_IMMUTABLE", "CV_ITEM_NOT_FOUND", "CV_NOT_FOUND",
+      "CV_OVERRIDE_UNSUPPORTED", "CV_REORDER_INVALID", "CV_RESOLUTION_INVALID", "CV_SOURCE_CHANGED", "CV_SOURCE_DUPLICATE", "CV_SOURCE_INELIGIBLE",
+      "CV_SOURCE_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "INVALID_CV_INPUT", "ONBOARDING_REQUIRED", "STALE_REVISION",
     ]);
   });
 
@@ -254,5 +263,93 @@ describe("T20 CV freshness contracts", () => {
     expect(cvReviewSummarySchema.safeParse({ has_cv: false, review_count: 0, available_count: 3 }).success).toBe(true);
     expect(cvReviewSummarySchema.safeParse({ has_cv: true, review_count: -1, available_count: 0 }).success).toBe(false);
     expect(cvReviewSummarySchema.safeParse({ has_cv: true, review_count: 1, available_count: 0, extra: 1 }).success).toBe(false);
+  });
+});
+
+describe("T21 CV export contracts", () => {
+  const EXPORT = "a5000000-0000-4000-8000-0000000000e1";
+  const CV_ID = "a5000000-0000-4000-8000-0000000000c1";
+  const row = (overrides: Record<string, unknown> = {}) => ({
+    id: EXPORT, cv_id: CV_ID, cv_revision: 4, status: "queued", error_code: null, attempt_count: 0, page_count: null, byte_size: null,
+    started_at: null, finished_at: null, expires_at: null, purged_at: null, created_at: "2026-10-06T10:00:00Z", updated_at: "2026-10-06T10:00:00Z", revision: 1,
+    ...overrides,
+  });
+
+  it("pins blocker codes, statuses and the worker error allowlist", () => {
+    expect([...CV_EXPORT_BLOCKER_CODES]).toEqual(["CV_NOT_FOUND", "NAME_REQUIRED", "CONTENT_REQUIRED", "ITEM_CHANGED", "ITEM_DELETED", "ITEM_UNCONFIRMED", "PROFILE_CHANGED"]);
+    expect([...CV_EXPORT_STATUSES]).toEqual(["queued", "running", "succeeded", "failed"]);
+    expect([...CV_EXPORT_ERROR_CODES].sort()).toEqual([
+      "ACCOUNT_DELETING", "EXPORT_RENDER_INVALID", "EXPORT_SNAPSHOT_INVALID", "EXPORT_TIMEOUT", "EXPORT_TOO_LONG", "RENDERER_TIMEOUT", "RENDERER_UNAVAILABLE", "STORAGE_UNAVAILABLE",
+    ]);
+  });
+
+  describe("cvExportReadinessSchema", () => {
+    it("accepts a ready CV, a blocked CV and a missing CV", () => {
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: true, blockers: [] }).success).toBe(true);
+      expect(cvExportReadinessSchema.safeParse({
+        has_cv: true, cv_revision: 8, ready: false, blockers: [{ code: "ITEM_CHANGED", item_id: ID }, { code: "NAME_REQUIRED" }],
+      }).success).toBe(true);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: false, cv_revision: null, ready: false, blockers: [{ code: "CV_NOT_FOUND" }] }).success).toBe(true);
+    });
+
+    it("rejects an inconsistent ready flag, unknown codes and keys, and a non-UUID item", () => {
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: true, blockers: [{ code: "NAME_REQUIRED" }] }).success).toBe(false);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: false, blockers: [] }).success).toBe(false);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: false, cv_revision: null, ready: true, blockers: [] }).success).toBe(false);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: false, blockers: [{ code: "ITEM_WEIRD" }] }).success).toBe(false);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: false, blockers: [{ code: "ITEM_CHANGED", item_id: "nope" }] }).success).toBe(false);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: false, blockers: [{ code: "ITEM_CHANGED", text: "WP-PRIVATE" }] }).success).toBe(false);
+      expect(cvExportReadinessSchema.safeParse({ has_cv: true, cv_revision: 8, ready: true, blockers: [], extra: 1 }).success).toBe(false);
+    });
+  });
+
+  describe("cvExportRowSchema", () => {
+    it("accepts the safe columns of each state", () => {
+      expect(cvExportRowSchema.safeParse(row()).success).toBe(true);
+      expect(cvExportRowSchema.safeParse(row({ status: "running", attempt_count: 1, started_at: "2026-10-06T10:00:01Z" })).success).toBe(true);
+      expect(cvExportRowSchema.safeParse(row({
+        status: "succeeded", attempt_count: 1, page_count: 2, byte_size: 54321, finished_at: "2026-10-06T10:00:05Z", expires_at: "2026-10-07T10:00:05Z",
+      })).success).toBe(true);
+      expect(cvExportRowSchema.safeParse(row({ status: "failed", attempt_count: 1, error_code: "RENDERER_TIMEOUT", finished_at: "2026-10-06T10:00:05Z" })).success).toBe(true);
+    });
+
+    it("rejects the private columns so they cannot reach the browser", () => {
+      for (const key of ["snapshot", "attempt_token", "lease_expires_at", "object_key", "idempotency_key", "user_id"]) {
+        expect(cvExportRowSchema.safeParse(row({ [key]: "WP-PRIVATE" })).success).toBe(false);
+      }
+    });
+
+    it("rejects unknown statuses and error codes, and an error code outside a failed row", () => {
+      expect(cvExportRowSchema.safeParse(row({ status: "done" })).success).toBe(false);
+      expect(cvExportRowSchema.safeParse(row({ status: "failed", attempt_count: 1, error_code: "SECRET_TEXT" })).success).toBe(false);
+      expect(cvExportRowSchema.safeParse(row({ status: "failed", attempt_count: 1, error_code: null })).success).toBe(false);
+      expect(cvExportRowSchema.safeParse(row({ error_code: "EXPORT_TIMEOUT" })).success).toBe(false);
+      expect(cvExportRowSchema.safeParse(row({ attempt_count: 4 })).success).toBe(false);
+      expect(cvExportRowSchema.safeParse(row({ page_count: 21 })).success).toBe(false);
+    });
+  });
+
+  describe("inputs", () => {
+    it("requestCvExportInput needs a positive revision and a safe, trimmed key", () => {
+      expect(requestCvExportInput.safeParse({ expected_revision: 3, idempotency_key: "req-1_A" }).success).toBe(true);
+      expect(requestCvExportInput.parse({ expected_revision: 3, idempotency_key: "  req-1  " }).idempotency_key).toBe("req-1");
+      expect(requestCvExportInput.safeParse({ expected_revision: 3, idempotency_key: "k".repeat(200) }).success).toBe(true);
+      expect(requestCvExportInput.safeParse({ expected_revision: 3, idempotency_key: "k".repeat(201) }).success).toBe(false);
+      expect(requestCvExportInput.safeParse({ expected_revision: 3, idempotency_key: "" }).success).toBe(false);
+      expect(requestCvExportInput.safeParse({ expected_revision: 3, idempotency_key: "bad key" }).success).toBe(false);
+      expect(requestCvExportInput.safeParse({ expected_revision: 3, idempotency_key: "bad/key" }).success).toBe(false);
+      expect(requestCvExportInput.safeParse({ expected_revision: 0, idempotency_key: "ok" }).success).toBe(false);
+      expect(requestCvExportInput.safeParse({ expected_revision: 1.5, idempotency_key: "ok" }).success).toBe(false);
+      expect(requestCvExportInput.safeParse({ expected_revision: 1, idempotency_key: "ok", user_id: ID }).success).toBe(false);
+    });
+
+    it("retry and download take one export UUID and nothing else", () => {
+      for (const schema of [retryCvExportInput, downloadCvExportInput]) {
+        expect(schema.safeParse({ export_id: ID }).success).toBe(true);
+        expect(schema.safeParse({ export_id: "nope" }).success).toBe(false);
+        expect(schema.safeParse({ export_id: ID, object_key: "x" }).success).toBe(false);
+        expect(schema.safeParse({}).success).toBe(false);
+      }
+    });
   });
 });

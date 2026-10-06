@@ -38,6 +38,14 @@ export const CV_ERROR_CODES = [
   "CV_OVERRIDE_UNSUPPORTED",
   "CV_SOURCE_CHANGED",
   "CV_RESOLUTION_INVALID",
+  "IDEMPOTENCY_KEY_REUSED",
+  "CV_EXPORT_BLOCKED",
+  "CV_EXPORT_IN_PROGRESS",
+  "CV_EXPORT_NOT_FOUND",
+  "CV_EXPORT_NOT_RETRYABLE",
+  "CV_EXPORT_NOT_READY",
+  "CV_EXPORT_EXPIRED",
+  "CV_EXPORT_IMMUTABLE",
 ] as const;
 export type CvErrorCode = (typeof CV_ERROR_CODES)[number];
 
@@ -345,4 +353,106 @@ export function parseChildItemsDetail(detail: string | null | undefined): string
   }
   const parsed = z.array(z.uuid()).safeParse(json);
   return parsed.success ? parsed.data : null;
+}
+
+// T21 export contracts ---------------------------------------------------------------------------------------------
+
+/** Codes of internal.cv_export_blockers() plus CV_NOT_FOUND for an account that has no CV yet. */
+export const CV_EXPORT_BLOCKER_CODES = [
+  "CV_NOT_FOUND",
+  "NAME_REQUIRED",
+  "CONTENT_REQUIRED",
+  "ITEM_CHANGED",
+  "ITEM_DELETED",
+  "ITEM_UNCONFIRMED",
+  "PROFILE_CHANGED",
+] as const;
+export type CvExportBlockerCode = (typeof CV_EXPORT_BLOCKER_CODES)[number];
+
+export const CV_EXPORT_STATUSES = ["queued", "running", "succeeded", "failed"] as const;
+export type CvExportStatus = (typeof CV_EXPORT_STATUSES)[number];
+
+/** The only error codes a worker may store on an export (fail_cv_export allowlist); never CV text. */
+export const CV_EXPORT_ERROR_CODES = [
+  "EXPORT_TIMEOUT",
+  "RENDERER_UNAVAILABLE",
+  "RENDERER_TIMEOUT",
+  "EXPORT_RENDER_INVALID",
+  "EXPORT_TOO_LONG",
+  "EXPORT_SNAPSHOT_INVALID",
+  "STORAGE_UNAVAILABLE",
+  "ACCOUNT_DELETING",
+] as const;
+export type CvExportErrorCode = (typeof CV_EXPORT_ERROR_CODES)[number];
+
+/** One blocker: a code and, for item blockers, the caller's own item id. */
+export const cvExportBlockerSchema = z.strictObject({
+  code: z.enum(CV_EXPORT_BLOCKER_CODES),
+  item_id: z.uuid().optional(),
+});
+export type CvExportBlocker = z.infer<typeof cvExportBlockerSchema>;
+
+/** One row of get_cv_export_readiness(): ready exactly when a CV exists and nothing blocks it. */
+export const cvExportReadinessSchema = z
+  .strictObject({
+    has_cv: z.boolean(),
+    cv_revision: revision.nullable(),
+    ready: z.boolean(),
+    blockers: z.array(cvExportBlockerSchema),
+  })
+  .refine((row) => row.ready === (row.has_cv && row.blockers.length === 0), { message: "ready_blockers_mismatch" });
+export type CvExportReadiness = z.infer<typeof cvExportReadinessSchema>;
+
+const CV_EXPORT_MAX_BYTES_LIMIT = 10 * 1024 * 1024;
+
+/**
+ * Columns of cv_exports that may reach a client. The snapshot, the attempt token, the lease and the object key
+ * stay on the server; strict on purpose.
+ */
+export const cvExportRowSchema = z
+  .strictObject({
+    id: z.uuid(),
+    cv_id: z.uuid(),
+    cv_revision: revision,
+    status: z.enum(CV_EXPORT_STATUSES),
+    error_code: z.enum(CV_EXPORT_ERROR_CODES).nullable(),
+    attempt_count: z.number().int().min(0).max(3),
+    page_count: z.number().int().min(1).max(20).nullable(),
+    byte_size: z.number().int().min(1).max(CV_EXPORT_MAX_BYTES_LIMIT).nullable(),
+    started_at: z.string().nullable(),
+    finished_at: z.string().nullable(),
+    expires_at: z.string().nullable(),
+    purged_at: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    revision,
+  })
+  .refine((row) => (row.status === "failed") === (row.error_code !== null), { message: "error_code_state_mismatch" });
+export type CvExportRow = z.infer<typeof cvExportRowSchema>;
+
+export const CV_IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{1,200}$/;
+
+export const requestCvExportInput = z.strictObject({
+  expected_revision: revision,
+  idempotency_key: z.string().trim().regex(CV_IDEMPOTENCY_KEY_PATTERN),
+});
+export type RequestCvExportInput = z.infer<typeof requestCvExportInput>;
+
+export const retryCvExportInput = z.strictObject({ export_id: z.uuid() });
+export type RetryCvExportInput = z.infer<typeof retryCvExportInput>;
+
+export const downloadCvExportInput = z.strictObject({ export_id: z.uuid() });
+export type DownloadCvExportInput = z.infer<typeof downloadCvExportInput>;
+
+/** The CV_EXPORT_BLOCKED detail is {"blockers":[{code,item_id?}]}; anything else is rejected (no text can leak). */
+export function parseExportBlockersDetail(detail: string | null | undefined): CvExportBlocker[] | null {
+  if (typeof detail !== "string") return null;
+  let json: unknown;
+  try {
+    json = JSON.parse(detail);
+  } catch {
+    return null;
+  }
+  const parsed = z.strictObject({ blockers: z.array(cvExportBlockerSchema) }).safeParse(json);
+  return parsed.success ? parsed.data.blockers : null;
 }

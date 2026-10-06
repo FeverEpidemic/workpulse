@@ -1,4 +1,5 @@
 import type { CvItemRow, CvDocumentRow, CvSectionKey, CvSourceSnapshot } from "@/domain/cv/contracts";
+import type { CvExportSnapshot } from "@/domain/cv/export";
 
 export const ORDER: CvSectionKey[] = ["experience", "projects", "achievements", "education", "skills", "certifications"];
 export const USER = "11111111-1111-4111-8111-111111111111";
@@ -69,4 +70,25 @@ export function graduateItems(): CvItemRow[] {
     itemRow(uuid(4), "achievements", 2, achievementSnapshot(uuid(302))),
     itemRow(uuid(5), "skills", 1, skillSnapshot(uuid(401))),
   ];
+}
+
+const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+/** Mirrors internal.cv_export_snapshot(): the saved CV as stored, items by section, position and id (T21). */
+export function exportSnapshotFrom(document: CvDocumentRow, items: readonly CvItemRow[]): CvExportSnapshot {
+  const sorted = [...items].sort((a, b) => compareText(a.section_key, b.section_key) || a.position - b.position || compareText(a.id, b.id));
+  return {
+    schema_version: "cv-export.v1",
+    template_key: document.template_key,
+    locale: document.locale,
+    title: document.title,
+    cv_id: document.id,
+    cv_revision: document.revision,
+    section_order: document.section_order,
+    profile_snapshot: document.profile_snapshot,
+    summary_override: document.summary_override,
+    items: sorted.map((item) => ({
+      id: item.id, section_key: item.section_key, position: item.position, source_snapshot: item.source_snapshot, override_text: item.override_text,
+    })),
+  };
 }

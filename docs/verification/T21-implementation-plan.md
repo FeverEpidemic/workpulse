@@ -219,10 +219,10 @@ Script baru:
 
 ### Fase 2 — Domain murni (TDD unit)
 
-- [ ] Test gagal lebih dulu:
+- [x] Test gagal lebih dulu:
   - `cv-contracts`: kode error, blocker, status, allowlist error worker; `requestCvExportInput` (pola key, revision ≥ 1); `cvExportRowSchema` menolak key privat.
   - `cv-export-domain`: `cvExportSnapshotSchema` menerima snapshot dari fixture dan menolak key asing/versi lain; `buildExportRenderModel` **sama persis** dengan `buildCvPreviewModel` atas dokumen/item yang sama (en dan id, tanggal parsial, override, achievement bersarang dan standalone); `effectiveExportName`; `isPermanentExportError`; `isExportExpired`.
-- [ ] Implementasi §3.2 hingga PASS. `pnpm test`, `pnpm typecheck`, `pnpm lint`. Commit `feat(t21): add CV export snapshot domain`, receipt Fase 2.
+- [x] Implementasi §3.2 hingga PASS. `pnpm test`, `pnpm typecheck`, `pnpm lint`. Commit `feat(t21): add CV export snapshot domain`, receipt Fase 2.
 
 ### Fase 3 — Template dan PdfRenderer (TDD unit)
 
