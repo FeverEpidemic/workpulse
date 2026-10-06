@@ -536,6 +536,7 @@ export type Database = {
         Row: {
           attempt_count: number
           attempt_token: string | null
+          byte_size: number | null
           created_at: string
           cv_id: string
           cv_revision: number
@@ -546,6 +547,8 @@ export type Database = {
           idempotency_key: string
           lease_expires_at: string | null
           object_key: string | null
+          page_count: number | null
+          purged_at: string | null
           revision: number
           snapshot: Json
           started_at: string | null
@@ -556,6 +559,7 @@ export type Database = {
         Insert: {
           attempt_count?: number
           attempt_token?: string | null
+          byte_size?: number | null
           created_at?: string
           cv_id: string
           cv_revision: number
@@ -566,6 +570,8 @@ export type Database = {
           idempotency_key: string
           lease_expires_at?: string | null
           object_key?: string | null
+          page_count?: number | null
+          purged_at?: string | null
           revision?: number
           snapshot: Json
           started_at?: string | null
@@ -576,6 +582,7 @@ export type Database = {
         Update: {
           attempt_count?: number
           attempt_token?: string | null
+          byte_size?: number | null
           created_at?: string
           cv_id?: string
           cv_revision?: number
@@ -586,6 +593,8 @@ export type Database = {
           idempotency_key?: string
           lease_expires_at?: string | null
           object_key?: string | null
+          page_count?: number | null
+          purged_at?: string | null
           revision?: number
           snapshot?: Json
           started_at?: string | null
@@ -1348,6 +1357,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      claim_cv_export_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          cv_revision: number
+          id: string
+          user_id: string
+        }[]
+      }
       claim_evidence_cleanup_jobs: {
         Args: { p_limit?: number }
         Returns: {
@@ -1384,6 +1403,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      claim_export_cleanup_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          id: string
+          lease_expires_at: string
+          object_key: string
+          user_id: string
+        }[]
       }
       claim_import_cleanup_jobs: {
         Args: { p_limit?: number }
@@ -1423,6 +1453,16 @@ export type Database = {
         Args: { p_attempt_token: string; p_job_id: string; p_result: Json }
         Returns: string
       }
+      complete_cv_export: {
+        Args: {
+          p_attempt_token: string
+          p_byte_size: number
+          p_export_id: string
+          p_object_key: string
+          p_page_count: number
+        }
+        Returns: string
+      }
       complete_evidence_cleanup_job: {
         Args: { p_attempt_token: string; p_job_id: string }
         Returns: boolean
@@ -1434,6 +1474,10 @@ export type Database = {
           p_job_id: string
           p_result: string
         }
+        Returns: boolean
+      }
+      complete_export_cleanup_job: {
+        Args: { p_attempt_token: string; p_job_id: string }
         Returns: boolean
       }
       complete_import_ai_job: {
@@ -1742,6 +1786,8 @@ export type Database = {
         }[]
       }
       expire_ai_job_leases: { Args: never; Returns: number }
+      expire_cv_export_leases: { Args: never; Returns: number }
+      expire_cv_exports: { Args: { p_limit?: number }; Returns: number }
       expire_evidence_uploads: { Args: { p_limit?: number }; Returns: number }
       expire_import_uploads: {
         Args: { p_limit?: number; p_min_age_seconds?: number }
@@ -1752,6 +1798,14 @@ export type Database = {
           p_attempt_token: string
           p_error_code: string
           p_job_id: string
+        }
+        Returns: boolean
+      }
+      fail_cv_export: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_export_id: string
         }
         Returns: boolean
       }
@@ -1790,6 +1844,14 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      fail_export_cleanup_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+        }
+        Returns: boolean
       }
       fail_import_cleanup_job: {
         Args: {
@@ -1915,6 +1977,23 @@ export type Database = {
           raw_text: string
           role: string
           scope: string
+        }[]
+      }
+      get_cv_export_download: { Args: { p_export_id: string }; Returns: string }
+      get_cv_export_input: {
+        Args: { p_attempt_token: string; p_export_id: string }
+        Returns: {
+          cv_revision: number
+          snapshot: Json
+        }[]
+      }
+      get_cv_export_readiness: {
+        Args: never
+        Returns: {
+          blockers: Json
+          cv_revision: number
+          has_cv: boolean
+          ready: boolean
         }[]
       }
       get_cv_freshness: {
@@ -2047,6 +2126,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      reconcile_orphan_export_objects: {
+        Args: { p_limit?: number; p_min_age_seconds?: number }
+        Returns: number
+      }
       reconcile_orphan_import_objects: {
         Args: { p_limit?: number; p_min_age_seconds?: number }
         Returns: number
@@ -2144,6 +2227,15 @@ export type Database = {
           status: string
         }[]
       }
+      request_cv_export: {
+        Args: { p_expected_revision: number; p_idempotency_key: string }
+        Returns: {
+          cv_revision: number
+          export_id: string
+          reused: boolean
+          status: string
+        }[]
+      }
       requeue_failed_evidence_cleanup_job: {
         Args: { p_job_id: string; p_next_attempt_at?: string }
         Returns: boolean
@@ -2198,6 +2290,14 @@ export type Database = {
           status: string
         }[]
       }
+      retry_cv_export: {
+        Args: { p_export_id: string }
+        Returns: {
+          attempt_count: number
+          export_id: string
+          status: string
+        }[]
+      }
       retry_evidence_cleanup_job: {
         Args: {
           p_attempt_token: string
@@ -2208,6 +2308,15 @@ export type Database = {
         Returns: boolean
       }
       retry_evidence_scan_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_job_id: string
+          p_next_attempt_at: string
+        }
+        Returns: boolean
+      }
+      retry_export_cleanup_job: {
         Args: {
           p_attempt_token: string
           p_error_code: string

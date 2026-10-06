@@ -201,7 +201,7 @@ Script baru:
 
 ### Fase 1 — Database (TDD pgTAP)
 
-- [ ] Tulis `supabase/tests/database/cv_export.test.sql` yang gagal lebih dulu (pola `cv_freshness.test.sql`). Assertion minimum:
+- [x] Tulis `supabase/tests/database/cv_export.test.sql` yang gagal lebih dulu (pola `cv_freshness.test.sql`). Assertion minimum:
   1. Struktur: kolom baru, constraint, index, trigger, fungsi `prosecdef`; RPC authenticated hanya `authenticated`, RPC worker hanya `service_role`, helper internal tanpa grant; `authenticated` tetap tanpa insert/update/delete pada `cv_exports`.
   2. Blocker (§1.1): CV siap → tanpa blocker; nama kosong (snapshot dan override) → `NAME_REQUIRED`; hanya skill/certification → `CONTENT_REQUIRED`; item `changed`/`deleted`/`unconfirmed` → kode per item dengan `item_id`; profil `changed` → `PROFILE_CHANGED`; `kept` (item dan profil) → lolos.
   3. Request (§1.2–§1.3): baris `queued` dengan snapshot `cv-export.v1` lengkap dan urut; snapshot tanpa key privat (`raw_text`, `contribution`, `source_excerpt`, `metrics`, `activity_id`, evidence); `CV_EXPORT_BLOCKED` dengan `detail` JSON tanpa write; `STALE_REVISION`, `CV_NOT_FOUND`, `ONBOARDING_REQUIRED`, `INVALID_CV_INPUT` (key invalid) tanpa write.
@@ -213,9 +213,9 @@ Script baru:
   9. Unduhan (§1.13): milik sendiri sukses → key; kedaluwarsa → `CV_EXPORT_EXPIRED`; belum sukses → `CV_EXPORT_NOT_READY`; akun B/ID acak → `CV_EXPORT_NOT_FOUND`.
   10. Akun deleting (§1.15): request → `AUTH_REQUIRED`; `get_cv_export_input` → tanpa baris dan job `failed` `ACCOUNT_DELETING`.
   11. Regresi: file pgTAP lama lulus tanpa perubahan (khususnya `cv_selection.test.sql` bagian grant `cv_exports`).
-- [ ] Pastikan `pnpm db:test` **FAIL** karena test baru. Tulis migration §3.1, lalu `pnpm exec supabase migration up --local`. **Dilarang** `db reset`.
-- [ ] `pnpm db:test` (PASS; catat total), `pnpm db:lint`, `pnpm db:types`, migration list (31/31).
-- [ ] Commit `feat(t21): add CV export request, job lifecycle and retention RPCs`, lalu receipt Fase 1. Checkpoint Claude dianjurkan.
+- [x] Pastikan `pnpm db:test` **FAIL** karena test baru. Tulis migration §3.1, lalu `pnpm exec supabase migration up --local`. **Dilarang** `db reset`.
+- [x] `pnpm db:test` (PASS; catat total), `pnpm db:lint`, `pnpm db:types`, migration list (31/31).
+- [x] Commit `feat(t21): add CV export request, job lifecycle and retention RPCs`, lalu receipt Fase 1. Checkpoint Claude dianjurkan.
 
 ### Fase 2 — Domain murni (TDD unit)
 
