@@ -388,11 +388,11 @@ Script baru:
 
 ### Fase 3 — UI S14 dan tautan S13 (TDD unit state, lalu komponen)
 
-- [ ] Test gagal lebih dulu:
+- [x] Test gagal lebih dulu:
   - `tests/unit/cv-export-page-state.test.ts`: reducer/state klien murni untuk alur klik → pending → receipt → polling → terminal, `STALE_REVISION`, `EXPORT_IN_PROGRESS`, `EXPORT_BLOCKED`, navigasi halaman (batas 1..N), dan polling berhenti saat terminal/hidden.
   - `tests/unit/cv-export-i18n.test.ts`: parity kunci baru en/id.
   - Unit state builder: tautan *Preview and export* nonaktif saat `dirty`.
-- [ ] Implementasi §3.3 (route, loading, komponen, CSS, i18n, tautan S13). Jalankan `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`. Commit `feat(t22): add S14 saved preview and export page`, lalu receipt Fase 3.
+- [x] Implementasi §3.3 (route, loading, komponen, CSS, i18n, tautan S13). Jalankan `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`. Commit `feat(t22): add S14 saved preview and export page`, lalu receipt Fase 3.
 
 ### Fase 4 — QA PDF nyata (TDD dengan renderer nyata)
 

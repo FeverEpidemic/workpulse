@@ -36,6 +36,14 @@ export function deriveSaveState(input: SaveStateInput): SaveState {
   return { status, canSave, showConflict: unresolved || (input.conflict && input.dirty) };
 }
 
+/**
+ * The "Preview and export" link of S13 (T22): S14 shows the saved revision, so the link is only usable when nothing
+ * is unsaved, being saved or in conflict. Otherwise it is a disabled button with a visible reason.
+ */
+export function previewLinkState(status: SaveStatus): { disabled: boolean; reasonKey: MessageKey | null } {
+  return status === "saved" ? { disabled: false, reasonKey: null } : { disabled: true, reasonKey: "cv.builder.previewAndExportDisabled" };
+}
+
 /** True for the stale-revision answer that reloads the CV instead of showing an error. */
 export function isStaleConflict(state: ActionState): boolean {
   return state.status === "error" && state.error.code === "CONFLICT" && state.error.messageKey === "error.conflict";

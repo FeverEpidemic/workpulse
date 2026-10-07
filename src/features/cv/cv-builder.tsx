@@ -23,11 +23,11 @@ import {
 } from "./actions";
 import {
   achievementPlacements, announcedPosition, BULK_FOCUS_CANDIDATES, choiceKeys, clientCorrelationId, deriveSaveState, firstInvalidField,
-  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, reviewFocusCandidates, reviewTargets, singleResolution,
+  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, previewLinkState, reviewFocusCandidates, reviewTargets, singleResolution,
 } from "./cv-builder-state";
 import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField, type ProfileReview } from "./cv-panels";
 import { CvReviewSummary } from "./cv-review";
-import { CvPreview } from "./cv-preview";
+import { CvExportLink, CvPreview } from "./cv-preview";
 import { CvSection, type EditorEntry, type SectionHandlers } from "./cv-section";
 import type { PoolBySection, PoolOption } from "./cv-view";
 
@@ -115,6 +115,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
   const dirtyKeys = useMemo(() => changedKeys(sync.base, sync.draft), [sync.base, sync.draft]);
   const freshnessIndex = useMemo(() => indexFreshness(freshness), [freshness]);
   const { status, canSave, showConflict } = deriveSaveState({ saving, busy, dirty, conflict, unresolved: sync.unresolved, problems });
+  const previewLink = previewLinkState(status);
 
   useEffect(() => {
     if (dirty) markDirty();
@@ -504,7 +505,10 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
         ))}
       </div>
       <div className="cv-preview-column">
-        <CvPreview model={model} locale={locale} dirty={dirty} />
+        <CvPreview
+          model={model} locale={locale} dirty={dirty}
+          action={<CvExportLink locale={locale} disabled={previewLink.disabled} reasonKey={previewLink.reasonKey} />}
+        />
       </div>
       <CvRemoveDialog
         locale={locale} open={removeTarget !== null} busy={busy}
