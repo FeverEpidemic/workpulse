@@ -441,7 +441,14 @@ export type RequestCvExportInput = z.infer<typeof requestCvExportInput>;
 export const retryCvExportInput = z.strictObject({ export_id: z.uuid() });
 export type RetryCvExportInput = z.infer<typeof retryCvExportInput>;
 
-export const downloadCvExportInput = z.strictObject({ export_id: z.uuid() });
+/** `attachment` saves the file under a generic name; `inline` lets S14 read the PDF pages itself (T22). */
+export const CV_EXPORT_DISPOSITIONS = ["attachment", "inline"] as const;
+export type CvExportDisposition = (typeof CV_EXPORT_DISPOSITIONS)[number];
+
+export const downloadCvExportInput = z.strictObject({
+  export_id: z.uuid(),
+  disposition: z.enum(CV_EXPORT_DISPOSITIONS).default("attachment"),
+});
 export type DownloadCvExportInput = z.infer<typeof downloadCvExportInput>;
 
 /** The CV_EXPORT_BLOCKED detail is {"blockers":[{code,item_id?}]}; anything else is rejected (no text can leak). */

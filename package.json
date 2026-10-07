@@ -45,7 +45,7 @@
     "test:integration:import-review": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/import-review-ui.test.ts",
     "test:integration:cv": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-selection.test.ts",
     "test:integration:cv-freshness": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-freshness.test.ts",
-    "test:integration:cv-export": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-export.test.ts tests/integration/cv-export-renderer-real.test.ts",
+    "test:integration:cv-export": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-export.test.ts tests/integration/cv-export-renderer-real.test.ts tests/integration/cv-export-preview.test.ts",
     "test:integration:cv-builder": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-builder.test.ts",
     "test:integration:evidence": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/evidence-backend.test.ts tests/integration/evidence-scanner-real.test.ts tests/integration/evidence-pipeline.test.ts",
     "build": "next build",

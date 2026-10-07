@@ -61,9 +61,39 @@ describe("T21 CV export actions", () => {
     rpc.mockResolvedValue({ data: OBJECT_KEY, error: null });
     const state = await issueCvExportDownloadAction(IDLE, form({ export_id: EXPORT }));
     expect(state).toMatchObject({ status: "success", data: { url: "https://storage.example/signed", expiresInSeconds: 300 } });
-    expect(issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300);
+    // T22: an attachment with a generic name (the mocked client has no export row, so no date).
+    expect(issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV.pdf" });
     expect(JSON.stringify(state)).not.toContain(OBJECT_KEY);
     expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("issues an inline URL when the form asks for it, without a file name", async () => {
+    rpc.mockResolvedValue({ data: OBJECT_KEY, error: null });
+    const state = await issueCvExportDownloadAction(IDLE, form({ export_id: EXPORT, disposition: "inline" }));
+    expect(state).toMatchObject({ status: "success", data: { url: "https://storage.example/signed", expiresInSeconds: 300 } });
+    expect(issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300, { disposition: "inline" });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("treats an explicit attachment like the default and rejects any other disposition without a database call", async () => {
+    rpc.mockResolvedValue({ data: OBJECT_KEY, error: null });
+    await issueCvExportDownloadAction(IDLE, form({ export_id: EXPORT, disposition: "attachment" }));
+    expect(issueDownload).toHaveBeenLastCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV.pdf" });
+    rpc.mockClear();
+    issueDownload.mockClear();
+    for (const disposition of ["download", "INLINE", "", "inline; filename=evil.pdf"]) {
+      const state = await issueCvExportDownloadAction(IDLE, form({ export_id: EXPORT, disposition }));
+      expect(state, disposition).toMatchObject({ status: "error", error: { code: "VALIDATION", messageKey: "error.validation" } });
+    }
+    expect(rpc).not.toHaveBeenCalled();
+    expect(issueDownload).not.toHaveBeenCalled();
+  });
+
+  it("does not let the form choose the file name or the object", async () => {
+    rpc.mockResolvedValue({ data: OBJECT_KEY, error: null });
+    await issueCvExportDownloadAction(IDLE, form({ export_id: EXPORT, filename: "Ani-Contoh.pdf", object_key: `${USER}/export/${EXPORT}` }));
+    expect(issueDownload).toHaveBeenCalledTimes(1);
+    expect(issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV.pdf" });
   });
 
   it("rejects malformed input without a database call or revalidation", async () => {

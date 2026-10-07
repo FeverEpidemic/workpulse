@@ -374,7 +374,7 @@ Script baru:
 
 ### Fase 2 — Storage, service, route, action (TDD unit + integration)
 
-- [ ] Test gagal lebih dulu:
+- [x] Test gagal lebih dulu:
   - **Unit adapter/service storage:** default `{ download: true }` tetap; `inline` tanpa opsi download; `filename` invalid ditolak; TTL > 300 ditolak.
   - **Unit `cv-export-service`:** `getExport` (UUID invalid → `null`, kolom aman, Zod) dan `issueDownload` dengan `disposition`.
   - **Unit `cv-export-actions`:** `disposition` dari form; default `attachment`.
@@ -384,7 +384,7 @@ Script baru:
     - klaim `exp` ≤ 305 detik;
     - route `GET /api/cv/exports/[id]` lewat handler langsung dengan sesi A (row aman + `expired`) dan sesi B/ID acak/bukan UUID (404 identik, tanpa body sensitif);
     - sentinel tidak muncul.
-- [ ] Implementasi §3.2. Jalankan `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm test:integration:cv-export`, dan `pnpm test:integration:storage`. Commit `feat(t22): add export status route and named or inline downloads`, lalu receipt Fase 2.
+- [x] Implementasi §3.2. Jalankan `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm test:integration:cv-export`, dan `pnpm test:integration:storage`. Commit `feat(t22): add export status route and named or inline downloads`, lalu receipt Fase 2.
 
 ### Fase 3 — UI S14 dan tautan S13 (TDD unit state, lalu komponen)
 

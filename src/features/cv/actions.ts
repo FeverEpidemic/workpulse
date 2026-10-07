@@ -181,9 +181,16 @@ export async function retryCvExportAction(_previous: ActionState, formData: Form
   return runExport((service) => service.retryExport(parsed.data), true);
 }
 
-/** A short-lived signed URL for a finished export; nothing is saved, so nothing is revalidated. */
+/**
+ * A short-lived signed URL for a finished export; nothing is saved, so nothing is revalidated. The form may only
+ * choose `attachment` (default, generic file name) or `inline` (S14 page rendering); the name and object stay server-side.
+ */
 export async function issueCvExportDownloadAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = downloadCvExportInput.safeParse({ export_id: text(formData, "export_id") });
+  const disposition = formData.get("disposition");
+  const parsed = downloadCvExportInput.safeParse({
+    export_id: text(formData, "export_id"),
+    ...(disposition === null ? {} : { disposition }),
+  });
   if (!parsed.success) return actionFailure("VALIDATION", "error.validation");
   return runExport((service) => service.issueDownload(parsed.data), false);
 }

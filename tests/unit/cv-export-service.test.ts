@@ -208,7 +208,8 @@ describe("T21 CV export service: download", () => {
     const { client, rpc } = fakeClient({ rpc: rpcKey(OBJECT_KEY) });
     const result = await service(client, storage).issueDownload({ export_id: EXPORT });
     expect(rpc).toHaveBeenCalledWith("get_cv_export_download", { p_export_id: EXPORT });
-    expect(storage.issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300);
+    // T22: a download is an attachment with a generic name (WorkPulse-CV.pdf here, as the fake has no finished_at).
+    expect(storage.issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV.pdf" });
     expect(result).toEqual({ url: "https://storage.example/signed?token=abc", expiresInSeconds: 300 });
     expect(JSON.stringify(result)).not.toContain(OBJECT_KEY);
     expect(JSON.stringify(result)).not.toContain(TOKEN);
@@ -253,5 +254,99 @@ describe("T21 CV export service: download", () => {
       correlationId: CORRELATION,
     });
     await expect(failing.issueDownload({ export_id: EXPORT })).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  });
+});
+
+describe("T22 CV export service: one export", () => {
+  it("returns null for an id that is not a UUID without any database call", async () => {
+    const { client, rpc, queries } = fakeClient({ rows: [exportRow()] });
+    for (const id of ["nope", "", "4444", `${EXPORT}x`, "../../etc/passwd"]) {
+      await expect(service(client).getExport(id)).resolves.toBeNull();
+    }
+    expect(queries).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("reads one export of the caller with the safe columns only", async () => {
+    const { client, queries } = fakeClient({ rows: [exportRow({ status: "succeeded", page_count: 2, byte_size: 2048, finished_at: "2026-10-07T01:00:05Z", expires_at: "2026-10-08T01:00:05Z" })] });
+    await expect(service(client).getExport(EXPORT)).resolves.toMatchObject({ id: EXPORT, status: "succeeded", page_count: 2, cv_revision: 4 });
+    const query = queries[0]!;
+    expect(query.table).toBe("cv_exports");
+    expect(query.filters).toEqual([["id", EXPORT], ["user_id", USER]]);
+    expect(query.limit).toBe(1);
+    for (const forbidden of ["snapshot", "object_key", "attempt_token", "lease_expires_at", "idempotency_key", "user_id"]) {
+      expect(query.columns!.split(",").map((column) => column.trim())).not.toContain(forbidden);
+    }
+  });
+
+  it("returns null when the caller has no such export (foreign or missing look the same)", async () => {
+    const { client } = fakeClient({ rows: [] });
+    await expect(service(client).getExport(EXPORT)).resolves.toBeNull();
+  });
+
+  it("fails closed on a row with a private column or a broken state, and for an anonymous caller", async () => {
+    await expect(service(fakeClient({ rows: [exportRow({ object_key: OBJECT_KEY })] }).client).getExport(EXPORT)).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    await expect(service(fakeClient({ rows: [exportRow({ status: "failed" })] }).client).getExport(EXPORT)).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    const anonymous = fakeClient({ user: null, rows: [exportRow()] });
+    await expect(service(anonymous.client).getExport(EXPORT)).rejects.toMatchObject({ code: "UNAUTHENTICATED", correlationId: CORRELATION });
+    expect(anonymous.queries).toEqual([]);
+  });
+});
+
+describe("T22 CV export service: download disposition and name", () => {
+  const rpcKey = async () => ({ data: OBJECT_KEY, error: null });
+  const finished = [exportRow({ status: "succeeded", page_count: 2, byte_size: 2048, finished_at: "2026-10-07T23:30:00-05:00", expires_at: "2026-10-09T01:00:00Z" })];
+
+  it("names an attachment WorkPulse-CV-<UTC day of finished_at>.pdf and defaults to an attachment", async () => {
+    const storage = storageStub();
+    const { client, queries } = fakeClient({ rpc: rpcKey, rows: finished });
+    await service(client, storage).issueDownload({ export_id: EXPORT });
+    expect(storage.issueDownload).toHaveBeenLastCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV-2026-10-08.pdf" });
+    expect(queries[0]).toMatchObject({ table: "cv_exports", filters: [["id", EXPORT], ["user_id", USER]], limit: 1 });
+    await service(client, storage).issueDownload({ export_id: EXPORT, disposition: "attachment" });
+    expect(storage.issueDownload).toHaveBeenLastCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV-2026-10-08.pdf" });
+  });
+
+  it("signs an inline URL without a name and without reading the export row", async () => {
+    const storage = storageStub();
+    const { client, queries } = fakeClient({ rpc: rpcKey, rows: finished });
+    await expect(service(client, storage).issueDownload({ export_id: EXPORT, disposition: "inline" })).resolves.toEqual({
+      url: "https://storage.example/signed?token=abc", expiresInSeconds: 300,
+    });
+    expect(storage.issueDownload).toHaveBeenCalledWith(OBJECT_KEY, 300, { disposition: "inline" });
+    expect(queries).toEqual([]);
+  });
+
+  it("falls back to the generic name when the row cannot be read, never failing the download over a name", async () => {
+    const storage = storageStub();
+    const failing = fakeClient({ rpc: rpcKey });
+    (failing.client as unknown as { from: () => never }).from = () => { throw new Error(`boom ${SENTINEL}`); };
+    await service(failing.client, storage).issueDownload({ export_id: EXPORT });
+    expect(storage.issueDownload).toHaveBeenLastCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV.pdf" });
+    const unreadable = fakeClient({ rpc: rpcKey, rows: [exportRow({ object_key: OBJECT_KEY })] });
+    await service(unreadable.client, storage).issueDownload({ export_id: EXPORT });
+    expect(storage.issueDownload).toHaveBeenLastCalledWith(OBJECT_KEY, 300, { disposition: "attachment", filename: "WorkPulse-CV.pdf" });
+  });
+
+  it("rejects an unknown disposition before any database or storage call", async () => {
+    const storage = storageStub();
+    const { client, rpc, queries } = fakeClient({ rpc: rpcKey });
+    for (const disposition of ["download", "ATTACHMENT", "", "inline; filename=x"]) {
+      await expect(service(client, storage).issueDownload({ export_id: EXPORT, disposition })).rejects.toMatchObject({ code: "VALIDATION" });
+    }
+    await expect(service(client, storage).issueDownload({ export_id: EXPORT, filename: "x.pdf" })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(queries).toEqual([]);
+    expect(storage.issueDownload).not.toHaveBeenCalled();
+  });
+
+  it("never puts the account's name, the object key or the snapshot into the name or the result", async () => {
+    const storage = storageStub();
+    const { client } = fakeClient({ rpc: rpcKey, rows: finished });
+    const result = await service(client, storage).issueDownload({ export_id: EXPORT });
+    const options = (storage.issueDownload as ReturnType<typeof vi.fn>).mock.calls.at(-1)![2] as { filename: string };
+    expect(options.filename).toMatch(/^[A-Za-z0-9._-]{1,80}\.pdf$/);
+    expect(JSON.stringify(result)).not.toContain(OBJECT_KEY);
+    expect(JSON.stringify(result)).not.toContain(options.filename);
   });
 });

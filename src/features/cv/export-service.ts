@@ -14,7 +14,9 @@ import {
   type CvExportRow,
 } from "@/domain/cv/contracts";
 import { CV_EXPORT_DOWNLOAD_TTL_SECONDS } from "@/domain/cv/export";
+import { exportDownloadName } from "@/domain/cv/export-view";
 import type { Database } from "@/server/supabase/database.types";
+import type { SignedDownloadOptions } from "@/server/storage/adapter";
 import { parseStorageObjectKey } from "@/server/storage/object-key";
 import type { PrivateStorageService } from "@/server/storage/private-storage-service";
 
@@ -73,6 +75,26 @@ export function createCvExportService(deps: { supabase: Client; getStorage: () =
       return await operation();
     } catch (error) {
       throw toCvServiceError(error, correlationId);
+    }
+  }
+
+  /** The caller's own export row (RLS plus an explicit owner filter), strictly parsed so no private column passes. */
+  async function readExport(exportId: string, actorId: string): Promise<CvExportRow | null> {
+    const { data, error } = await supabase.from("cv_exports").select(EXPORT_COLUMNS).eq("id", exportId).eq("user_id", actorId).limit(1);
+    if (error) throw fail("UNAVAILABLE");
+    const row = (data ?? [])[0];
+    if (row === undefined) return null;
+    const parsed = cvExportRowSchema.safeParse(row);
+    if (!parsed.success) throw fail("UNAVAILABLE");
+    return parsed.data;
+  }
+
+  /** The generic attachment name from finished_at; never fails the download: any trouble gives the undated name. */
+  async function attachmentName(exportId: string, actorId: string): Promise<string> {
+    try {
+      return exportDownloadName((await readExport(exportId, actorId))?.finished_at);
+    } catch {
+      return exportDownloadName(null);
     }
   }
 
@@ -141,7 +163,19 @@ export function createCvExportService(deps: { supabase: Client; getStorage: () =
       });
     },
 
-    /** A signed URL (at most 300 seconds) for a finished, unexpired export of the caller. */
+    /** One export of the caller (safe columns only); null for an id that is not a UUID, a foreign export or none. */
+    getExport(id: string): Promise<CvExportRow | null> {
+      return guarded(async () => {
+        const exportId = z.uuid().safeParse(id);
+        if (!exportId.success) return null;
+        return readExport(exportId.data, await requireActorId());
+      });
+    },
+
+    /**
+     * A signed URL (at most 300 seconds) for a finished, unexpired export of the caller. An attachment is named
+     * `WorkPulse-CV-<UTC day>.pdf`; an inline URL (S14 page rendering) carries no name and no download header.
+     */
     issueDownload(input: unknown): Promise<{ url: string; expiresInSeconds: number }> {
       return guarded(async () => {
         const parsed = downloadCvExportInput.safeParse(input);
@@ -152,9 +186,12 @@ export function createCvExportService(deps: { supabase: Client; getStorage: () =
         // The key is server-only. It must be an export object of the caller; anything else is a server fault.
         const key = parseStorageObjectKey(data);
         if (!key || key.category !== "export" || key.ownerId !== actorId) throw fail("UNAVAILABLE");
+        const options: SignedDownloadOptions = parsed.data.disposition === "inline"
+          ? { disposition: "inline" }
+          : { disposition: "attachment", filename: await attachmentName(parsed.data.export_id, actorId) };
         let issued: { url: string; expiresInSeconds: number };
         try {
-          issued = await deps.getStorage().issueDownload(`${key.ownerId}/${key.category}/${key.objectId}`, CV_EXPORT_DOWNLOAD_TTL_SECONDS);
+          issued = await deps.getStorage().issueDownload(`${key.ownerId}/${key.category}/${key.objectId}`, CV_EXPORT_DOWNLOAD_TTL_SECONDS, options);
         } catch {
           throw fail("UNAVAILABLE");
         }
