@@ -405,12 +405,12 @@ Script baru:
 
 ### Fase 5 — Integration nyata lintas lapis
 
-- [ ] Perluas `cv-export-preview.test.ts` dengan:
+- [x] Perluas `cv-export-preview.test.ts` dengan:
   - jalur penuh service + route dengan worker nyata (renderer fake untuk status, renderer nyata untuk satu kasus `inline` yang di-parse pdf.js);
   - polling route melihat `queued` → `running` (lewat seam `onRendered`) → `succeeded`;
   - export revision lama + edit CV → aturan `exportActions` menghasilkan `regenerate`;
   - kedaluwarsa → `expired: true`.
-- [ ] Jalankan `pnpm test:integration:cv-export`. Commit `test(t22): add preview integration`, lalu receipt Fase 5.
+- [x] Jalankan `pnpm test:integration:cv-export`. Commit `test(t22): add preview integration`, lalu receipt Fase 5.
 
 ### Fase 6 — Browser acceptance
 
