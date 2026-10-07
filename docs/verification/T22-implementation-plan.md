@@ -364,13 +364,13 @@ Script baru:
 
 ### Fase 1 — Domain murni (TDD unit)
 
-- [ ] Test gagal lebih dulu di `tests/unit/cv-export-view.test.ts`:
+- [x] Test gagal lebih dulu di `tests/unit/cv-export-view.test.ts`:
   - matriks `exportActions` untuk setiap status × revision sama/lama × readiness siap/terblokir × kode retriable/permanen × `attempt_count` 1–3 × kedaluwarsa/purged;
   - `exportStatusView`;
   - `blockerLink` untuk setiap kode;
   - `exportDownloadName` (UTC, pola, tanggal invalid → nama tanpa tanggal yang aman);
   - `EXPORT_POLL_DELAYS`.
-- [ ] Implementasi §3.1. Jalankan `pnpm test`, `pnpm typecheck`, `pnpm lint`. Commit `feat(t22): add export view rules`, lalu receipt Fase 1.
+- [x] Implementasi §3.1. Jalankan `pnpm test`, `pnpm typecheck`, `pnpm lint`. Commit `feat(t22): add export view rules`, lalu receipt Fase 1.
 
 ### Fase 2 — Storage, service, route, action (TDD unit + integration)
 
