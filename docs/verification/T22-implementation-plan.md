@@ -396,12 +396,12 @@ Script baru:
 
 ### Fase 4 — QA PDF nyata (TDD dengan renderer nyata)
 
-- [ ] Tulis `tests/pdf/{fixtures,pdf-layout,cv-pdf-layout.test}.ts` dan `vitest.pdf.config.ts` + script `test:pdf`. Jalankan dengan template saat ini dan catat test yang **gagal** (bila ada) sebagai bukti kebutuhan §2.2.11. Assertion minimum:
+- [x] Tulis `tests/pdf/{fixtures,pdf-layout,cv-pdf-layout.test}.ts` dan `vitest.pdf.config.ts` + script `test:pdf`. Jalankan dengan template saat ini dan catat test yang **gagal** (bila ada) sebagai bukti kebutuhan §2.2.11. Assertion minimum:
   - §1.10: ekstraksi = model, urutan, tanpa teks asing, tanpa placeholder tanggal;
   - §1.11: sapuan ≥ 24 varian, tanpa heading yatim, entry yang muat tidak terbelah;
   - §1.12: MediaBox A4, margin, awal/akhir bullet panjang, halaman > 1 dan ≤ 20;
   - §1.14: Unicode `id`, dan nama Han/Arab/Devanagari terender dengan cek nama worker (`exportTextShowsName`) lolos.
-- [ ] Bila gagal, ubah template sesuai §2.2.11 (satu aturan per langkah, ulangi suite), lalu perbarui `tests/unit/cv-print-template.test.ts`. Jalankan `pnpm test:pdf`, `pnpm test`, `pnpm test:integration:cv-export` (renderer nyata ikut). Commit `test(t22): add real-renderer PDF layout QA` (dan `fix(t22): …` untuk perubahan template), lalu receipt Fase 4 berisi tabel varian, halaman, dan hasil.
+- [x] Bila gagal, ubah template sesuai §2.2.11 (satu aturan per langkah, ulangi suite), lalu perbarui `tests/unit/cv-print-template.test.ts`. Jalankan `pnpm test:pdf`, `pnpm test`, `pnpm test:integration:cv-export` (renderer nyata ikut). Commit `test(t22): add real-renderer PDF layout QA` (dan `fix(t22): …` untuk perubahan template), lalu receipt Fase 4 berisi tabel varian, halaman, dan hasil.
 
 ### Fase 5 — Integration nyata lintas lapis
 

@@ -14,7 +14,7 @@ function esc(value: string): string {
 const STYLE = `
 @page { size: A4; margin: 16mm 18mm; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-body { font-family: 'Noto Sans', sans-serif; font-size: 10pt; line-height: 1.45; color: #111111; margin: 0; }
+body { font-family: 'Noto Sans', sans-serif; font-size: 10pt; line-height: 1.45; color: #111111; margin: 0; overflow-wrap: anywhere; }
 h1 { font-size: 20pt; line-height: 1.2; margin: 0 0 2pt; }
 h2 { font-size: 11pt; font-weight: 700; margin: 12pt 0 6pt; padding-bottom: 2pt; border-bottom: 0.5pt solid #888888; break-after: avoid; page-break-after: avoid; }
 h3 { font-size: 10pt; font-weight: 700; margin: 0; break-after: avoid; page-break-after: avoid; }

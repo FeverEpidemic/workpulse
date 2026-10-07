@@ -154,6 +154,12 @@ describe("T21 single-column print template", () => {
     expect(html).toContain("white-space: pre-line");
   });
 
+  it("lets a word without spaces wrap at the margin, so a long URL cannot shrink the whole page (T22)", () => {
+    const html = renderCvPrintHtml(modelFor("en"));
+    // overflow-wrap is inherited: on body it covers every heading, paragraph and list item of the document.
+    expect(html).toMatch(/body\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  });
+
   it("is deterministic", () => {
     expect(renderCvPrintHtml(modelFor("id"))).toBe(renderCvPrintHtml(modelFor("id")));
   });
