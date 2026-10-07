@@ -328,13 +328,13 @@ Script baru:
 
 ### Fase 0 — Baseline, probe, dan persetujuan (tanpa edit kode)
 
-- [ ] Catat `git status --short --branch` dan HEAD (harapan `fe64466` atau turunannya). Working tree harus bersih kecuali `.claude/`; jika tidak, **stop**.
-- [ ] Siapkan environment:
+- [x] Catat `git status --short --branch` dan HEAD (harapan `fe64466` atau turunannya). Working tree harus bersih kecuali `.claude/`; jika tidak, **stop**.
+- [x] Siapkan environment:
   - `pnpm install --frozen-lockfile`.
   - `pnpm exec supabase migration list --local`: parity harus **31/31** dengan migration terakhir `20261005090000_t21_cv_export_backend.sql`.
   - Bila Docker mati, nyalakan dan jalankan `pnpm db:start` (tanpa reset).
   - Pastikan `workpulse-t21-pdf`, ClamAV T10, dan Gotenberg T15 hidup sesuai runbook masing-masing.
-- [ ] Jalankan baseline dengan harapan berikut:
+- [x] Jalankan baseline dengan harapan berikut:
 
   | Command | Harapan |
   | --- | --- |
@@ -345,22 +345,22 @@ Script baru:
   | `pnpm test:e2e:cv` | 8 |
   | `pnpm test:e2e:cv-freshness` | 10 |
 
-- [ ] Verifikasi dari source dan catat file:baris untuk:
+- [x] Verifikasi dari source dan catat file:baris untuk:
   - **Route dan halaman:** `src/app/(workspace)/cv/page.tsx`, `requireCompletedWorkspace`, `src/app/api/imports/[id]/route.ts` + `src/features/import/http.ts` (pola route).
   - **Komponen CV:** `src/features/cv/{cv-builder,cv-preview,cv-panels,cv-section}.tsx`, yaitu anchor `#cv-review`, `#cv-item-<id>`, dan ada/tidaknya anchor panel profil; `cv-builder.tsx:111` (model) dan `:506` (kolom preview).
   - **Export T21:** `src/features/cv/{export-service,actions}.ts` (`issueDownload :145`, action `:185`); `src/domain/cv/{export,contracts,preview,labels}.ts`.
   - **Storage:** `src/server/storage/{adapter.ts:8,supabase-storage-adapter.ts:64,private-storage-service.ts:79}`.
   - **Polling dan worker:** `EVIDENCE_POLL_DELAYS` (`src/features/evidence/evidence-attachments.tsx:17`), `tests/e2e/helpers/import-worker.ts` (pola menguras worker), `workers/run.ts` (pass export, env `WORKPULSE_PDF_*`).
   - **Template:** `src/server/export/cv-print-template.ts` (aturan break saat ini).
-- [ ] **Probe pdf.js browser.** Di branch scratch atau stash (jangan di-commit), buat halaman uji minimal yang memuat `pdfjs-dist/build/pdf.mjs` dengan worker `new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url)`, lalu jalankan `next build` + `next start`. Render satu PDF dari renderer T21 (diambil dari signed URL `inline` Storage lokal) ke canvas di Playwright Chromium. Catat:
+- [x] **Probe pdf.js browser.** Di branch scratch atau stash (jangan di-commit), buat halaman uji minimal yang memuat `pdfjs-dist/build/pdf.mjs` dengan worker `new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url)`, lalu jalankan `next build` + `next start`. Render satu PDF dari renderer T21 (diambil dari signed URL `inline` Storage lokal) ke canvas di Playwright Chromium. Catat:
   - build sukses;
   - worker termuat (bukan *fake worker*);
   - `fetch` lintas origin berhasil (header ACAO);
   - canvas berpiksel non-kosong.
 
   Bila worker tidak dapat dibundel, **stop** dan laporkan alternatif (salinan worker versi terpin di `public/` dengan alasan, atau pendekatan lain). Hapus halaman uji setelah probe.
-- [ ] **Probe page break.** Dengan template saat ini, render 24 varian filler (heading section bergeser di sekitar dasar halaman) ke renderer nyata dan analisis dengan pdf.js (baris terakhir per halaman). Catat apakah heading yatim atau entry terbelah terjadi. Ini menentukan kebutuhan §2.2.11; bila terjadi, pilihan aturan CSS dicatat untuk Fase 4.
-- [ ] Catat di receipt bahwa pengguna menyetujui §2.4 (6 Oktober 2026). Tulis receipt Fase 0 `docs/verification/T22-phase0-baseline.md`. Commit `docs(t22): add phase 0 baseline receipt`. Lanjut ke Fase 1 bila tidak ada stop condition.
+- [x] **Probe page break.** Dengan template saat ini, render 24 varian filler (heading section bergeser di sekitar dasar halaman) ke renderer nyata dan analisis dengan pdf.js (baris terakhir per halaman). Catat apakah heading yatim atau entry terbelah terjadi. Ini menentukan kebutuhan §2.2.11; bila terjadi, pilihan aturan CSS dicatat untuk Fase 4.
+- [x] Catat di receipt bahwa pengguna menyetujui §2.4 (6 Oktober 2026). Tulis receipt Fase 0 `docs/verification/T22-phase0-baseline.md`. Commit `docs(t22): add phase 0 baseline receipt`. Lanjut ke Fase 1 bila tidak ada stop condition.
 
 ### Fase 1 — Domain murni (TDD unit)
 
