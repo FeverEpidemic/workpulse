@@ -430,13 +430,13 @@ Script baru:
 
 ### Fase 7 — Regresi penuh
 
-- [ ] Jalankan seluruh §7. `test:e2e:m2` dan `test:e2e:m3` wajib lulus tanpa melemahkan assertion env (kosongkan `AI_AGENT`/`ANTHROPIC_BASE_URL` untuk run itu). ClamAV, Gotenberg T15, dan renderer T21 wajib berjalan untuk suite yang membutuhkannya; bila tidak, catat **tidak dijalankan** beserta alasan. Flaky bawaan `activity-ui.spec.ts:356` dicatat sebagai flaky bila lulus saat diulang tanpa perubahan.
-- [ ] Periksa diff dan hygiene:
+- [x] Jalankan seluruh §7. `test:e2e:m2` dan `test:e2e:m3` wajib lulus tanpa melemahkan assertion env (kosongkan `AI_AGENT`/`ANTHROPIC_BASE_URL` untuk run itu). ClamAV, Gotenberg T15, dan renderer T21 wajib berjalan untuk suite yang membutuhkannya; bila tidak, catat **tidak dijalankan** beserta alasan. Flaky bawaan `activity-ui.spec.ts:356` dicatat sebagai flaky bila lulus saat diulang tanpa perubahan.
+- [x] Periksa diff dan hygiene:
   - `git diff fe64466 -- supabase/migrations` harus kosong;
   - `git diff fe64466 --stat` hanya menyentuh file §4;
   - grep `console.` sesuai §1.18;
   - `git diff --check fe64466..HEAD`.
-- [ ] Tulis receipt Fase 7 `docs/verification/T22-phase7-regression.md` dan commit `test(t22): record regression receipt`. Serahkan kepada Claude: hash commit, diff, receipt Fase 0–7, output command, screenshot, dan daftar acceptance yang belum terbukti.
+- [x] Tulis receipt Fase 7 `docs/verification/T22-phase7-regression.md` dan commit `test(t22): record regression receipt`. Serahkan kepada Claude: hash commit, diff, receipt Fase 0–7, output command, screenshot, dan daftar acceptance yang belum terbukti.
 
 ### Fase 8 — Draft dokumen (setelah gate Claude dan perbaikan P0–P2)
 
