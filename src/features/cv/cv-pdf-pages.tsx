@@ -118,8 +118,13 @@ export function CvPdfPages({ locale, exportId, pageCount, revision, savedRevisio
         canvas.width = Math.max(1, Math.floor(viewport.width));
         canvas.height = Math.max(1, Math.floor(viewport.height));
         canvas.style.aspectRatio = `${natural.width} / ${natural.height}`;
+        // pdf.js paints in steps: the canvas says it is busy until the whole page is on it, and then which page it holds.
+        canvas.removeAttribute("data-rendered");
+        canvas.setAttribute("aria-busy", "true");
         drawing = pdfPage.render({ canvas, viewport });
         await drawing.promise;
+        canvas.removeAttribute("aria-busy");
+        canvas.dataset["rendered"] = String(page);
       } catch (error) {
         // A cancelled draw (page changed or view closed) is normal; any other failure shows the retry message.
         if (!cancelled && !(error instanceof Error && error.name === "RenderingCancelledException")) setDrawFailed(`${exportId}:${attempt}`);

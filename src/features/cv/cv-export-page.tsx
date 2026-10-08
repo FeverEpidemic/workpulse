@@ -151,6 +151,7 @@ export function CvExportPage(props: CvExportPageProps) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [pending, setPending] = useState<{ action: RunAction; id: string | null } | null>(null);
   const [tick, setTick] = useState(0);
+  const [focusRequest, setFocusRequest] = useState<{ target: "status" | "notice"; count: number } | null>(null);
   const inFlight = useRef(false);
   const pollIndex = useRef(0);
   const rowsRef = useRef(rows);
@@ -170,6 +171,11 @@ export function CvExportPage(props: CvExportPageProps) {
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
+
+  useEffect(() => {
+    if (focusRequest === null) return;
+    (focusRequest.target === "status" ? statusRef : noticeRef).current?.focus();
+  }, [focusRequest]);
 
   const latest = rows[0] ?? null;
   const view = latest ? exportStatusView(latest, now) : null;
@@ -214,7 +220,8 @@ export function CvExportPage(props: CvExportPageProps) {
     return () => clearTimeout(timer);
   }, [activeId, hidden, tick, poll]);
 
-  const focusSoon = (target: RefObject<HTMLElement | null>) => requestAnimationFrame(() => target.current?.focus());
+  // Focus moves after the render that shows its target, so the status or the notice exists when it is asked for.
+  const focusSoon = (target: RefObject<HTMLElement | null>) => setFocusRequest((current) => ({ target: target === statusRef ? "status" : "notice", count: (current?.count ?? 0) + 1 }));
 
   const apply = (outcome: ExportOutcome) => {
     switch (outcome.kind) {
