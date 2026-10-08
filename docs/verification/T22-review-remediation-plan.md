@@ -1,6 +1,15 @@
 # Rencana Remediasi Review T22 — Saved preview dan PDF QA
 
-Status plan: **TODO**.
+Status plan: **DONE — 8 Oktober 2026** (RV1 ditutup; bukti `T22-phase7b-remediation.md`, commit `369b016`).
+
+- Persetujuan pengguna (8 Oktober 2026, "Setuju, kamu kerjakan RV1 sendiri"): verdict, klasifikasi RV1 dan N1–N8, dan pendekatan perbaikan §2. Remediasi dikerjakan reviewer sendiri.
+- **Review ulang (8 Oktober 2026): LULUS — tidak ada P0–P2 terbuka.**
+  - Test RV1 terbukti gagal sebelum perbaikan (9 gagal; celah 732, 436, dan 343 pt) dan lulus sesudahnya (`test:pdf` 46).
+  - Uji mutasi membuktikan ketiga bagian aturan diperlukan.
+  - Checks §3 exit 0: unit 103/956, `test:integration:cv-export` 35, `test:e2e:cv-export` 12.
+  - Halaman 1 CV panjang kini memuat awal project.
+  - Review ulang tidak independen penuh karena reviewer juga mengerjakan perbaikannya.
+- Langkah berikutnya: Fase 8, lalu closeout.
 
 - Tanggal: 8 Oktober 2026.
 - Reviewer: Claude (Opus). Gate review read-only setelah Fase 7, mengacu ke `T22-implementation-plan.md` §9–§10.
@@ -18,7 +27,7 @@ Status plan: **TODO**.
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | Entry teratas (experience/project) yang lebih tinggi dari satu halaman dipindah utuh ke halaman berikutnya. Akibatnya halaman sebelumnya kosong sebagian besar, dan pada CV tanpa summary halaman 1 hanya berisi nama | OPEN |
+| RV1 | P2 | Entry teratas (experience/project) yang lebih tinggi dari satu halaman dipindah utuh ke halaman berikutnya. Akibatnya halaman sebelumnya kosong sebagian besar, dan pada CV tanpa summary halaman 1 hanya berisi nama | FIXED (`T22-phase7b-remediation.md`) |
 | N1 | P3 | Pada keadaan *failed*, kalimat *Your CV is unchanged.* tampil dua kali (badge status dan alasan kegagalan); F2 receipt Fase 6 | Follow-up copy |
 | N2 | P3 | Halaman PDF ditampilkan dalam satu canvas untuk halaman aktif, bukan satu canvas per halaman dengan render lazy ±1 (§2.2.2). Navigasi, label *Page n of N*, dan jumlah halaman tetap memenuhi §1.6 dan S14 | Diterima; catat di decision 0028 |
 | N3 | P3 | Setiap run `test:e2e:cv-export` menulis ulang 34 PNG yang di-track di `docs/verification/T22-screenshots/`, sehingga working tree kotor setelah regresi biasa. Reviewer harus `git checkout` setelah run | Follow-up hermetisitas: tulis screenshot hanya bila diminta env, mis. `WORKPULSE_E2E_SCREENSHOTS=1` |
