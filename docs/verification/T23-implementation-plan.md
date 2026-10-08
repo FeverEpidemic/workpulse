@@ -19,7 +19,7 @@
 - **Gate M4: belum dijalankan saat plan ditulis** (`IMPLEMENTATION_STATUS.md` baris 80–87). T23 tidak boleh dimulai sebelum Gate M4 PASSED, kecuali pengguna mengizinkan secara eksplisit. Fase 0 memeriksanya.
 - Eksekutor: satu agent **Claude Sonnet 5.5**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 8; Fase 9 (draft dokumen) dikerjakan setelah gate. Checkpoint Claude setelah Fase 0 **wajib** (hasil probe cascade dan probe auth menentukan desain Fase 1 dan 4).
-- Keputusan produk: tujuh keputusan §2.4 **menunggu persetujuan pengguna**. Pelaksana berhenti di akhir Fase 0 bila persetujuan belum tercatat di plan ini.
+- Keputusan produk: pengguna **menyetujui** (8 Oktober 2026, "Setuju semua") ketujuh keputusan §2.4 sesuai rekomendasi. Semuanya dibekukan; pelaksana tidak perlu menanyakannya ulang dan tidak perlu berhenti di akhir Fase 0 untuk persetujuan. Probe Fase 0, cek Gate M4, dan stop condition-nya tetap berlaku.
 - Acuan:
   - **PRD:** R01 (*Another account cannot read or mutate any record or file*), tabel *Privacy and safety*: *Deletion* (*Account deletion revokes sessions immediately, removes active data and objects within 24 hours, and expires backups within 30 days*), *Data minimization* (file import dan teks staging dihapus ≤ 24 jam setelah terminal), *Failures* (job durable), M5 (*Instrumentation, access review, deletion, regression*).
   - **Wireframe S12** `/settings/profile`: *Account deletion requires reauthentication and a clear data loss confirmation, then revokes sessions and queues deletion. Explain backup retention in the privacy detail.* Aturan umum: konfirmasi destruktif memakai nama record.
@@ -337,9 +337,9 @@ T23 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - **Tidak diubah:** state machine job AI/import/evidence, worker evidence, alur commit import T16, lock protocol CV T20/T21 (selain `retry_cv_export` dan guard snapshot §2.2.15–16), dan `internal.mark_account_deleting`.
 - **Bukan v0.1:** billing, team, public profile, dan fitur roadmap `Design.md`.
 
-### 2.4 Keputusan produk yang perlu persetujuan pengguna
+### 2.4 Keputusan produk yang sudah disetujui pengguna (8 Oktober 2026)
 
-Rekomendasi pertama di setiap poin adalah pilihan plan ini. Pelaksana mencatat persetujuan di receipt Fase 0. Bila implementasi menuntut penyimpangan dari salah satu poin, **stop** (lihat §8).
+Ketujuhnya disetujui sesuai rekomendasi (pilihan pertama di setiap poin). Catat persetujuan ini di receipt Fase 0 dan lanjutkan tanpa bertanya ulang. Bila implementasi menuntut penyimpangan dari salah satunya, **stop** (lihat §8).
 
 1. **Reautentikasi dengan memasukkan ulang password** (§2.2.3). Alternatif:
    - OTP email lewat `reauthenticate()` (perlu mail sink, langkah tambahan);
@@ -351,7 +351,7 @@ Rekomendasi pertama di setiap poin adalah pilihan plan ini. Pelaksana mencatat p
 6. **Snapshot export dikosongkan** saat PDF dipurge (24 jam setelah sukses) dan 24 jam setelah export gagal. Metadata riwayat tetap (§2.2.15). Konsekuensi: export gagal yang lebih tua dari 24 jam hanya dapat di-*Regenerate*. Alternatif: snapshot disimpan sampai akun dihapus (status quo T21, teks sumber yang sudah dihapus tetap tersimpan).
 7. **Retry export ditolak bila CV berubah atau terblokir** (§2.2.16). Ini mengubah perilaku T21 yang disetujui (Retry tanpa validasi ulang) demi mencegah teks sumber yang sudah dihapus tercetak lagi. Alternatif: hanya UI yang menyembunyikan Retry (backend tetap mengizinkan lewat panggilan langsung).
 
-Persetujuan pengguna: **belum tercatat**.
+Persetujuan pengguna: **tercatat** — 8 Oktober 2026, "Setuju semua".
 
 ## 3. Kontrak teknis
 
@@ -457,7 +457,7 @@ Script baru:
   3. `admin.deleteUser(id)` → baris `public.profiles` ikut hilang (pada akun kosong) dan panggilan kedua mengembalikan 404.
   4. Di dalam fungsi `security definer` yang dipanggil dengan secret key, `auth.uid()` bernilai NULL.
   5. `signInWithPassword` pada client sekali pakai tidak menulis cookie dan tidak mengganti session pengguna di browser.
-- [ ] Catat persetujuan pengguna atas §2.4 di receipt. Bila belum tercatat di §2.4, **stop** dan minta persetujuan.
+- [ ] Catat di receipt bahwa pengguna menyetujui §2.4 (8 Oktober 2026).
 - [ ] Tulis receipt `docs/verification/T23-phase0-baseline.md` dan commit `docs(t23): add phase 0 baseline receipt`. Serahkan hasil probe ke checkpoint Claude sebelum Fase 1.
 
 ### Fase 1 — Database: guard, antrean, dan purge (TDD pgTAP)
@@ -666,7 +666,7 @@ Aturan menjalankan suite:
 Berhenti dan laporkan bukti, jangan berimprovisasi, bila:
 
 - Working tree tidak bersih di Fase 0, parity tidak sesuai, atau Gate M4 belum PASSED tanpa izin pengguna.
-- Persetujuan §2.4 belum tercatat, atau implementasi menuntut penyimpangan darinya.
+- Implementasi menuntut penyimpangan dari keputusan §2.4 yang disetujui.
 - Probe menunjukkan:
   - Auth lokal tidak mendukung ban atau global sign-out;
   - `auth.uid()` tidak NULL untuk panggilan secret key;
