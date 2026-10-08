@@ -3,7 +3,8 @@ import { Worker } from "node:worker_threads";
 
 import { IMPORT_PARSE_TIMEOUT_MS, IMPORT_PERMANENT_ERROR_CODES, type ImportFileErrorCode } from "../../domain/import/contracts.ts";
 
-export type ParseKind = "pdf" | "docx" | "pdf-pages";
+// "pdf-export" (T21) reads the PDF an export renderer produced: no import limits, text only up to the export page limit.
+export type ParseKind = "pdf" | "docx" | "pdf-pages" | "pdf-export";
 
 export type ParseResult =
   | { status: "ok"; text: string | null; pageCount: number | null }

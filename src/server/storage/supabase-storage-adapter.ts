@@ -5,6 +5,8 @@ import { PRIVATE_STORAGE_BUCKET } from "@/server/storage/constants";
 import {
   StorageAdapterUnavailableError,
   StorageObjectAlreadyExistsError,
+  isValidSignedDownloadOptions,
+  type SignedDownloadOptions,
   type StorageAdapter,
 } from "@/server/storage/adapter";
 
@@ -61,10 +63,14 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     throw new StorageAdapterUnavailableError();
   }
 
-  async createSignedDownloadUrl(objectKey: string, expiresInSeconds: number): Promise<string> {
-    const { data, error } = await this.client.storage
-      .from(PRIVATE_STORAGE_BUCKET)
-      .createSignedUrl(objectKey, expiresInSeconds, { download: true });
+  async createSignedDownloadUrl(objectKey: string, expiresInSeconds: number, options: SignedDownloadOptions = {}): Promise<string> {
+    if (!isValidSignedDownloadOptions(options)) throw new StorageAdapterUnavailableError();
+    const bucket = this.client.storage.from(PRIVATE_STORAGE_BUCKET);
+    // Inline: no download option, so the response carries no content-disposition and a page may read the bytes.
+    // Attachment: { download: true } as before, or { download: <generic name> } to name the saved file.
+    const { data, error } = options.disposition === "inline"
+      ? await bucket.createSignedUrl(objectKey, expiresInSeconds)
+      : await bucket.createSignedUrl(objectKey, expiresInSeconds, { download: options.filename ?? true });
     if (error || !data?.signedUrl) throw new StorageAdapterUnavailableError();
     return data.signedUrl;
   }

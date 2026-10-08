@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { StorageAdapter } from "@/server/storage/adapter";
+import { isValidSignedDownloadOptions, type SignedDownloadOptions, type StorageAdapter } from "@/server/storage/adapter";
 import { validatePrivateStorageMetadata } from "@/server/storage/metadata";
 import { isCanonicalStorageUuid, parseStorageObjectKey } from "@/server/storage/object-key";
 
@@ -8,6 +8,7 @@ export type PrivateStorageErrorCode =
   | "AUTH_REQUIRED"
   | "STORAGE_OBJECT_UNAVAILABLE"
   | "STORAGE_TTL_INVALID"
+  | "STORAGE_DOWNLOAD_OPTIONS_INVALID"
   | "STORAGE_METADATA_INVALID"
   | "STORAGE_PROVIDER_UNAVAILABLE";
 
@@ -28,7 +29,11 @@ export interface StorageActor {
 export type StorageActorResolver = () => Promise<StorageActor | null>;
 
 export interface PrivateStorageService {
-  issueDownload(objectKey: string, expiresInSeconds?: number): Promise<{ url: string; expiresInSeconds: number }>;
+  issueDownload(
+    objectKey: string,
+    expiresInSeconds?: number,
+    options?: SignedDownloadOptions,
+  ): Promise<{ url: string; expiresInSeconds: number }>;
   deleteObject(objectKey: string): Promise<void>;
 }
 
@@ -76,7 +81,7 @@ export function createPrivateStorageService(
   }
 
   return {
-    async issueDownload(objectKey, expiresInSeconds = 300) {
+    async issueDownload(objectKey, expiresInSeconds = 300, options) {
       await authorize(objectKey);
       if (
         !Number.isInteger(expiresInSeconds) ||
@@ -85,11 +90,17 @@ export function createPrivateStorageService(
       ) {
         throw new PrivateStorageError("STORAGE_TTL_INVALID");
       }
+      if (options !== undefined && !isValidSignedDownloadOptions(options)) {
+        throw new PrivateStorageError("STORAGE_DOWNLOAD_OPTIONS_INVALID");
+      }
 
       await requireExistingMetadata(objectKey);
       let url: string;
       try {
-        url = await adapter.createSignedDownloadUrl(objectKey, expiresInSeconds);
+        // Callers without options reach the adapter exactly as before (two arguments).
+        url = options === undefined
+          ? await adapter.createSignedDownloadUrl(objectKey, expiresInSeconds)
+          : await adapter.createSignedDownloadUrl(objectKey, expiresInSeconds, options);
       } catch {
         throw new PrivateStorageError("STORAGE_PROVIDER_UNAVAILABLE");
       }

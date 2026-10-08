@@ -126,7 +126,7 @@ export function CvProfileEditor({
   const reviewable = review !== null && review.state !== "fresh";
   const reviewName = t(locale, "cv.review.profileLabel");
   return (
-    <section className="cv-panel" aria-labelledby="cv-profile-heading" data-freshness={review?.state ?? "fresh"}>
+    <section id="cv-profile" className="cv-panel" aria-labelledby="cv-profile-heading" data-freshness={review?.state ?? "fresh"}>
       <h2 id="cv-profile-heading" tabIndex={-1} className="cv-panel-heading">{t(locale, "cv.profile.heading")}</h2>
       {reviewable ? (
         <div className="cv-row-actions">

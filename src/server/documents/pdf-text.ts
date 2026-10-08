@@ -1,4 +1,5 @@
 // Loaded only inside the isolated parser thread (parser-thread.ts); never in the web app.
+import { CV_EXPORT_MAX_PAGES } from "../../domain/cv/export.ts";
 import { IMPORT_MAX_PAGES, IMPORT_MIN_TEXT_CHARS, type ImportFileErrorCode } from "../../domain/import/contracts.ts";
 import { normalizeExtractedText } from "./docx-text.ts";
 
@@ -79,6 +80,39 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfParseResult>
     const text = normalizeExtractedText(pages.join("\n\n"));
     if (text.replace(/\s/g, "").length < IMPORT_MIN_TEXT_CHARS) return { status: "error", code: "SCANNED_PDF" };
     return { status: "ok", text, pageCount };
+  } catch (error) {
+    return { status: "error", code: errorCode(error) };
+  } finally {
+    await task?.destroy().catch(() => undefined);
+  }
+}
+
+/**
+ * Text and page count of a PDF produced by the export renderer (T21). It applies none of the import limits: the
+ * export worker enforces the export page limit and checks the text itself, so a short CV is not a "scanned" PDF.
+ * A PDF over the export page limit is reported by page count only; no text is extracted from it.
+ */
+export async function readExportPdf(bytes: Uint8Array): Promise<PdfParseResult> {
+  let task: Awaited<ReturnType<typeof openTask>> | null = null;
+  try {
+    task = await openTask(bytes);
+    const document = await task.promise;
+    const pageCount = document.numPages;
+    if (!Number.isInteger(pageCount) || pageCount < 1) return { status: "error", code: "CORRUPT_FILE" };
+    if (pageCount > CV_EXPORT_MAX_PAGES) return { status: "ok", text: "", pageCount };
+    const pages: string[] = [];
+    for (let number = 1; number <= pageCount; number += 1) {
+      const page = await document.getPage(number);
+      const content = await page.getTextContent();
+      let text = "";
+      for (const item of content.items as TextItem[]) {
+        if (typeof item.str === "string") text += item.str;
+        if (item.hasEOL === true) text += "\n";
+      }
+      pages.push(text);
+      page.cleanup();
+    }
+    return { status: "ok", text: normalizeExtractedText(pages.join("\n\n")), pageCount };
   } catch (error) {
     return { status: "error", code: errorCode(error) };
   } finally {

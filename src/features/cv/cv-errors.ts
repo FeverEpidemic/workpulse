@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { parseChildItemsDetail } from "@/domain/cv/contracts";
+import { parseChildItemsDetail, parseExportBlockersDetail, type CvExportBlocker } from "@/domain/cv/contracts";
 import type { MessageKey } from "@/i18n/messages";
 
 export type CvServiceErrorCode =
@@ -17,6 +17,12 @@ export type CvServiceErrorCode =
   | "OVERRIDE_UNSUPPORTED"
   | "SOURCE_CHANGED"
   | "RESOLUTION_INVALID"
+  | "EXPORT_BLOCKED"
+  | "EXPORT_IN_PROGRESS"
+  | "EXPORT_NOT_FOUND"
+  | "EXPORT_NOT_RETRYABLE"
+  | "EXPORT_NOT_READY"
+  | "EXPORT_EXPIRED"
   | "UNAVAILABLE";
 
 export const CV_ERROR_MESSAGE_KEYS: Record<CvServiceErrorCode, MessageKey> = {
@@ -33,24 +39,33 @@ export const CV_ERROR_MESSAGE_KEYS: Record<CvServiceErrorCode, MessageKey> = {
   OVERRIDE_UNSUPPORTED: "cv.error.overrideUnsupported",
   SOURCE_CHANGED: "cv.error.sourceChanged",
   RESOLUTION_INVALID: "cv.error.resolutionInvalid",
+  EXPORT_BLOCKED: "cv.export.error.blocked",
+  EXPORT_IN_PROGRESS: "cv.export.error.inProgress",
+  EXPORT_NOT_FOUND: "cv.export.error.notFound",
+  EXPORT_NOT_RETRYABLE: "cv.export.error.notRetryable",
+  EXPORT_NOT_READY: "cv.export.error.notReady",
+  EXPORT_EXPIRED: "cv.export.error.expired",
   UNAVAILABLE: "error.unavailable",
 };
 
-/** Safe, localized CV error with a correlation ID. Never carries source text, only codes and item ids. */
+/** Safe, localized CV error with a correlation ID. Never carries source text, only codes and item ids (also blockers). */
 export class CvServiceError extends Error {
   readonly code: CvServiceErrorCode;
   readonly messageKey: MessageKey;
   readonly correlationId: string;
   /** Child item ids for CHILD_ITEMS_EXIST; empty otherwise. */
   readonly childItemIds: string[];
+  /** Export blockers (codes and the caller's own item ids) for EXPORT_BLOCKED; empty otherwise. */
+  readonly blockers: CvExportBlocker[];
 
-  constructor(code: CvServiceErrorCode, options: { correlationId?: string; childItemIds?: string[] } = {}) {
+  constructor(code: CvServiceErrorCode, options: { correlationId?: string; childItemIds?: string[]; blockers?: CvExportBlocker[] } = {}) {
     super("CV request could not be completed.");
     this.name = "CvServiceError";
     this.code = code;
     this.messageKey = CV_ERROR_MESSAGE_KEYS[code];
     this.correlationId = options.correlationId ?? randomUUID();
     this.childItemIds = options.childItemIds ?? [];
+    this.blockers = options.blockers ?? [];
   }
 }
 
@@ -66,7 +81,8 @@ export function mapCvDatabaseError(
     case "INVALID_CV_INPUT": return make("VALIDATION");
     case "CV_NOT_FOUND":
     case "CV_ITEM_NOT_FOUND": return make("NOT_FOUND");
-    case "STALE_REVISION": return make("CONFLICT");
+    case "STALE_REVISION":
+    case "IDEMPOTENCY_KEY_REUSED": return make("CONFLICT");
     case "CV_SOURCE_NOT_FOUND": return make("SOURCE_NOT_FOUND");
     case "CV_SOURCE_INELIGIBLE": return make("SOURCE_INELIGIBLE");
     case "CV_SOURCE_DUPLICATE": return make("SOURCE_DUPLICATE");
@@ -74,6 +90,13 @@ export function mapCvDatabaseError(
     case "CV_OVERRIDE_UNSUPPORTED": return make("OVERRIDE_UNSUPPORTED");
     case "CV_SOURCE_CHANGED": return make("SOURCE_CHANGED");
     case "CV_RESOLUTION_INVALID": return make("RESOLUTION_INVALID");
+    case "CV_EXPORT_BLOCKED":
+      return new CvServiceError("EXPORT_BLOCKED", { correlationId, blockers: parseExportBlockersDetail(error.details) ?? [] });
+    case "CV_EXPORT_IN_PROGRESS": return make("EXPORT_IN_PROGRESS");
+    case "CV_EXPORT_NOT_FOUND": return make("EXPORT_NOT_FOUND");
+    case "CV_EXPORT_NOT_RETRYABLE": return make("EXPORT_NOT_RETRYABLE");
+    case "CV_EXPORT_NOT_READY": return make("EXPORT_NOT_READY");
+    case "CV_EXPORT_EXPIRED": return make("EXPORT_EXPIRED");
     case "CV_CHILD_ITEMS_EXIST":
       return new CvServiceError("CHILD_ITEMS_EXIST", { correlationId, childItemIds: parseChildItemsDetail(error.details) ?? [] });
     default: break;

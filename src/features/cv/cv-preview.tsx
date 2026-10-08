@@ -1,7 +1,10 @@
+import Link from "next/link";
+import { useId, type ReactNode } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { CV_PROFILE_OVERRIDE_KEYS } from "@/domain/cv/contracts";
 import type { CvPreviewEntry, CvPreviewModel } from "@/domain/cv/preview";
-import { t, type Locale } from "@/i18n/messages";
+import { t, type Locale, type MessageKey } from "@/i18n/messages";
 
 function Entry({ entry, locale, nested = false }: { entry: CvPreviewEntry; locale: Locale; nested?: boolean }) {
   const lines = [entry.subline, entry.dates].filter(Boolean).join(" · ");
@@ -23,10 +26,30 @@ function Entry({ entry, locale, nested = false }: { entry: CvPreviewEntry; local
 }
 
 /**
+ * The way from S13 to S14. S14 shows the saved revision, so while anything is unsaved the link is a focusable but
+ * disabled button whose reason stays visible and is read with it (T22).
+ */
+export function CvExportLink({ locale, disabled, reasonKey }: { locale: Locale; disabled: boolean; reasonKey: MessageKey | null }) {
+  const reasonId = useId();
+  if (!disabled) {
+    return <Link href="/cv/preview" className="button-secondary" data-testid="cv-preview-export-link">{t(locale, "cv.builder.previewAndExport")}</Link>;
+  }
+  return (
+    <>
+      <button type="button" className="button-secondary" aria-disabled="true" aria-describedby={reasonId} data-testid="cv-preview-export-link">
+        {t(locale, "cv.builder.previewAndExport")}
+      </button>
+      <p id={reasonId} className="field-help" data-testid="cv-preview-export-reason">{reasonKey ? t(locale, reasonKey) : null}</p>
+    </>
+  );
+}
+
+/**
  * Screen preview of the saved CV. It renders the model it is given and never reads the editor draft, so it
  * shows exactly what a later export of the same revision contains. Headings and dates follow the CV language.
+ * `action` is an optional slot in the header (S13 puts the link to S14 there).
  */
-export function CvPreview({ model, locale, dirty }: { model: CvPreviewModel; locale: Locale; dirty: boolean }) {
+export function CvPreview({ model, locale, dirty, action }: { model: CvPreviewModel; locale: Locale; dirty: boolean; action?: ReactNode }) {
   const contact = CV_PROFILE_OVERRIDE_KEYS
     .filter((key) => key !== "display_name" && key !== "headline")
     .map((key) => model.profile[key])
@@ -37,6 +60,7 @@ export function CvPreview({ model, locale, dirty }: { model: CvPreviewModel; loc
         <h2 id="cv-preview-heading" className="text-base font-semibold">{t(locale, "cv.preview.heading")}</h2>
         <p className="field-help">{t(locale, "cv.preview.description")}</p>
         {dirty ? <p className="field-help" role="note"><Badge variant="warning">{t(locale, "cv.status.unsaved")}</Badge> {t(locale, "cv.preview.unsavedNotShown")}</p> : null}
+        {action ? <div className="cv-preview-actions">{action}</div> : null}
       </div>
       <article className="cv-paper" data-testid="cv-preview-paper">
         <header className="cv-preview-header">

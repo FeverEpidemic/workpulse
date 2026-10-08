@@ -16,7 +16,7 @@ const APP_PATHS = [
   /^\/achievements(?:\/new|\/[0-9a-f-]{36})?$/i,
   /^\/projects(?:\/new|\/[0-9a-f-]{36})?$/i,
   /^\/timeline$/,
-  /^\/cv$/,
+  /^\/cv(?:\/preview)?$/,
   /^\/settings\/profile$/,
   /^\/onboarding\/import$/,
   /^\/imports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/review$/i,
