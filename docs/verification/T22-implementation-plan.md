@@ -414,9 +414,9 @@ Script baru:
 
 ### Fase 6 — Browser acceptance
 
-- [ ] `playwright.cv-export.config.ts`: port 3014, pola `playwright.cv-freshness.config.ts`. Web server tanpa env `WORKPULSE_AI_*`, `WORKPULSE_OPENAI_*`, `WORKPULSE_DOCX_*`, `WORKPULSE_GOTENBERG_*`, `WORKPULSE_PDF_*`.
-- [ ] `tests/e2e/helpers/export-worker.ts`: menguras `workers/run.ts --once` dengan env anak `NODE_ENV=test` dan `WORKPULSE_PDF_RENDERER_MODE=gotenberg` (renderer nyata `http://127.0.0.1:13401`) atau `fake` per skenario. Polanya `tests/e2e/helpers/import-worker.ts`; env renderer hanya di proses anak.
-- [ ] Skenario `tests/e2e/cv-export.spec.ts` (akun fixture dibersihkan):
+- [x] `playwright.cv-export.config.ts`: port 3014, pola `playwright.cv-freshness.config.ts`. Web server tanpa env `WORKPULSE_AI_*`, `WORKPULSE_OPENAI_*`, `WORKPULSE_DOCX_*`, `WORKPULSE_GOTENBERG_*`, `WORKPULSE_PDF_*`.
+- [x] `tests/e2e/helpers/export-worker.ts`: menguras `workers/run.ts --once` dengan env anak `NODE_ENV=test` dan `WORKPULSE_PDF_RENDERER_MODE=gotenberg` (renderer nyata `http://127.0.0.1:13401`) atau `fake` per skenario. Polanya `tests/e2e/helpers/import-worker.ts`; env renderer hanya di proses anak.
+- [x] Skenario `tests/e2e/cv-export.spec.ts` (akun fixture dibersihkan):
   1. **Graduate PRD:** keyboard saja, S13 pilih education + project + achievement → Save → *Preview and export* → S14 *Saved revision N* → *Export PDF* → status `queued` → worker (renderer nyata) → `succeeded` → halaman PDF tampil (*Page 1 of N*, piksel non-kosong) → *Download PDF* (event download, nama `WorkPulse-CV-*.pdf`, isi `%PDF-`).
   2. **Unsaved:** wording diketik di S13 tanpa Save → tautan nonaktif dengan alasan; S14 lewat URL langsung tetap menampilkan revision tersimpan tanpa teks draft.
   3. **Release scenario delete:** hapus achievement terpilih (UI S07) → S14 blocker `ITEM_DELETED` + tautan `/cv#cv-item-<id>` → Remove di S13 → S14 siap.
@@ -426,7 +426,7 @@ Script baru:
   7. **Konflik dua tab:** Save di tab B → *Export PDF* di tab A → notice konflik + *Reload*, 0 export baru.
   8. **Isolasi:** akun B → status/route/unduhan export A → 404/`EXPORT_NOT_FOUND` generik. Sentinel tidak ada di console/network selain PDF pemilik.
   9. **Aksesibilitas dan screenshot:** Axe untuk enam keadaan §1.15, 360/1440 × light/dark tanpa overflow, keyboard dan fokus, reduced motion; screenshot keadaan dan halaman PDF fixture panjang `id`/`en` (§2.2.14).
-- [ ] Jalankan `pnpm test:e2e:cv-export` (dua kali; run kedua menyimpan screenshot). Inspeksi setiap screenshot halaman PDF dan catat temuan visual (heading yatim, clipping, tumpang tindih, glyph hilang) di receipt. Commit `test(t22): add S14 browser acceptance and screenshots`, lalu receipt Fase 6.
+- [x] Jalankan `pnpm test:e2e:cv-export` (dua kali; run kedua menyimpan screenshot). Inspeksi setiap screenshot halaman PDF dan catat temuan visual (heading yatim, clipping, tumpang tindih, glyph hilang) di receipt. Commit `test(t22): add S14 browser acceptance and screenshots`, lalu receipt Fase 6.
 
 ### Fase 7 — Regresi penuh
 

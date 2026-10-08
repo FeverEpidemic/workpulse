@@ -254,6 +254,12 @@ describe("T22 PDF QA: page breaks (headings stay with content, entries that fit 
     const span = (lastChild?.lastPage ?? 0) - (project?.firstPage ?? 0) + 1;
     log(`long entry: "Program Transformasi Digital" spans ${span} pages (page ${project?.firstPage} to ${lastChild?.lastPage}) of ${analysis.pages.length}`);
     expect(span).toBeGreaterThan(1);
+    // Known behaviour, recorded for the reviewer: an entry that cannot fit one page still has break-inside: avoid, so
+    // Chromium starts it on a new page and the page before it keeps the room it did not use.
+    const before = analysis.pages[(project?.firstPage ?? 1) - 2];
+    const lastLine = before?.lines.at(-1);
+    const empty = lastLine ? lastLine.y - MARGIN.bottom : A4.height - MARGIN.top - MARGIN.bottom;
+    log(`long entry gap: the page before it ends at y=${lastLine?.y.toFixed(0) ?? "none"}, ${empty.toFixed(0)} pt (${((empty / (A4.height - MARGIN.top - MARGIN.bottom)) * 100).toFixed(0)}% of the page) stay empty`);
   });
 });
 
