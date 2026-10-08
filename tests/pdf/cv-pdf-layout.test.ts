@@ -4,6 +4,7 @@ import type { CvLocale } from "@/domain/cv/contracts";
 import { exportTextShowsName } from "@/domain/cv/export";
 import { CV_LABELS } from "@/domain/cv/labels";
 import type { CvPreviewModel } from "@/domain/cv/preview";
+import { renderCvPrintHtml } from "@/server/export/cv-print-template";
 
 import { parseInThread } from "../../src/server/documents/parse-in-thread.ts";
 import {
@@ -14,6 +15,9 @@ import {
   SWEEP_SECTIONS,
   SWEEP_TAG_PATTERN,
   graduate,
+  longEntryFirst,
+  longExperience,
+  nearlyPageEntry,
   nonLatinName,
   ownerA,
   ownerLong,
@@ -22,8 +26,11 @@ import {
 } from "./fixtures";
 import {
   A4,
+  CONTENT_HEIGHT,
   MARGIN,
   analyzePdf,
+  blockExtent,
+  bottomGaps,
   matchInOrder,
   normalize,
   printedStrings,
@@ -254,12 +261,117 @@ describe("T22 PDF QA: page breaks (headings stay with content, entries that fit 
     const span = (lastChild?.lastPage ?? 0) - (project?.firstPage ?? 0) + 1;
     log(`long entry: "Program Transformasi Digital" spans ${span} pages (page ${project?.firstPage} to ${lastChild?.lastPage}) of ${analysis.pages.length}`);
     expect(span).toBeGreaterThan(1);
-    // Known behaviour, recorded for the reviewer: an entry that cannot fit one page still has break-inside: avoid, so
-    // Chromium starts it on a new page and the page before it keeps the room it did not use.
-    const before = analysis.pages[(project?.firstPage ?? 1) - 2];
-    const lastLine = before?.lines.at(-1);
-    const empty = lastLine ? lastLine.y - MARGIN.bottom : A4.height - MARGIN.top - MARGIN.bottom;
-    log(`long entry gap: the page before it ends at y=${lastLine?.y.toFixed(0) ?? "none"}, ${empty.toFixed(0)} pt (${((empty / (A4.height - MARGIN.top - MARGIN.bottom)) * 100).toFixed(0)}% of the page) stay empty`);
+    // The room this entry leaves on the pages around it is asserted by the RV1 block below (it flows, it does not move).
+  });
+});
+
+describe("T22 PDF QA: an entry taller than a page flows instead of leaving a blank page (review RV1)", () => {
+  /** Headlines of the top entries the template marked to flow (read from the HTML it renders). */
+  const flowingHeadlines = (model: CvPreviewModel): string[] =>
+    [...renderCvPrintHtml(model).matchAll(/<li class="entry entry-flow"><h3 class="entry-title">([^<]*)<\/h3>/g)].map((match) => match[1]!);
+
+  /** The tallest child that is printed whole on one page: the most room a page may leave when the next child moves on. */
+  function tallestChild(analysis: PdfAnalysis, model: CvPreviewModel): number {
+    const children = model.sections.flatMap((section) => section.entries.flatMap((entry) => entry.children));
+    const heights = children.flatMap((child) => {
+      const tag = /END-(\S+)$/.exec(child.text ?? "")?.[1];
+      const extent = tag ? blockExtent(analysis, child.headline, tag) : null;
+      return extent && extent.firstPage === extent.lastPage ? [extent.height] : [];
+    });
+    expect(heights.length, "children found whole on one page").toBeGreaterThan(0);
+    return Math.max(...heights);
+  }
+
+  // The head of a flowing entry (title, meta, text) stays with its first child, so a page may also leave that room.
+  const HEAD_ALLOWANCE = 72;
+
+  it.each(["en", "id"] as const)("the E2E-shaped CV (%s, name only, one long project) starts the project on page 1", async (locale) => {
+    const fixture = longEntryFirst(locale);
+    const analysis = await analyzePdf(await renderModelPdf(fixture.model));
+    const first = analysis.pages[0]!;
+    const heading = CV_LABELS[locale].sections.projects;
+    expect(first.lines.length, "page 1 holds more than the profile header").toBeGreaterThan(1);
+    expect(first.text).toContain(heading);
+    expect(first.text).toContain("Program Transformasi Digital");
+    expect(first.text, "the first child starts on page 1").toContain("START-P1");
+    expect(first.text, "the first child ends on page 1").toContain("END-P1");
+    log(`RV1 long entry first ${locale}: pages=${analysis.pages.length} page1Lines=${first.lines.length} gaps=${bottomGaps(analysis).map((gap) => gap.empty.toFixed(0)).join(",")}`);
+  });
+
+  it.each([
+    ["long entry first (en)", () => longEntryFirst("en")],
+    ["long entry first (id)", () => longEntryFirst("id")],
+    ["owner A long (en)", () => ownerLong("en")],
+    ["owner A long (id)", () => ownerLong("id")],
+    ["long experience (id)", () => longExperience()],
+  ] as const)("%s: no page before another one leaves more room than one child and an entry head", async (_name, make) => {
+    const fixture = make();
+    const analysis = await analyzePdf(await renderModelPdf(fixture.model));
+    const limit = tallestChild(analysis, fixture.model) + HEAD_ALLOWANCE;
+    const gaps = bottomGaps(analysis);
+    log(`RV1 gaps ${fixture.name}: pages=${analysis.pages.length} limit=${limit.toFixed(0)} empty=${gaps.map((gap) => gap.empty.toFixed(0)).join(",")}`);
+    expect(gaps.filter((gap) => gap.empty > limit).map((gap) => `page ${gap.page} leaves ${gap.empty.toFixed(0)} pt`)).toEqual([]);
+  });
+
+  it("a long experience keeps its heading with its content and never splits one of its achievements", async () => {
+    const fixture = longExperience();
+    const analysis = await analyzePdf(await renderModelPdf(fixture.model));
+    const headings = new Set([CV_LABELS.id.sections.experience, "Kepala Operasional", ...fixture.model.sections.flatMap((section) => section.entries.flatMap((entry) => entry.children.map((child) => child.headline)))].map(normalize));
+    for (const page of analysis.pages) {
+      const last = page.lines.at(-1);
+      expect(last && headings.has(last.text.replace(/^[•◦▪‣]\s*/u, "")) ? `page ${page.number} ends with "${last.text}"` : null).toBeNull();
+    }
+    const split = fixture.model.sections.flatMap((section) => section.entries.flatMap((entry) => entry.children)).flatMap((child) => {
+      const tag = /END-(\S+)$/.exec(child.text ?? "")![1]!;
+      const extent = blockExtent(analysis, child.headline, tag);
+      expect(extent, child.headline).not.toBeNull();
+      return extent && extent.firstPage !== extent.lastPage ? [child.headline] : [];
+    });
+    expect(split).toEqual([]);
+    expect(analysis.pages[0]!.text, "the experience starts on page 1, after the summary").toContain("Kepala Operasional");
+  });
+
+  it("keeps the head of a flowing entry with its first child wherever the page ends (sweep of 36 summaries)", async () => {
+    const problems: string[] = [];
+    let headsNearBottom = 0;
+    for (let lines = 14; lines <= 49; lines += 1) {
+      const fixture = longExperience(lines);
+      expect(flowingHeadlines(fixture.model)).toEqual(["Kepala Operasional"]);
+      const analysis = await analyzePdf(await renderModelPdf(fixture.model));
+      const head = analysis.pages.find((page) => page.lines.some((line) => line.text === "Kepala Operasional"));
+      if (!head) { problems.push(`n=${lines}: the experience is missing`); continue; }
+      if (!head.text.includes("START-X1")) problems.push(`n=${lines}: the head is on page ${head.number} without its first child`);
+      const at = head.lines.find((line) => line.text === "Kepala Operasional")!;
+      if (at.y < MARGIN.bottom + 200) headsNearBottom += 1;
+    }
+    log(`RV1 head sweep: variants=36 headsNearBottom=${headsNearBottom} problems=${problems.length}`);
+    expect(problems).toEqual([]);
+    expect(headsNearBottom, "variants that put the head in the last 200 points of a page").toBeGreaterThanOrEqual(5);
+  });
+
+  it("marks only entries that really are taller than a page; an entry of nearly a page fits, is not marked and is not split", async () => {
+    const fixtures = [longEntryFirst("en"), ownerLong("en"), longExperience(), nearlyPageEntry(), ownerA("en"), graduate()];
+    for (const fixture of fixtures) {
+      const analysis = await analyzePdf(await renderModelPdf(fixture.model));
+      for (const headline of flowingHeadlines(fixture.model)) {
+        const entry = fixture.model.sections.flatMap((section) => section.entries).find((candidate) => candidate.headline === headline)!;
+        const lastTag = /END-(\S+)$/.exec(entry.children.at(-1)?.text ?? "")?.[1];
+        expect(lastTag, `${fixture.name}: ${headline} ends with a tagged child`).toBeDefined();
+        const extent = blockExtent(analysis, headline, lastTag!);
+        log(`RV1 flowing ${fixture.name}: "${headline}" height=${extent?.height.toFixed(0)}pt pages=${extent?.firstPage}-${extent?.lastPage}`);
+        expect(extent!.height, `${fixture.name}: ${headline} is taller than the text area`).toBeGreaterThan(CONTENT_HEIGHT);
+      }
+    }
+    const near = nearlyPageEntry();
+    expect(flowingHeadlines(near.model)).toEqual([]);
+    expect(flowingHeadlines(longEntryFirst("en").model)).toEqual(["Program Transformasi Digital"]);
+    expect(flowingHeadlines(longExperience().model)).toEqual(["Kepala Operasional"]);
+    const analysis = await analyzePdf(await renderModelPdf(near.model));
+    const extent = blockExtent(analysis, "Analis Kontrak", "N8");
+    log(`RV1 nearly a page: height=${extent?.height.toFixed(0)}pt (${((extent?.height ?? 0) / CONTENT_HEIGHT * 100).toFixed(0)}% of the text area) pages=${extent?.firstPage}-${extent?.lastPage}`);
+    expect(extent).not.toBeNull();
+    expect(extent!.height, "the entry is close to a page, so the check means something").toBeGreaterThan(CONTENT_HEIGHT * 0.75);
+    expect(extent!.firstPage, "an entry that fits a page is never split").toBe(extent!.lastPage);
   });
 });
 

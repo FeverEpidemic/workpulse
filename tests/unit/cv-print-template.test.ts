@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CV_LABELS } from "@/domain/cv/labels";
 import { buildCvPreviewModel, type CvPreviewEntry, type CvPreviewModel } from "@/domain/cv/preview";
 import { buildExportRenderModel, cvExportSnapshotSchema } from "@/domain/cv/export";
-import { renderCvPrintHtml } from "@/server/export/cv-print-template";
+import { entryFlowsAcrossPages, minEntryHeightPt, renderCvPrintHtml } from "@/server/export/cv-print-template";
 
 import {
   achievementSnapshot, documentRow, exportSnapshotFrom, itemRow, richCvFixture, skillSnapshot, uuid,
@@ -158,6 +158,47 @@ describe("T21 single-column print template", () => {
     const html = renderCvPrintHtml(modelFor("en"));
     // overflow-wrap is inherited: on body it covers every heading, paragraph and list item of the document.
     expect(html).toMatch(/body\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  });
+
+  describe("entries taller than a page (T22 review RV1)", () => {
+    const entry = (over: Partial<CvPreviewEntry> = {}): CvPreviewEntry => ({
+      itemId: "e", type: "experience", headline: "Kepala Operasional", subline: "PT Contoh", dates: "2016 – Sekarang", text: "Memimpin tim.",
+      deleted: false, hasOverride: false, children: [], ...over,
+    });
+    const child = (index: number, length: number, over: Partial<CvPreviewEntry> = {}): CvPreviewEntry =>
+      entry({ itemId: `c${index}`, type: "achievement", headline: `Capaian ${index}`, subline: null, dates: "10 Mei 2023", text: "x ".repeat(length / 2).trim(), ...over });
+    const modelWith = (entries: CvPreviewEntry[]): CvPreviewModel => ({
+      title: "CV", locale: "id", profile: { display_name: "Rina", headline: null, contact_email: null, phone: null, location: null, website: null },
+      summary: null, sections: [{ key: "experience", heading: "Pengalaman", entries }],
+    });
+
+    it("keeps an entry that fits a page whole and lets one that cannot fit flow between its children", () => {
+      const short = entry({ children: [child(1, 240), child(2, 240)] });
+      const long = entry({ itemId: "long", headline: "Manajer", children: Array.from({ length: 12 }, (_, index) => child(index + 1, 240)) });
+      expect(entryFlowsAcrossPages(short)).toBe(false);
+      expect(entryFlowsAcrossPages(long)).toBe(true);
+      const html = renderCvPrintHtml(modelWith([short, long]));
+      expect(html).toContain('<li class="entry"><h3 class="entry-title">Kepala Operasional</h3>');
+      expect(html).toContain('<li class="entry entry-flow"><h3 class="entry-title">Manajer</h3>');
+      // The children of a flowing entry still never split, and its head stays with the first child.
+      expect(html).toMatch(/\.child \{[^}]*break-inside: avoid/);
+      expect(html).toMatch(/\.entry-flow \{[^}]*break-inside: auto/);
+      expect(html).toMatch(/\.entry-flow > \.entry-meta, \.entry-flow > \.entry-text \{[^}]*break-after: avoid/);
+      expect(html).toMatch(/\.entry \{[^}]*break-inside: avoid/);
+    });
+
+    it("estimates a lower bound: 120 characters a line, kept line breaks, and nothing for deleted children", () => {
+      const lines = (count: number) => count * 14.5;
+      // Headline 1 line, meta 1 line (9 pt), text 2 lines (130 characters) with its 2 pt margin.
+      expect(minEntryHeightPt(entry({ text: "a".repeat(130), children: [] }))).toBeCloseTo(lines(1) + 9 * 1.45 + 2 + lines(2), 5);
+      // pre-line keeps the line breaks of the text: three short lines are three lines.
+      expect(minEntryHeightPt(entry({ text: "a\nb\nc", children: [] }))).toBeCloseTo(lines(1) + 9 * 1.45 + 2 + lines(3), 5);
+      const withChildren = entry({ children: [child(1, 240), child(2, 240, { deleted: true })] });
+      const withoutDeleted = entry({ children: [child(1, 240)] });
+      expect(minEntryHeightPt(withChildren)).toBe(minEntryHeightPt(withoutDeleted));
+      expect(minEntryHeightPt(entry({ deleted: true }))).toBe(0);
+      expect(minEntryHeightPt(withChildren)).toBe(minEntryHeightPt(withChildren));
+    });
   });
 
   it("is deterministic", () => {

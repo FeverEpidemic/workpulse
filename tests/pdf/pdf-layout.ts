@@ -166,6 +166,45 @@ export function printedStrings(model: CvPreviewModel): string[] {
   return out.map(normalize).filter((value) => value !== "");
 }
 
+/** Height of the text area of a page: A4 minus the top and bottom `@page` margins. */
+export const CONTENT_HEIGHT = A4.height - MARGIN.top - MARGIN.bottom;
+
+const unmarked = (text: string): string => text.replace(/^[•◦▪‣]\s*/u, "");
+
+type LineAt = { page: PdfPage; index: number };
+
+function findLine(analysis: PdfAnalysis, test: (text: string) => boolean): LineAt | null {
+  for (const page of analysis.pages) {
+    const index = page.lines.findIndex((line) => test(unmarked(line.text)));
+    if (index >= 0) return { page, index };
+  }
+  return null;
+}
+
+/**
+ * The printed height of a block from the line that is exactly `headline` to the line that holds `END-<endTag>`, added up
+ * over every page it covers (the top of its first line to the foot of its last line on each page). Null if not found.
+ */
+export function blockExtent(analysis: PdfAnalysis, headline: string, endTag: string): { height: number; firstPage: number; lastPage: number } | null {
+  const start = findLine(analysis, (text) => text === normalize(headline));
+  const end = findLine(analysis, (text) => new RegExp(`(^|\\s)END-${endTag}$`).test(text));
+  if (!start || !end || end.page.number < start.page.number) return null;
+  let height = 0;
+  for (let number = start.page.number; number <= end.page.number; number += 1) {
+    const page = analysis.pages[number - 1]!;
+    const from = number === start.page.number ? start.index : 0;
+    const to = number === end.page.number ? end.index : page.lines.length - 1;
+    const top = page.lines[from]!;
+    height += top.y + top.size - page.lines[to]!.y;
+  }
+  return { height, firstPage: start.page.number, lastPage: end.page.number };
+}
+
+/** The empty room at the foot of every page that is followed by another page (last line to the bottom margin). */
+export function bottomGaps(analysis: PdfAnalysis): { page: number; empty: number }[] {
+  return analysis.pages.slice(0, -1).map((page) => ({ page: page.number, empty: (page.lines.at(-1)?.y ?? A4.height - MARGIN.top) - MARGIN.bottom }));
+}
+
 export interface Placement {
   expected: string;
   /** 1-based page of the first and last character of the string, or null when it was not found. */

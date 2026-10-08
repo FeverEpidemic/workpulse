@@ -128,6 +128,63 @@ export function ownerLong(locale: CvLocale): PdfFixture {
   return { name: `owner A long (${locale})`, locale, model: fromRows(document, items), mustPrint, mustNotPrint: [] };
 }
 
+/**
+ * The shape of the E2E long CV (RV1): a name only, no headline, contact or summary, and one project with 24 long child
+ * bullets, so the project is taller than a page. Before RV1 page 1 held the name and nothing else.
+ */
+export function longEntryFirst(locale: CvLocale): PdfFixture {
+  const project = uuid(120);
+  const document = documentRow({
+    locale, title: "CV panjang",
+    profile_snapshot: { schema_version: "cv-profile.v1", display_name: "Budi Santoso", headline: null, summary: null, contact_email: null, phone: null, location: null, website: null },
+  });
+  const items: CvItemRow[] = [itemRow(uuid(1), "projects", 1, projectSnapshot(project, { title: "Program Transformasi Digital", description: "Deskripsi", user_role: "Peneliti", ...none }))];
+  for (let index = 1; index <= 24; index += 1) {
+    items.push(itemRow(uuid(60 + index), "achievements", index, achievementSnapshot(uuid(800 + index), { title: `Hasil program ${index}`, cv_bullet: longBullet(`P${index}`, locale), project_id: project })));
+  }
+  return { name: `long entry first (${locale})`, locale, model: fromRows(document, items), mustPrint: [], mustNotPrint: [] };
+}
+
+/**
+ * A summary of about half a page, then one experience with twelve contextual achievements of two to three lines: the
+ * experience is taller than a page (a long tenure with many achievements, the common case of RV1).
+ */
+export function longExperience(summaryLines = 24): PdfFixture {
+  const experience = uuid(110);
+  const document = documentRow({
+    locale: "id", title: "CV pengalaman panjang",
+    profile_snapshot: { schema_version: "cv-profile.v1", display_name: "Rina Wulandari", headline: "Pemimpin Operasional", summary: null, contact_email: "rina@example.com", phone: null, location: "Surabaya", website: null },
+    summary_override: Array.from({ length: summaryLines }, (_, index) => `Baris ringkasan ${index + 1}`).join("\n"),
+  });
+  const items: CvItemRow[] = [
+    itemRow(uuid(1), "experience", 1, experienceSnapshot(experience, { organization: "PT Logistik Nusantara", role_title: "Kepala Operasional", description: "Memimpin tim operasional gudang.", start_date: "2016-01-01", start_precision: "year", is_current: true })),
+  ];
+  for (let index = 1; index <= 12; index += 1) {
+    items.push(itemRow(uuid(30 + index), "achievements", index, achievementSnapshot(uuid(700 + index), { title: `Capaian operasional ${index}`, cv_bullet: longBullet(`X${index}`, "id", 240), experience_id: experience })));
+  }
+  return { name: "long experience (id)", locale: "id", model: fromRows(document, items), mustPrint: [], mustNotPrint: [] };
+}
+
+/**
+ * An experience of about five sixths of a page after a short summary: it fits one page, so it is not marked to flow and
+ * must never be split (it may move to the next page whole).
+ */
+export function nearlyPageEntry(): PdfFixture {
+  const experience = uuid(110);
+  const document = documentRow({
+    locale: "en", title: "CV",
+    profile_snapshot: { schema_version: "cv-profile.v1", display_name: "Ani Contoh", headline: "Analis", summary: null, contact_email: "ani@example.com", phone: null, location: null, website: null },
+    summary_override: Array.from({ length: 12 }, (_, index) => `Baris ringkasan ${index + 1}`).join("\n"),
+  });
+  const items: CvItemRow[] = [
+    itemRow(uuid(1), "experience", 1, experienceSnapshot(experience, { organization: "PT Contoh", role_title: "Analis Kontrak", description: "Menyusun laporan.", start_date: "2020-01-01", start_precision: "year", is_current: true })),
+  ];
+  for (let index = 1; index <= 8; index += 1) {
+    items.push(itemRow(uuid(30 + index), "achievements", index, achievementSnapshot(uuid(700 + index), { title: `Capaian ${index}`, cv_bullet: longBullet(`N${index}`, "id", 240), experience_id: experience })));
+  }
+  return { name: "nearly a page (en)", locale: "en", model: fromRows(document, items), mustPrint: [], mustNotPrint: [] };
+}
+
 /** A graduate: no experience, an education record, an academic project and one confirmed achievement. */
 export function graduate(): PdfFixture {
   const project = uuid(120);
