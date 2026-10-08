@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T21 done locally; Gates M2 and M3 passed; T22 (S14 preview and PDF QA) next.** Auth/profile,
+Status: **T01–T22 done locally; Gates M2 and M3 passed; Gate M4 (CV export integration review) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -12,8 +12,8 @@ checks, real ClamAV screening through the durable worker (T10), and the attachme
 Achievement, and Project detail screens with upload/scan polling, retry, authorized download,
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
-production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented, and T21 adds the PDF export
-backend (no UI yet); the S14 preview page and account deletion remain deferred to their feature tasks. See
+production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented, T21 adds the PDF export
+backend, and T22 adds the S14 preview and export page with real-renderer PDF QA; account deletion remains deferred to T23. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -61,7 +61,8 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:cv` | T18 master CV against local Supabase with real Auth: one CV under parallel first open, draft ineligibility, parent inclusion, duplicates, concurrent edits and source races, source deletion, two-account isolation, log hygiene |
 | `pnpm test:integration:cv-builder` | T19 CV builder against local Supabase with real Auth: graduate journey with untouched canonical records, overrides kept out of snapshots, skill/certification refusal, concurrent text and structural edits, parent removal, isolation, deleted sources, log hygiene |
 | `pnpm test:integration:cv-freshness` | T20 CV freshness against local Supabase with real Auth: PRD edit-after-override release scenario (refresh keeps the override, keep per revision, delete invalidates in the same transaction), six source types, context relink, reopen/dismiss, profile freshness, four two-session race scenarios without deadlock, dashboard counts, isolation, log hygiene |
-| `pnpm test:integration:cv-export` | T21 CV export against local Supabase, Storage and the real worker: readiness, PRD delete-source and graduate scenarios, snapshot isolation from later edits, five request-versus-mutation races, dedup/idempotency, lease loss, render failure and retry, 24-hour expiry and cleanup, orphans, deleting accounts, owner-only signed download, log hygiene; plus a real Chromium renderer suite (A4, searchable en/id text, multipage, non-Latin names) that fails loudly without `workpulse-t21-pdf` ([PDF renderer runbook](docs/verification/T21-pdf-renderer-runbook.md)) |
+| `pnpm test:integration:cv-export` | T21 CV export against local Supabase, Storage and the real worker: readiness, PRD delete-source and graduate scenarios, snapshot isolation from later edits, five request-versus-mutation races, dedup/idempotency, lease loss, render failure and retry, 24-hour expiry and cleanup, orphans, deleting accounts, owner-only signed download, log hygiene; plus a real Chromium renderer suite (A4, searchable en/id text, multipage, non-Latin names) that fails loudly without `workpulse-t21-pdf` ([PDF renderer runbook](docs/verification/T21-pdf-renderer-runbook.md)); plus the T22 S14 server layer (status route owner-only with identical 404s, named attachment and inline signed URLs, polling from queued to succeeded, Retry/Regenerate against real rows, one job per double click) |
+| `pnpm test:pdf` | T22 PDF QA against the real Chromium renderer `workpulse-t21-pdf` (`WORKPULSE_PDF_GOTENBERG_URL`, no database, no fake fallback): extracted text equals the model in order, A4 and margins, no scaling, a 60-variant page-break sweep without orphan headings or split entries, page gaps around entries taller than a page, Indonesian and non-Latin text |
 | `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
@@ -77,6 +78,7 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:import-review` | S03 import review: PRD Indonesian-CV release scenario (keyboard only), idempotent commit, refresh, partial extraction, two-tab conflicts and commit token, empty extraction, returning user, isolation/privacy, 360/1440 light/dark and Axe; drains the worker on port 3010 |
 | `pnpm test:e2e:cv` | S13 CV builder: graduate journey (keyboard moves, wording override, Save, reload), CV language, parent removal dialog, two-session conflict, wording dropped by a removal elsewhere, Add to CV, 360/1440 light/dark with Axe, reduced motion; port 3012 |
 | `pnpm test:e2e:cv-freshness` | S13 freshness review and S04 CV checks: Refresh, Keep saved wording, Keep my wording, Replace, deleted/unconfirmed sources, profile review, Refresh all without manual wording, actions off while wording is unsaved, dashboard links, keyboard/focus/live region, 360/1440 light/dark with Axe, reduced motion; port 3013 |
+| `pnpm test:e2e:cv-export` | S14 preview and export: access and empty state, graduate journey with the keyboard and the real renderer (real PDF pages, download), unsaved S13 wording, PRD delete-source scenario, Keep saved wording, failure → Retry → Regenerate, expiry, PDF pages that fail to load, two-tab conflict, two-account isolation, 360/1440 light/dark with Axe, long id/en CV page screenshots; drains the worker as a child process on port 3014 and writes `docs/verification/T22-screenshots/` |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -161,6 +163,15 @@ T21 adds the CV export backend (no UI; S14 is T22).
 - **Download and expiry.** A finished PDF can be downloaded for 24 hours through a signed URL of at most five minutes; then `export-cleanup` deletes the object, and a new request revalidates.
 
 See [decision 0027](docs/decisions/0027-t21-cv-export-backend.md).
+
+T22 adds S14 `/cv/preview`, opened from S13 through *Preview and export*. The link is disabled while wording is unsaved.
+- **Saved revision only.** The page reads the saved CV and never creates one or starts an export by itself. It shows *Saved revision N*, the blockers with links to the place in S13 where each is fixed, and one explicit action. *Export PDF* sends the shown revision with a new idempotency key per click; a CV saved elsewhere meanwhile gives *Reload*, not an export.
+- **Status.** `GET /api/cv/exports/[id]` serves the owner's safe columns with `no-store`; any other id gets the same 404. The page polls it with a staged delay (1–30 s) and announces the status in a live region.
+- **Actions.** *Retry* is offered only for a retriable failure of the revision that is saved now; otherwise the page offers *Regenerate*, a new request that is validated again.
+- **PDF pages.** Once a PDF exists, its real pages are drawn with pdf.js in the browser from a short-lived inline URL, with page navigation. *Download PDF* issues a 300-second attachment URL named `WorkPulse-CV-<date>.pdf` at the moment of the click.
+- **Print template.** Long unbroken words wrap instead of shrinking the page. An entry taller than one page may break between its children, so no page is left blank before it.
+
+See [decision 0028](docs/decisions/0028-t22-saved-preview-pdf-qa.md).
 
 ## Local database (Supabase)
 

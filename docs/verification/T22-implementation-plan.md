@@ -7,7 +7,7 @@
 > - Semua nama route, komponen, fungsi, kode error, key i18n, script, port, dan path di dokumen ini **dibekukan**; jangan mengganti namanya.
 
 - Tanggal: 6 Oktober 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status akhir: **DONE — 8 Oktober 2026** (acceptance lokal; gate review RV1 diperbaiki, lihat `T22-review-remediation-plan.md` dan `T22-saved-preview-pdf-qa.md`).
 - Dependensi:
   - T21 **DONE**: backend export, decision 0027, `docs/verification/T21-cv-export-backend.md`, runbook renderer `docs/verification/T21-pdf-renderer-runbook.md`.
   - T20 **DONE**: freshness dan tautan review `/cv#cv-review`.
@@ -440,16 +440,16 @@ Script baru:
 
 ### Fase 8 — Draft dokumen (setelah gate Claude dan perbaikan P0–P2)
 
-- [ ] `docs/decisions/0028-t22-saved-preview-pdf-qa.md` berisi:
+- [x] `docs/decisions/0028-t22-saved-preview-pdf-qa.md` berisi:
   - keputusan §2.2 dan persetujuan §2.4;
   - aturan aksi Retry/Regenerate;
   - aturan template yang diubah beserta bukti;
   - batas searchability Unicode (rujuk 0027 N4);
   - alternatif yang ditolak;
   - seam Gate M4 dan T23.
-- [ ] `docs/verification/T22-saved-preview-pdf-qa.md`: pass/fail/warning/tidak dijalankan, trace ke R10, F07, S14, DB §5, dan setiap poin §1, serta daftar screenshot.
-- [ ] README: S14, script baru, dan tabel quality gates.
-- [ ] Jangan mengubah bagian authoritative `IMPLEMENTATION_STATUS.md` dan jangan mengklaim DONE.
+- [x] `docs/verification/T22-saved-preview-pdf-qa.md`: pass/fail/warning/tidak dijalankan, trace ke R10, F07, S14, DB §5, dan setiap poin §1, serta daftar screenshot.
+- [x] README: S14, script baru, dan tabel quality gates.
+- [x] Jangan mengubah bagian authoritative `IMPLEMENTATION_STATUS.md` dan jangan mengklaim DONE.
 
 ## 6. Fixture
 

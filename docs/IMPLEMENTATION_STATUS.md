@@ -1,5 +1,91 @@
 # WorkPulse Implementation Status
 
+## T22 — Saved preview dan PDF QA, acceptance lokal — 8 Oktober 2026
+
+Status T22: **DONE** (acceptance lokal) — seluruh 18 poin acceptance §1 terbukti lokal.
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0–7). Gate review Claude (Opus) pada HEAD `d68ad3e` menemukan satu P2 dan delapan P3 (N1–N8). P2 itu adalah RV1: entry yang lebih tinggi dari satu halaman dipindah utuh, sehingga halaman sebelumnya kosong; pada CV tanpa summary, halaman 1 hanya berisi nama.
+- RV1 diperbaiki reviewer di `369b016` atas instruksi pengguna. Review ulang lulus tanpa P0–P2, tetapi tidak independen penuh; perbaikan ditopang test yang terbukti gagal tanpa perbaikan dan uji mutasi.
+- Fase 8 ditulis reviewer.
+- Dependensi T21, T20, T19, T05 **DONE**; Gate M3 PASSED.
+- Rujukan: R10, F07 langkah 4–6, S14, DB §5.
+
+[Rencana](verification/T22-implementation-plan.md), [bukti](verification/T22-saved-preview-pdf-qa.md), [gate review dan remediasi](verification/T22-review-remediation-plan.md), [decision 0028](decisions/0028-t22-saved-preview-pdf-qa.md), [screenshot](verification/T22-screenshots/), receipt [Fase 0](verification/T22-phase0-baseline.md)–[7](verification/T22-phase7-regression.md), [7b](verification/T22-phase7b-remediation.md).
+
+Yang selesai:
+
+- **S14 `/cv/preview`.** Halaman hanya membaca revision CV tersimpan (`getCv` tanpa `ensure`, readiness, lima export terakhir). Isinya:
+  - *Saved revision N*, bahasa CV, dan daftar blocker dengan tautan ke S13 (`#cv-item-<id>`, `#cv-review`, `#cv-profile` baru);
+  - satu aksi utama eksplisit, dengan `expected_revision` yang ditampilkan dan idempotency key per klik;
+  - status yang di-polling (`GET /api/cv/exports/[id]`, jeda 1–30 detik, live region, fokus) dan riwayat dengan *Earlier revision*;
+  - preview HTML tersimpan.
+
+  Konflik dua tab memunculkan notice + *Reload* tanpa export.
+- **Aturan aksi.** `src/domain/cv/export-view.ts`: *Retry* hanya untuk export gagal retriable dari revision tersimpan dengan attempt < 3. Selain itu *Regenerate* yang melewati readiness, atau *Open CV builder* untuk kode permanen.
+- **Halaman PDF nyata.** pdf.js browser (worker terbundel, tanpa eval) menggambar PDF dari signed URL `inline` ke canvas berlabel dengan *Previous*/*Next* dan *Page n of N*. Gagal memuat menampilkan *Try again* tanpa memblokir *Download PDF*.
+- **Unduhan.** Adapter storage diperluas secara aditif (`disposition`, `filename` generik). Nama unduhan `WorkPulse-CV-<YYYY-MM-DD>.pdf` (UTC); URL 300 detik dibuat saat klik.
+- **Tautan S13.** *Preview and export* nonaktif dengan alasan terlihat selama ada perubahan yang belum disimpan.
+- **Template cetak** (hanya aturan break):
+  - `overflow-wrap: anywhere`: token panjang tidak lagi menyusutkan seluruh PDF;
+  - `entry-flow` (RV1): entry yang taksiran tinggi minimumnya > satu halaman boleh terbelah di antara child, sedangkan kepala entry tetap bersama child pertama.
+- **QA PDF nyata (`tests/pdf/`).** Ekstraksi cocok dengan model, A4/margin, font tidak diskalakan, sapuan 60 varian page break, celah halaman, sapuan kepala 36 varian, dan Unicode, semuanya dengan renderer Chromium nyata.
+
+File berubah:
+
+- Route: `src/app/(workspace)/cv/preview/{page,loading}.tsx`, `src/app/api/cv/exports/[id]/route.ts`.
+- Domain dan state: `src/domain/cv/{export-view,contracts}.ts`, `src/domain/routes/safe-return.ts`.
+- Komponen CV: `src/features/cv/{cv-export-page,cv-pdf-pages,cv-export-page-state,pdfjs-build.d}.ts(x)`.
+- Fitur CV lain: `src/features/cv/{export-service,actions,cv-builder,cv-builder-state,cv-preview,cv-panels}.ts(x)`.
+- Server: `src/server/storage/{adapter,supabase-storage-adapter,private-storage-service}.ts` (aditif), `src/server/export/cv-print-template.ts`.
+- UI bersama: `src/i18n/messages.ts`, `src/app/globals.css`.
+- Test unit: lima file baru (`cv-export-view`, `cv-export-page-state`, `cv-export-page-ui`, `cv-export-status-route`, `storage-download-options`), plus perluasan `cv-export-{service,actions,i18n}` dan `cv-print-template`.
+- Test lain: integration `cv-export-preview.test.ts`; QA `tests/pdf/{fixtures,pdf-layout,cv-pdf-layout.test}.ts` + `vitest.pdf.config.ts`; E2E `cv-export.spec.ts` + `helpers/export-worker.ts` + `playwright.cv-export.config.ts` (port 3014).
+- Konfigurasi dan dokumen: `package.json` (`test:pdf`, `test:e2e:cv-export`, file baru di `test:integration:cv-export`), README, screenshot, decision, dan dokumen verifikasi.
+
+Migration dan keputusan: tanpa migration (parity 31/31). RPC, SQL, dan worker T18–T21 tidak diubah. Decision 0028 mencatat enam keputusan produk §2.4 yang disetujui pengguna 6 Oktober 2026, aturan Retry/Regenerate, perluasan storage aditif, aturan break template beserta buktinya, batas searchability Unicode, dan P3 yang diterima.
+
+Checks (hasil aktual):
+
+- **Reviewer, setelah RV1 (`369b016`):**
+  - lint, typecheck, build, dan `worker:check` exit 0;
+  - unit **103/956**, `test:pdf` **46**, `test:integration:cv-export` **35**, `test:e2e:cv-export` **12**;
+  - `git diff --check` bersih;
+  - bukti RED RV1 di `93174e8`: `test:pdf` 9 gagal.
+- **Reviewer, pada `d68ad3e`:**
+  - pgTAP 15/1290, `db:lint` bersih, migration 31/31;
+  - integration storage 1, evidence 14, cv-freshness 11, cv-builder 7;
+  - E2E cv 8, cv-freshness 10, evidence 8, m2 1, m3 2;
+  - diff `supabase`, `workers`, dan lockfile kosong; `console.` 0.
+- **Pelaksana (Fase 7):** 17 suite integration (187 test) dan 16 suite E2E (80 test) exit 0, kecuali flaky bawaan `activity-ui.spec.ts:356` (lulus 3 dari 5 percobaan ulang).
+
+Belum dijalankan:
+
+- `test:e2e` gabungan dan `test:ai:live` (T22 tanpa AI).
+- p95 render (T24) dan staging/production.
+- Setelah RV1 (hanya template dan test PDF), suite domain lain tidak diulang; untuk suite itu berlaku hasil pelaksana Fase 7 dan reviewer pada `d68ad3e`.
+
+Risiko/batas: P3 terbuka (detail di decision 0028):
+
+- N1: copy *failed* ganda.
+- N2: satu canvas untuk halaman aktif.
+- N3: E2E menulis ulang screenshot yang di-track.
+- N4: Retry tanpa cek readiness (T23).
+- N5: tiga query paralel di S14.
+- N6: Retry/Regenerate/Download belum diuji dengan keyboard.
+- N7: flaky `activity-ui`.
+- N8: kolom preview sticky.
+
+Batas Unicode Han/Arab/Devanagari tercatat (0027 N4). Bukti lokal saja; bukan bukti production.
+
+Berikutnya: **Gate M4 (integration review CV export)**. Isinya:
+
+- F07 end-to-end;
+- snapshot, provenance, dan override terjaga dari S13 sampai PDF;
+- PDF dapat dibaca dan dicari;
+- fixture layout lulus.
+
+Rencana `M4-gate-review-plan.md` belum ditulis. Setelah itu: T23 Account deletion dan retention.
+
 ## T21 — Immutable export backend, acceptance lokal — 6 Oktober 2026
 
 Status T21: **DONE** (acceptance lokal) — seluruh 19 poin acceptance §1 terbukti lokal.
@@ -65,7 +151,7 @@ Berikutnya: **T22 Preview dan PDF QA**.
 - Polling status dan nama file unduhan.
 - QA visual/Unicode PDF di `tests/pdf/` (N4).
 
-[Handoff T22 single-agent](verification/T22-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5). Enam keputusan §2.4 disetujui pengguna (6 Oktober 2026). T22 tetap **TODO**.
+[Handoff T22 single-agent](verification/T22-implementation-plan.md) tersedia (6 Oktober 2026; eksekutor Claude Sonnet 5.5). Enam keputusan §2.4 disetujui pengguna (6 Oktober 2026). T22 kini **DONE** (lihat entry 8 Oktober 2026).
 
 ## T20 — CV freshness dan deletion, acceptance lokal — 3 Oktober 2026
 
@@ -812,7 +898,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T19 | CV builder dan overrides | DONE |
 | T20 | CV freshness dan deletion | DONE |
 | T21 | Export backend | DONE |
-| T22 | Preview dan PDF QA | TODO |
+| T22 | Preview dan PDF QA | DONE |
 | T23 | Account deletion dan retention | TODO |
 | T24 | Instrumentation dan performance | TODO |
 | T25 | Regression dan release handoff | TODO |
