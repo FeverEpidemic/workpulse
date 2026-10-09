@@ -27,6 +27,7 @@ import type { ActivityContextIssue } from "@/features/activity/activity-context-
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 import { createActivityAction, updateActivityAction } from "@/features/activity/actions";
+import { insertedTextOf } from "@/features/activity/before-input";
 
 function captureModeLabel(locale: Locale, mode: ActivityCaptureMode): string {
   const key = mode === "note" ? "activity.noteMode" : mode === "form" ? "activity.formMode" : "activity.chatMode";
@@ -408,10 +409,7 @@ export function ActivityCaptureForm({
               ...(textLength > 10_000 ? [rawTextLimitErrorId] : []),
             ])["aria-describedby"]}
             onBeforeInput={(event: FormEvent<HTMLTextAreaElement>) => {
-              const inputEvent = event.nativeEvent as InputEvent;
-              if (inputEvent.inputType.startsWith("delete")) return;
-              const insertion = inputEvent.data ??
-                (inputEvent.inputType === "insertLineBreak" || inputEvent.inputType === "insertParagraph" ? "\n" : null);
+              const insertion = insertedTextOf(event as { data?: string | null }, event.nativeEvent as Partial<InputEvent>);
               if (insertion !== null && wouldExceedCodePointLimit(event.currentTarget, insertion)) event.preventDefault();
             }}
             onPaste={(event: ClipboardEvent<HTMLTextAreaElement>) => {
