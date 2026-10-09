@@ -120,6 +120,9 @@ export interface Seeded {
   orphanKey: string;
   exportId: string;
   batchId: string;
+  activityId: string;
+  cvId: string;
+  cvRevision: number;
 }
 
 /**
@@ -141,8 +144,10 @@ export async function seedAccount(account: Account): Promise<Seeded> {
   })).data?.[0]?.id, null, "education");
   required((await client.rpc("create_skill_idempotent", { p_operation_key: randomUUID(), p_name: `Skill ${SENTINEL}`.slice(0, 60) })).data, null, "skill");
   required((await client.rpc("ensure_cv_document")).data, null, "cv");
-  const cv = required((await client.from("cv_documents").select("id, revision").eq("user_id", id).single()).data, null, "cv row");
-  required((await client.rpc("select_cv_source", { p_expected_revision: cv.revision, p_source_type: "education", p_source_id: education })).data, null, "cv item");
+  const created = required((await client.from("cv_documents").select("id, revision").eq("user_id", id).single()).data, null, "cv row");
+  required((await client.rpc("select_cv_source", { p_expected_revision: created.revision, p_source_type: "education", p_source_id: education })).data, null, "cv item");
+  // The selection bumped the revision; exports and later calls are bound to the saved one.
+  const cv = required((await client.from("cv_documents").select("id, revision").eq("user_id", id).single()).data, null, "saved cv row");
 
   sql(`insert into public.activities (id, user_id, raw_text, occurred_on, capture_mode) values ('${activityId}', '${id}', '${SENTINEL} aktivitas', current_date, 'note')`);
   sql(
@@ -165,7 +170,7 @@ export async function seedAccount(account: Account): Promise<Seeded> {
     orphanKey: `${id}/evidence/${orphanId}`,
   };
   for (const key of Object.values(keys)) await putObject(key);
-  return { ...keys, exportId, batchId };
+  return { ...keys, exportId, batchId, activityId, cvId: cv.id, cvRevision: cv.revision };
 }
 
 /** Every table with a `user_id` column outside the receipt queues, from the catalog so a new table is counted too. */
@@ -289,4 +294,49 @@ export async function teardownHarness(): Promise<void> {
     await admin.auth.admin.deleteUser(id).catch(() => undefined);
     sql(`delete from internal.account_deletions where user_id = '${id}'::uuid`);
   }
+}
+
+type RpcResult = { data: unknown; error: { code?: string; message?: string } | null };
+
+/** Calls an RPC by name with loose arguments, so a test can exercise the contract without per-function typing. */
+export async function rpcAny(client: Client, name: string, args: Record<string, unknown> = {}): Promise<RpcResult> {
+  const call = client.rpc as unknown as (name: string, args: Record<string, unknown>) => PromiseLike<RpcResult>;
+  return call.call(client, name, args);
+}
+
+/** A new Auth account for an email that an earlier, deleted account used. */
+export async function registerAgain(email: string): Promise<Account> {
+  const password = randomBytes(18).toString("base64url") + "Aa1!";
+  const id = required((await admin.auth.admin.createUser({ email, password, email_confirm: true })).data.user?.id, null, "re-registered user");
+  createdUserIds.push(id);
+  const client = signedInClient();
+  required((await client.auth.signInWithPassword({ email, password })).data.user, null, "re-registered sign-in");
+  return { id, email, password, client };
+}
+
+/** Work that is queued when the deletion starts: an AI job, an import job with its file, and an export. */
+export async function seedQueuedWork(account: Account, seeded: Seeded): Promise<{ aiJobId: string; importJobId: string; queuedExportId: string }> {
+  const { id } = account;
+  const batchId = randomUUID();
+  const importJobId = randomUUID();
+  const queuedExportId = randomUUID();
+  const aiJobId = randomUUID();
+  sql(
+    `insert into public.ai_jobs (id, user_id, kind, activity_id, input_revision, idempotency_key, payload_hash, consent_version) ` +
+    `values ('${aiJobId}', '${id}', 'detect', '${seeded.activityId}', 1, 'detect:${seeded.activityId}:r1', decode(repeat('00', 32), 'hex'), 'ai-processing-v1')`,
+  );
+  sql(
+    `insert into public.import_batches (id, user_id, idempotency_key, payload_hash, file_key, filename, mime_type, bytes, sha256, status, stage) ` +
+    `values ('${batchId}', '${id}', gen_random_uuid(), decode(repeat('ab', 32), 'hex'), '${id}/import/${batchId}', 'queued.pdf', 'application/pdf', ${PDF_BYTES.byteLength}, repeat('a', 64), 'queued', 'screening')`,
+  );
+  sql(
+    `insert into internal.import_jobs (id, user_id, batch_id, object_key, expected_bytes, mime_type, sha256) ` +
+    `values ('${importJobId}', '${id}', '${batchId}', '${id}/import/${batchId}', ${PDF_BYTES.byteLength}, 'application/pdf', repeat('a', 64))`,
+  );
+  await putObject(`${id}/import/${batchId}`);
+  sql(
+    `insert into public.cv_exports (id, user_id, cv_id, cv_revision, snapshot, status, idempotency_key) ` +
+    `values ('${queuedExportId}', '${id}', '${seeded.cvId}', ${seeded.cvRevision}, '{"title":"${SENTINEL}"}'::jsonb, 'queued', 'acd-queued-${queuedExportId}')`,
+  );
+  return { aiJobId, importJobId, queuedExportId };
 }
