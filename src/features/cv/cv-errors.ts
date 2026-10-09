@@ -21,6 +21,7 @@ export type CvServiceErrorCode =
   | "EXPORT_IN_PROGRESS"
   | "EXPORT_NOT_FOUND"
   | "EXPORT_NOT_RETRYABLE"
+  | "EXPORT_RETRY_UNAVAILABLE"
   | "EXPORT_NOT_READY"
   | "EXPORT_EXPIRED"
   | "UNAVAILABLE";
@@ -43,6 +44,7 @@ export const CV_ERROR_MESSAGE_KEYS: Record<CvServiceErrorCode, MessageKey> = {
   EXPORT_IN_PROGRESS: "cv.export.error.inProgress",
   EXPORT_NOT_FOUND: "cv.export.error.notFound",
   EXPORT_NOT_RETRYABLE: "cv.export.error.notRetryable",
+  EXPORT_RETRY_UNAVAILABLE: "cv.export.error.retryUnavailable",
   EXPORT_NOT_READY: "cv.export.error.notReady",
   EXPORT_EXPIRED: "cv.export.error.expired",
   UNAVAILABLE: "error.unavailable",
@@ -95,6 +97,7 @@ export function mapCvDatabaseError(
     case "CV_EXPORT_IN_PROGRESS": return make("EXPORT_IN_PROGRESS");
     case "CV_EXPORT_NOT_FOUND": return make("EXPORT_NOT_FOUND");
     case "CV_EXPORT_NOT_RETRYABLE": return make("EXPORT_NOT_RETRYABLE");
+    case "EXPORT_RETRY_UNAVAILABLE": return make("EXPORT_RETRY_UNAVAILABLE");
     case "CV_EXPORT_NOT_READY": return make("EXPORT_NOT_READY");
     case "CV_EXPORT_EXPIRED": return make("EXPORT_EXPIRED");
     case "CV_CHILD_ITEMS_EXIST":

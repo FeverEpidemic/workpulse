@@ -49,8 +49,9 @@ const NO_CV_REASON = "cv.export.blocker.cvNotFound" as const satisfies MessageKe
 /**
  * The valid actions for the newest export of the saved CV (or for one history row).
  *
- * Retry is only valid for a failed export with a retriable code, attempts left, and the revision that is saved now:
- * a retry prints the old snapshot, so after the CV changed (sources may be gone) the user regenerates instead (N2).
+ * Retry is only valid for a failed export with a retriable code, attempts left, the revision that is saved now, a
+ * snapshot that still exists, and a CV that is ready: a retry prints the old snapshot, so after the CV changed or got
+ * blocked (sources may be gone) the user regenerates instead (N2, N4).
  */
 export function exportActions(input: {
   row: CvExportRow | null;
@@ -77,7 +78,9 @@ export function exportActions(input: {
       return offered("regenerate");
     case "failed": {
       const current = row.cv_revision === savedRevision;
-      if (current && !isPermanentExportError(row.error_code) && row.attempt_count < CV_EXPORT_MAX_ATTEMPTS) return offered("retry");
+      const retryable = current && readiness.ready && row.snapshot_purged_at === null
+        && !isPermanentExportError(row.error_code) && row.attempt_count < CV_EXPORT_MAX_ATTEMPTS;
+      if (retryable) return offered("retry");
       // A permanent failure of the saved revision repeats until the CV changes: send the user to S13 first.
       if (current && isPermanentExportError(row.error_code)) return offered("openBuilder", ["regenerate"]);
       return offered("regenerate");
