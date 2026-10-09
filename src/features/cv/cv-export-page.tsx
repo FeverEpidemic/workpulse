@@ -433,7 +433,7 @@ export function CvExportPage(props: CvExportPageProps) {
         ) : null}
       </div>
 
-      <div className="cv-preview-column cv-export-preview">
+      <div className="cv-preview-column cv-export-preview" role="region" aria-label={t(locale, "cv.preview.heading")} tabIndex={0}>
         {pdfRow && pdfRow.page_count !== null ? (
           <CvPdfPages
             key={pdfRow.id} locale={locale} exportId={pdfRow.id} pageCount={pdfRow.page_count}

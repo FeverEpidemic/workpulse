@@ -105,6 +105,8 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
   const busyRef = useRef(false);
   const pendingFocus = useRef<(() => void) | null>(null);
   const conflictRef = useRef<HTMLDivElement>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const [noticeFocus, setNoticeFocus] = useState(0);
   const { markDirty, markClean } = useUnsavedForm("cv-builder");
 
   const entries = useMemo(() => toEditorEntries(doc, items), [doc, items]);
@@ -133,6 +135,11 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
     if (showConflict) conflictRef.current?.focus();
   }, [showConflict]);
 
+  // The review panel that held the focused button closes with the failed choice; the notice takes the focus.
+  useEffect(() => {
+    if (noticeFocus > 0) noticeRef.current?.focus();
+  }, [noticeFocus]);
+
   // The dashboard links to the list of achievements that are not on the CV yet; open it on arrival.
   useEffect(() => {
     if (window.location.hash !== "#cv-pool-achievements") return;
@@ -153,6 +160,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
       // A record changed again while it was being reviewed: reload, keep every other draft, ask again.
       setNotice({ messageKey: "cv.notice.sourceChangedAgain", correlationId: state.error.correlationId });
       setOpenReviews(new Set());
+      setNoticeFocus((count) => count + 1);
       startTransition(() => router.refresh());
       return;
     }
@@ -470,9 +478,11 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
         <p className="field-help">{t(locale, "cv.saveHint")}</p>
         <p className="sr-only" role="status" aria-live="polite" data-testid="cv-announcer">{announcement}</p>
         {notice ? (
-          <InlineError correlationId={notice.correlationId || undefined}>
-            <p>{t(locale, notice.messageKey)}</p>
-          </InlineError>
+          <div ref={noticeRef} tabIndex={-1} data-testid="cv-notice">
+            <InlineError correlationId={notice.correlationId || undefined}>
+              <p>{t(locale, notice.messageKey)}</p>
+            </InlineError>
+          </div>
         ) : null}
         {infoNotice ? <p className="ui-message" role="status" data-testid="cv-info-notice">{infoNotice}</p> : null}
         {droppedCount > 0 ? (
@@ -504,7 +514,7 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
           <CvSection key={key} sectionKey={key} entries={entries[key]} pool={pool[key]} handlers={handlers(key)} />
         ))}
       </div>
-      <div className="cv-preview-column">
+      <div className="cv-preview-column" role="region" aria-label={t(locale, "cv.preview.heading")} tabIndex={0}>
         <CvPreview
           model={model} locale={locale} dirty={dirty}
           action={<CvExportLink locale={locale} disabled={previewLink.disabled} reasonKey={previewLink.reasonKey} />}
