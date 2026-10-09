@@ -110,6 +110,9 @@ export function createSupabaseImportWorkerGateway(
     async expireImportUploads(limit, minAgeSeconds) {
       return count(await rpc("expire_import_uploads", { p_limit: limit, p_min_age_seconds: minAgeSeconds }));
     },
+    async expireAbandonedImportReviews(limit) {
+      return count(await rpc("expire_abandoned_import_reviews", { p_limit: limit }));
+    },
     async purgeExpiredImportBatches(limit) {
       return count(await rpc("purge_expired_import_batches", { p_limit: limit }));
     },

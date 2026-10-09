@@ -51,6 +51,7 @@ type Setup = {
   uploadError?: boolean;
   removeError?: boolean;
   expired?: number;
+  redacted?: number;
   orphans?: number;
 };
 
@@ -59,6 +60,7 @@ function harness(setup: Setup = {}) {
   const jobs = setup.jobs ?? [job()];
   const database: ExportWorkerDatabase = {
     async expireCvExports(limit) { calls.housekeeping.push(`expire:${limit}`); return setup.expired ?? 0; },
+    async redactCvExportSnapshots(limit) { calls.housekeeping.push(`redact:${limit}`); return setup.redacted ?? 0; },
     async reconcileOrphanExportObjects(minAge, limit) { calls.housekeeping.push(`orphans:${minAge}:${limit}`); return setup.orphans ?? 0; },
     async claimCvExportJobs(limit) { calls.housekeeping.push(`claim:${limit}`); return jobs; },
     async getCvExportInput(exportId) {
@@ -140,11 +142,11 @@ describe("T21 export worker: success path", () => {
   });
 
   it("runs housekeeping before claiming and reports counts only", async () => {
-    const h = harness({ jobs: [], expired: 2, orphans: 3 });
+    const h = harness({ jobs: [], expired: 2, redacted: 4, orphans: 3 });
     const summary = await runExportWorkerOnce(options(h, { claimLimit: 2, housekeepingLimit: 7, orphanMinAgeSeconds: 1800 }));
-    expect(h.calls.housekeeping).toEqual(["expire:7", "orphans:1800:7", "claim:2"]);
+    expect(h.calls.housekeeping).toEqual(["expire:7", "redact:7", "orphans:1800:7", "claim:2"]);
     expect(summary).toEqual({
-      exportExpired: 2, exportOrphansQueued: 3, exportJobsClaimed: 0, exportSucceeded: 0, exportFailed: {}, exportStale: 0, exportErrored: 0,
+      exportExpired: 2, exportSnapshotsRedacted: 4, exportOrphansQueued: 3, exportJobsClaimed: 0, exportSucceeded: 0, exportFailed: {}, exportStale: 0, exportErrored: 0,
       exportCleanupClaimed: 0, exportCleanupCompleted: 0, exportCleanupRetried: 0,
     });
   });

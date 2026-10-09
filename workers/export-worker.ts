@@ -41,6 +41,7 @@ export type ExportInput = { snapshot: unknown; cv_revision: number };
 /** Service-role operations; every transition is compare-and-set in PostgreSQL. */
 export interface ExportWorkerDatabase {
   expireCvExports(limit: number): Promise<number>;
+  redactCvExportSnapshots(limit: number): Promise<number>;
   reconcileOrphanExportObjects(minAgeSeconds: number, limit: number): Promise<number>;
   claimCvExportJobs(limit: number): Promise<ExportJob[]>;
   getCvExportInput(exportId: string, attemptToken: string): Promise<ExportInput | null>;
@@ -75,6 +76,7 @@ export type ExportWorkerOptions = {
 /** Counts and stable codes only; never CV text, names, object keys, or tokens. */
 export type ExportWorkerSummary = {
   exportExpired: number;
+  exportSnapshotsRedacted: number;
   exportOrphansQueued: number;
   exportJobsClaimed: number;
   exportSucceeded: number;
@@ -210,6 +212,7 @@ export async function runExportWorkerOnce(options: ExportWorkerOptions): Promise
 
   const summary: ExportWorkerSummary = {
     exportExpired: await options.database.expireCvExports(housekeeping),
+    exportSnapshotsRedacted: await options.database.redactCvExportSnapshots(housekeeping),
     exportOrphansQueued: await options.database.reconcileOrphanExportObjects(options.orphanMinAgeSeconds ?? EXPORT_ORPHAN_MIN_AGE_SECONDS, housekeeping),
     exportJobsClaimed: 0, exportSucceeded: 0, exportFailed: {}, exportStale: 0, exportErrored: 0,
     exportCleanupClaimed: 0, exportCleanupCompleted: 0, exportCleanupRetried: 0,

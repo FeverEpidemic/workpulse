@@ -46,6 +46,7 @@ export type ImportCleanupJob = {
 /** Service-role operations; every transition is compare-and-set in PostgreSQL. */
 export interface ImportWorkerDatabase {
   expireImportUploads(limit: number, minAgeSeconds: number): Promise<number>;
+  expireAbandonedImportReviews(limit: number): Promise<number>;
   purgeExpiredImportBatches(limit: number): Promise<number>;
   reconcileOrphanImportObjects(minAgeSeconds: number, limit: number): Promise<number>;
   claimImportJobs(limit: number): Promise<ImportJob[]>;
@@ -82,6 +83,7 @@ export type ImportWorkerOptions = {
 /** Counts and stable codes only; never file names, text, or object keys. */
 export type ImportWorkerSummary = {
   importExpiredUploads: number;
+  importReviewsExpired: number;
   importPurged: number;
   importOrphansQueued: number;
   importJobsClaimed: number;
@@ -214,6 +216,8 @@ export async function runImportWorkerOnce(options: ImportWorkerOptions): Promise
 
   const summary: ImportWorkerSummary = {
     importExpiredUploads: await options.database.expireImportUploads(housekeeping, options.uploadGraceSeconds ?? IMPORT_UPLOAD_GRACE_SECONDS),
+    // Cancel abandoned reviews first so the purge below removes their file and text in the same pass.
+    importReviewsExpired: await options.database.expireAbandonedImportReviews(housekeeping),
     importPurged: await options.database.purgeExpiredImportBatches(housekeeping),
     importOrphansQueued: await options.database.reconcileOrphanImportObjects(options.orphanMinAgeSeconds ?? IMPORT_ORPHAN_MIN_AGE_SECONDS, housekeeping),
     importJobsClaimed: 0, importParsed: 0, importFailed: {}, importRetried: 0, importStale: 0,
