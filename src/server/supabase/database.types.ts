@@ -551,6 +551,7 @@ export type Database = {
           purged_at: string | null
           revision: number
           snapshot: Json
+          snapshot_purged_at: string | null
           started_at: string | null
           status: string
           updated_at: string
@@ -574,6 +575,7 @@ export type Database = {
           purged_at?: string | null
           revision?: number
           snapshot: Json
+          snapshot_purged_at?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -597,6 +599,7 @@ export type Database = {
           purged_at?: string | null
           revision?: number
           snapshot?: Json
+          snapshot_purged_at?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -1802,6 +1805,10 @@ export type Database = {
           revision: number
         }[]
       }
+      expire_abandoned_import_reviews: {
+        Args: { p_idle_days?: number; p_limit?: number }
+        Returns: number
+      }
       expire_ai_job_leases: { Args: never; Returns: number }
       expire_cv_export_leases: { Args: never; Returns: number }
       expire_cv_exports: { Args: { p_limit?: number }; Returns: number }
@@ -2180,6 +2187,10 @@ export type Database = {
       }
       reconcile_orphan_import_objects: {
         Args: { p_limit?: number; p_min_age_seconds?: number }
+        Returns: number
+      }
+      redact_cv_export_snapshots: {
+        Args: { p_limit?: number }
         Returns: number
       }
       relink_achievement_project: {
