@@ -80,9 +80,28 @@ describe("T17 import review view service", () => {
     expect(snapshot.errors).toEqual([{ item_id: ITEM, field: "name", code: "DUPLICATE", existing_id: SKILL }]);
     expect(snapshot.profile.onboarded).toBe(true);
     // Only the columns the view needs are requested.
-    expect(selects.find((s) => s.table === "import_batches")!.columns).toBe("id, filename, status, stage, error_code, revision, commit_result");
+    expect(selects.find((s) => s.table === "import_batches")!.columns).toBe("id, filename, status, stage, error_code, revision, commit_result, updated_at");
     expect(selects.find((s) => s.table === "experiences")!.columns).toBe("id, organization, role_title, start_date, start_precision");
     expect(selects.find((s) => s.table === "skills")!.columns).toBe("id, name, normalized_name");
+  });
+
+  it("reports the latest of the batch and item update times as the last activity, and keeps item timestamps out of the snapshot", async () => {
+    const { service } = setup({
+      batch: { data: batchRow("review", { updated_at: "2026-09-01T10:00:00Z" }) },
+      items: { data: [itemRow({ updated_at: "2026-09-20T08:30:00Z" }), itemRow({ id: "5f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f", updated_at: "2026-09-10T08:30:00Z" })] },
+      targets: { skills: { data: [] } },
+      rpc: { data: [] },
+    });
+    const snapshot = await service.getReviewView(BATCH);
+    expect(snapshot.batch.last_activity_at).toBe("2026-09-20T08:30:00Z");
+    expect(snapshot.items.every((item) => !("updated_at" in item))).toBe(true);
+  });
+
+  it("falls back to the batch time, and to null when no time is readable", async () => {
+    const batchOnly = await setup({ batch: { data: batchRow("committed", { updated_at: "2026-09-01T10:00:00Z" }) }, items: { data: [] } }).service.getReviewView(BATCH);
+    expect(batchOnly.batch.last_activity_at).toBe("2026-09-01T10:00:00Z");
+    const none = await setup({ batch: { data: batchRow("committed", { updated_at: "not a date" }) }, items: { data: [] } }).service.getReviewView(BATCH);
+    expect(none.batch.last_activity_at).toBeNull();
   });
 
   it("skips targets and validation for committed batches and reads the stored result", async () => {

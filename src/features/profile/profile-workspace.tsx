@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DeleteAccountCard } from "@/features/account/delete-account-card";
 import { AiConsentCard } from "@/features/profile/ai-consent-card";
 import { FoundationEditors } from "@/features/profile/foundation-editors";
 import { ProfileEditor } from "@/features/profile/profile-editor";
@@ -63,6 +64,9 @@ export async function ProfileWorkspace({
         </Card>
         <Card className="space-y-4">
           <AiConsentCard profile={profile} locale={locale} />
+        </Card>
+        <Card className="space-y-3">
+          <DeleteAccountCard accountEmail={userEmail} locale={locale} />
         </Card>
       </section>
 

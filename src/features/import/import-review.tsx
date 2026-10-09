@@ -36,6 +36,7 @@ import {
   type ReviewCandidate,
 } from "@/domain/import/review-view";
 import { IMPORT_ENTITY_TYPES } from "@/domain/import/contracts";
+import { abandonedReviewDeadline, formatAbandonedReviewDate } from "@/domain/import/review-retention";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 
@@ -474,6 +475,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     );
   }
 
+  const autoCancelDeadline = abandonedReviewDeadline(snapshot.batch.last_activity_at);
   const blockerText = view.commitBlockers.map((blocker) =>
     t(locale, `import.review.blocker.${blocker.kind}` as MessageKey, { count: blocker.count }));
   const totalTypes = REVIEW_GROUP_ORDER.filter((type) => view.summary.byType[type].create + view.summary.byType[type].map + view.summary.byType[type].skip > 0);
@@ -482,6 +484,11 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     <div className="import-review space-y-5">
       {header}
       <p className="text-sm">{t(locale, "import.review.intro")}</p>
+      {autoCancelDeadline ? (
+        <p className="field-help" data-testid="import-auto-cancel-notice">
+          {t(locale, "import.review.autoCancelNotice", { date: formatAbandonedReviewDate(autoCancelDeadline, locale) })}
+        </p>
+      ) : null}
 
       {notice ? <p role="alert" className="ui-message ui-message--warning">{notice}</p> : null}
 

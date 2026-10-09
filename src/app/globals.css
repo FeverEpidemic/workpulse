@@ -2801,3 +2801,50 @@ a.dashboard-stat-card:hover,
     scroll-behavior: auto !important;
   }
 }
+
+/* T23 account deletion (S12). */
+.delete-account {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.delete-account-form {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.delete-account-preview {
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-3) var(--space-4);
+}
+
+.delete-account-heading {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.delete-account-counts {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.delete-account-help {
+  overflow-wrap: anywhere;
+}
+
+.delete-account-alert:empty {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .delete-account-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-4);
+  }
+}
