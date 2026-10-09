@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1317,6 +1317,13 @@ export type Database = {
           created: boolean
         }[]
       }
+      begin_account_deletion: {
+        Args: { p_user_id: string }
+        Returns: {
+          already_requested: boolean
+          requested_at: string
+        }[]
+      }
       begin_import_batch: {
         Args: {
           p_bytes: number
@@ -1344,6 +1351,16 @@ export type Database = {
           revision: number
           stage: string
           status: string
+        }[]
+      }
+      claim_account_deletion_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempt_count: number
+          attempt_token: string
+          lease_expires_at: string
+          requested_at: string
+          user_id: string
         }[]
       }
       claim_ai_jobs: {
@@ -1968,6 +1985,25 @@ export type Database = {
           status: string
         }[]
       }
+      get_account_deletion_backlog: {
+        Args: never
+        Returns: {
+          overdue: number
+          pending: number
+        }[]
+      }
+      get_account_deletion_preview: {
+        Args: never
+        Returns: {
+          achievements: number
+          activities: number
+          cv_exports: number
+          evidence_files: number
+          has_cv: boolean
+          import_batches: number
+          projects: number
+        }[]
+      }
       get_ai_job_input: {
         Args: { p_attempt_token: string; p_job_id: string }
         Returns: {
@@ -2085,6 +2121,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      mark_account_auth_deleted: {
+        Args: { p_attempt_token: string; p_user_id: string }
+        Returns: boolean
+      }
       move_activity_evidence_to_achievement: {
         Args: {
           p_evidence_id: string
@@ -2113,6 +2153,14 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      prune_account_deletion_receipts: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
+      purge_account_data: {
+        Args: { p_attempt_token: string; p_user_id: string }
+        Returns: number
       }
       purge_expired_import_batches: {
         Args: { p_limit?: number }
@@ -2278,6 +2326,15 @@ export type Database = {
           added_parent_item_ids: string[]
           cv_revision: number
         }[]
+      }
+      retry_account_deletion_job: {
+        Args: {
+          p_attempt_token: string
+          p_error_code: string
+          p_next_attempt_at: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       retry_ai_job: {
         Args: { p_job_id: string }
@@ -2630,6 +2687,7 @@ export type Database = {
           item_id: string
         }[]
       }
+      verify_account_purges: { Args: { p_limit?: number }; Returns: number }
     }
     Enums: {
       [_ in never]: never
