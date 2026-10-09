@@ -1171,6 +1171,8 @@ button:disabled {
 }
 
 .ui-dialog {
+  /* Tailwind's preflight resets margin to 0, which removes the auto margin that centers a modal dialog. */
+  margin: auto;
   width: min(100% - 32px, 480px);
   max-height: min(85dvh, 720px);
   overflow: auto;
