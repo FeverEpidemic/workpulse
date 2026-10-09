@@ -392,6 +392,12 @@ test("M4 journey (F07): career data → S04/S08 → S13 → S14 → real PDF, ov
     expect(pdf1.text).not.toContain(norm(fallbackBullet));
     expect(pdf1.text).not.toMatch(/evidence|https?:|\.pdf|storage|workpulse-private/i);
     const pdf1Hash = sha256(pdf1Bytes);
+    const report = (label: string, facts: { pageCount: number }, hash: string) => {
+      const line = `M4-PDF ${label} pages=${facts.pageCount} sha256=${hash}`;
+      testInfo.annotations.push({ type: label, description: line });
+      process.stdout.write(`${line}\n`);
+    };
+    report("PDF-1", pdf1, pdf1Hash);
     expect(sha256(await storedBytes(pdf1Row!.id))).toBe(pdf1Hash);
     const pdf1Snapshot = snapshotMd5(pdf1Row!.id);
 
@@ -460,6 +466,7 @@ test("M4 journey (F07): career data → S04/S08 → S13 → S14 → real PDF, ov
     expect(pdf2.text).toContain(norm(secondBullet));
     expect(pdf2.text).not.toContain(norm(editedSource));
     expect(sha256(pdf2Bytes)).not.toBe(pdf1Hash);
+    report("PDF-2", pdf2, sha256(pdf2Bytes));
 
     // 7. Release scenario: the second Achievement is deleted in S08; S14 blocks, links to S13, Remove, export again.
     await page.goto(`/achievements/${secondId}`);
@@ -494,7 +501,9 @@ test("M4 journey (F07): career data → S04/S08 → S13 → S14 → real PDF, ov
     expect(third).toMatchObject({ succeeded: 1, failed: {} });
     await expect(status(page)).toContainText("PDF ready", { timeout: 30_000 });
     const [pdf3Row] = await exportRows();
-    const pdf3 = await pdfFacts(await downloadWithKeyboard(downloadButton(page)));
+    const pdf3Bytes = await downloadWithKeyboard(downloadButton(page));
+    const pdf3 = await pdfFacts(pdf3Bytes);
+    report("PDF-3", pdf3, sha256(pdf3Bytes));
     expect(pdf3.text).toContain(norm(INDONESIAN_OVERRIDE));
     expect(pdf3.text).not.toContain(norm(secondBullet));
     expect(pdf3Row!.id).not.toBe(pdf2Row!.id);
