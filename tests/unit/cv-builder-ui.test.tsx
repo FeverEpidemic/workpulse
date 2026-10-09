@@ -328,3 +328,12 @@ describe("T20 S13 freshness review", () => {
     expect(closed).not.toContain("cv-review-open-profile");
   });
 });
+
+describe("Gate M4: the scrollable preview column", () => {
+  it("is a labelled, focusable region so that a keyboard user can scroll it (WCAG 2.1.1)", () => {
+    const column = render().match(/<div class="cv-preview-column"[^>]*>/)?.[0] ?? "";
+    expect(column).toContain('role="region"');
+    expect(column).toContain('aria-label="Preview"');
+    expect(column).toContain('tabindex="0"');
+  });
+});

@@ -443,6 +443,33 @@ test("a review works with the keyboard alone: open, choose, hear the result, kee
   await expect(page.getByRole("heading", { name: "Achievements", level: 2 })).toBeFocused();
 });
 
+test("a review that fails because the record changed again leaves the keyboard focus on the page (Gate M4, T20 F1)", async ({ page }) => {
+  const user = await createUser();
+  const achievementId = await createAchievement(user, "Hasil fokus");
+  await selectSources(user, [["achievement", achievementId]]);
+  await signIn(page, user);
+  await editBullet(user, achievementId, "Sumber fokus versi dua");
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  const toggle = page.locator('[id^="cv-review-open-"]');
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  const refresh = page.getByRole("button", { name: "Refresh Hasil fokus from source" });
+  await expect(refresh).toBeVisible();
+
+  // The record changes once more while the panel is open: the choice no longer matches the live version.
+  await editBullet(user, achievementId, "Sumber fokus versi tiga");
+  await refresh.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("alert").filter({ hasText: "The record changed again." })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => document.activeElement?.tagName ?? "NONE"), { message: "focus must not fall to the page after the failed choice", timeout: 8_000 })
+    .not.toMatch(/^(BODY|HTML|NONE)$/);
+  await expect(page.getByTestId("cv-notice")).toBeFocused();
+  await expect(preview(page)).toContainText("Bullet Hasil fokus");
+  await expect(preview(page)).not.toContainText("Sumber fokus versi tiga");
+});
+
 test("layout and accessibility with changed, deleted and unconfirmed items: 360 and 1440 px, light and dark, no overflow, no Axe findings", async ({ page }, testInfo) => {
   const user = await createUser();
   const changedId = await createAchievement(user, "Berubah");
