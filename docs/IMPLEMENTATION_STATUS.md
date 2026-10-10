@@ -55,7 +55,7 @@ Belum dijalankan:
 
 Risiko/batas: P3 terbuka (detail di gate review):
 
-- G1: `get_pilot_metrics` untuk `p_as_of` lampau dapat menggelembungkan `pending` value/return. Runbook memakai `now()`. Perbaikannya butuh migration baru (sudah diusulkan sebagai sesi terpisah).
+- G1 (sudah diperbaiki): `get_pilot_metrics` kini hanya membaca event sampai `p_as_of` lewat migration `20261011100000_t24_pilot_metrics_as_of.sql` (parity **35/35**), dengan pgTAP 9.6. `db:test` 18/1577, `db:lint`, `db:types` (tanpa diff), dan integration product-events 9 lulus.
 - G2: draft achievement kosong menghitung Activation (diterima untuk pilot).
 - G5: batas metode perf: satu mesin, satu pengguna, loopback, tanpa evidence, buffer tidak dikosongkan.
 - G7: loop N+1 di `get_cv_review_summary` dan `loadSkills` tanpa batas di `achievement-service.ts`.

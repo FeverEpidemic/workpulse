@@ -82,4 +82,4 @@ Lapisan yang diukur adalah layanan Node, lalu Kong/PostgREST loopback, lalu Post
 
 ## Temuan terbuka
 
-P3 dari gate review: G1 (laporan untuk tanggal lampau) dan G7 (N+1 di `get_cv_review_summary`, `loadSkills` tanpa batas) menjadi follow-up. G2 (draft achievement kosong menghitung Activation) diterima pengguna untuk pilot. G3-G6 diterima dan dicatat di decision 0030.
+P3 dari gate review: G1 (laporan untuk tanggal lampau) sudah diperbaiki lewat migration `20261011100000_t24_pilot_metrics_as_of.sql`. G7 (N+1 di `get_cv_review_summary`, `loadSkills` tanpa batas) menjadi follow-up. G2 (draft achievement kosong menghitung Activation) diterima pengguna untuk pilot. G3-G6 diterima dan dicatat di decision 0030.

@@ -56,7 +56,7 @@ Fungsi mengisi `withdrawn_at` sekali. Pemanggilan ulang tidak mengubah waktu itu
 select * from public.get_pilot_metrics(now());
 ```
 
-Selalu gunakan `now()`. Untuk tanggal lampau, kolom `pending` value completion dan return capture dapat ikut menghitung akun yang baru teraktivasi sesudah tanggal itu (gate review G1). `eligible`, `achieved`, dan `rate` tetap benar.
+Untuk laporan tanggal lampau, ganti `now()` dengan waktu itu, misalnya `get_pilot_metrics('2026-11-01 00:00+07')`. Hanya event sampai waktu itu yang dihitung (migration `20261011100000_t24_pilot_metrics_as_of.sql`, gate review G1). Kohort tetap dibaca dari daftar peserta saat ini: peserta yang menarik diri atau menghapus akun sesudah tanggal itu tidak ikut, dan peserta yang didaftarkan sesudahnya ikut.
 
 | Kolom | Arti |
 | --- | --- |

@@ -708,6 +708,19 @@ select is(pg_temp.m('activation', pg_temp.asof()), '1|1|0|0|0.0000|0.60', 'only 
 select is(pg_temp.m('export_reliability', pg_temp.asof()), '1|0|0|0|null|0.98', 'a withdrawn participant and an unenrolled account add no export');
 select pg_temp.drop_members((select ids from pg_temp.g5));
 
+-- 9.6 A past as-of ignores events after it (gate review G1): activation at t0 + 5h is not yet known at t0 + 1h.
+create temporary table pg_temp.g6 as select array[pg_temp.member('pa', pg_temp.t0())] as ids;
+select pg_temp.ev(pg_temp.usr('pa'), 'activity_saved', '{"capture_mode":"note"}', pg_temp.t0() + interval '5 hours');
+select is(pg_temp.m('activation', pg_temp.t0() + interval '1 hour'), '1|0|0|1|null|0.60',
+  'at t0 + 1h the 24 hour window is open: activation is pending');
+select is(pg_temp.m('value_completion', pg_temp.t0() + interval '1 hour'), '1|0|0|0|null|0.40',
+  'an activation after the as-of does not make value completion pending');
+select is(pg_temp.m('return_capture', pg_temp.t0() + interval '1 hour'), '1|0|0|0|null|0.30',
+  'nor return capture');
+select is(pg_temp.m('value_completion', pg_temp.t0() + interval '6 hours'), '1|0|0|1|null|0.40',
+  'once the as-of passes the activation, value completion is pending');
+select pg_temp.drop_members((select ids from pg_temp.g6));
+
 -- 10. Deletion cascade (acceptance 11) ---------------------------------------------------------------------------------
 
 select pg_temp.mk_user('f1');
