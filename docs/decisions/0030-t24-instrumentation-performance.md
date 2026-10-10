@@ -53,6 +53,7 @@ Pengguna menyetujui delapan keputusan produk §2.4 handoff pada 10 Oktober 2026 
    - Jendela adalah `[created_at, created_at + N)`. Event di detik terakhir masuk, event tepat di batas tidak.
    - Akun yang jendelanya belum selesai masuk `pending`, bukan dihitung gagal. Value completion dan return capture hanya menghitung akun yang sudah teraktivasi, jadi `pending` keduanya berisi akun teraktivasi yang jendela 7 atau 28 harinya masih terbuka.
    - Export reliability menghitung setiap event `cv_export_finished` kohort sampai `p_as_of`, kecuali `ACCOUNT_DELETING`. Gagal lalu retry sukses dihitung 1 dari 2. `pending` selalu 0.
+   - Semua ukuran hanya membaca event dengan `occurred_at <= p_as_of`. Batas ini ditambahkan setelah gate review lewat migration `20261011100000_t24_pilot_metrics_as_of.sql` (G1, lihat Batas definisi). Kohort tetap dibaca dari daftar peserta saat fungsi dipanggil.
 8. **Tidak dapat diakses klien.** Ketiga tabel internal punya RLS aktif dan tidak punya privilege untuk `anon`, `authenticated`, maupun `service_role`. Kedua RPC hanya dapat dieksekusi `service_role`.
 9. **Penghapusan akun lewat FK cascade.** Event dan baris peserta mereferensikan `public.profiles(id) on delete cascade`, sehingga ikut hilang saat `deleteUser` menghapus tombstone profil (decision 0029). Fungsi T23 tidak diubah, dan tidak ada event `account_deleted` (event itu akan langsung ikut terhapus). Observability penghapusan tetap memakai `get_account_deletion_backlog`.
 10. **Tidak ada migration indeks.** Query plan Fase 4 tidak memenuhi kriteria §2.2.12 handoff. Query halaman memakai indeks yang sudah ada atau membaca tabel kecil milik satu akun dalam waktu di bawah 3 ms. Satu-satunya Seq Scan pada tabel di atas 1.000 baris adalah `exists (select 1 from activities ...)` di `get_dashboard_summary`, yang berhenti di baris pertama dalam 0,007 ms. Indeks baru tidak akan mengubah pilihan planner itu.
@@ -67,7 +68,7 @@ Batas metode: satu mesin pengembangan (Windows, Docker Desktop/WSL2), satu pengg
 ## Batas definisi yang diterima
 
 - **Draft achievement kosong menghitung Activation.** `create_achievement_idempotent` membuat baris draft tanpa isi, dan trigger insert mencatat `career_record_created` untuk baris itu. Akibatnya, satu klik "achievement baru" sudah memenuhi "menyimpan satu record karier manual". Ini sesuai §1.1 dan keputusan produk 3. Pengguna menerima batas ini untuk pilot pada 10 Oktober 2026 (gate review G2). Bila angka Activation tampak terlalu tinggi, penajaman definisi (misalnya achievement dihitung saat simpan pertama yang berisi) adalah perubahan kontrak di task lanjutan.
-- **Laporan untuk tanggal lampau tidak sepenuhnya point-in-time.** Status teraktivasi tidak dibatasi `occurred_at <= p_as_of`. Untuk `p_as_of` di masa lalu, `pending` value completion dan return capture dapat ikut menghitung akun yang baru teraktivasi sesudah `p_as_of`. `eligible`, `achieved`, dan `rate` tidak terpengaruh, dan laporan dengan `now()` benar. Perbaikannya butuh migration baru, jadi dicatat sebagai follow-up (gate review G1).
+- **Laporan untuk tanggal lampau (G1, sudah diperbaiki).** Di migration T24, status teraktivasi hanya dibatasi oleh akhir jendela, tidak oleh `p_as_of`. Untuk `p_as_of` di masa lalu, `pending` value completion dan return capture ikut menghitung akun yang baru teraktivasi sesudah `p_as_of`. `eligible`, `achieved`, dan `rate` tidak terpengaruh. Migration forward-only `20261011100000_t24_pilot_metrics_as_of.sql` (parity 34 ke 35) mendefinisikan ulang `get_pilot_metrics` dengan `and e.occurred_at <= v_as_of` di keempat subquery `is_activated`, `has_confirmed`, `has_export`, dan `week_count`. Signature, grant (`service_role` saja), dan comment tidak berubah. pgTAP 9.6 membuktikannya: akun dibuat di t0 dengan activity di t0 + 5 jam, dan pada `p_as_of = t0 + 1 jam` activation `pending` 1 sedangkan value completion dan return capture `pending` 0. Kohort tetap memakai daftar peserta saat ini, bukan status peserta pada `p_as_of`.
 - **`local_date` pada import yang menyelesaikan onboarding.** Import commit T16 memperbarui `profiles.timezone` setelah record diinsert. Event `career_record_created` dari import itu memakai zona lama (default `UTC`). Tidak ada ukuran yang membaca `local_date` event itu, karena return capture hanya memakai `activity_saved` (gate review G6).
 
 ## Alternatif yang ditolak
@@ -83,11 +84,11 @@ Batas metode: satu mesin pengembangan (Windows, Docker Desktop/WSL2), satu pengg
 
 - **T25:** pengukuran performa di staging atau hosted, performa yang dirasakan browser, alert backlog penghapusan dan cleanup, dan kalimat pemberitahuan event di detail privasi S12 bersama copy rilis.
 - **Pasca-pilot:** retensi atau agregasi event, peninjauan target setelah 20 peserta, dan definisi Activation bila draft kosong terbukti mengganggu.
-- **Follow-up:** batas `p_as_of` di `get_pilot_metrics` (G1), loop N+1 di `get_cv_review_summary`, dan `loadSkills` tanpa batas di `achievement-service.ts` (G7).
+- **Follow-up:** loop N+1 di `get_cv_review_summary`, dan `loadSkills` tanpa batas di `achievement-service.ts` (G7).
 
 ## Gate review
 
-Gate review Claude (Opus) pada `0f5aeeb` tidak menemukan P0-P2 ([T24-gate-review.md](../verification/T24-gate-review.md)). Reviewer menjalankan ulang pgTAP, suite integration T24 dan suite yang disentuh trigger, serta `test:perf`, dan menghitung ulang p95 dari sampel mentah. Ada delapan temuan P3. G2 diterima pengguna, sedangkan G1 dan G7 menjadi follow-up.
+Gate review Claude (Opus) pada `0f5aeeb` tidak menemukan P0-P2 ([T24-gate-review.md](../verification/T24-gate-review.md)). Reviewer menjalankan ulang pgTAP, suite integration T24 dan suite yang disentuh trigger, serta `test:perf`, dan menghitung ulang p95 dari sampel mentah. Ada delapan temuan P3. G2 diterima pengguna, G1 diperbaiki lewat migration `20261011100000_t24_pilot_metrics_as_of.sql`, dan G7 menjadi follow-up.
 
 ## Perubahan pada test lama
 
