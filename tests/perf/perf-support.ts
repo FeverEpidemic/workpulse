@@ -98,6 +98,16 @@ export async function signInClient(harness: Harness, account: PerfAccount): Prom
   return client;
 }
 
+/** A new client object that reuses an existing session, so a "cold" sample costs no extra password sign-in. */
+export async function clientFromSession(harness: Harness, source: Client): Promise<Client> {
+  const session = (await source.auth.getSession()).data.session;
+  if (!session) throw new Error("T24 perf setup failed: no session to reuse");
+  const client = createClient<Database>(harness.url, harness.publishableKey, clientOptions);
+  const restored = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+  if (restored.error) throw new Error("T24 perf setup failed: restore session");
+  return client;
+}
+
 /**
  * Removes an account through the T23 deletion path (a populated account cannot be removed with a plain user delete):
  * begin, deletion worker passes until the receipt is completed, then the receipt row of this fixture is dropped.
