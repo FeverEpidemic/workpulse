@@ -350,9 +350,8 @@ a {
   min-width: 0;
 }
 
-/* Titles and notes are the user's own words: a long word or URL wraps instead of widening the page at 200% text. */
-.workspace-content,
-.ui-dialog-panel {
+/* Titles are the user's own words: one long word wraps instead of widening the page at 200% text. */
+.workspace-content :is(h1, h2, h3) {
   overflow-wrap: anywhere;
 }
 
