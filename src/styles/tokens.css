@@ -25,6 +25,7 @@
   --color-border-default: #dde5dc;
   --color-border-strong: #c9d5c8;
   --color-border-control: #7b897e;
+  --color-selection-bg: #d1e0cc;
 
   --color-action-primary: #567657;
   --color-action-primary-hover: #435e45;
@@ -111,7 +112,8 @@
   --color-text-tertiary: #a8b3aa;
   --color-border-default: #2b352e;
   --color-border-strong: #3a463d;
-  --color-border-control: #65746a;
+  --color-border-control: #6a796f;
+  --color-selection-bg: #435e45;
 
   --color-action-primary: #8faf87;
   --color-action-primary-hover: #b3c9ac;

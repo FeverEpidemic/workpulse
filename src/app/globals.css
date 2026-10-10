@@ -64,7 +64,7 @@ a {
 
 ::selection {
   color: var(--color-text-primary);
-  background: var(--color-primary-200);
+  background: var(--color-selection-bg);
 }
 
 .app-card {
