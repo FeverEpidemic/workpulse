@@ -201,6 +201,7 @@ test("every dialog opens with Enter or Space, closes with Escape and gives focus
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
     await expect(menu, `focus returns to the menu button after ${key}`).toBeFocused();
+    await settle(page);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -245,6 +246,7 @@ test("every dialog opens with Enter or Space, closes with Escape and gives focus
   await page.keyboard.press("Escape");
   await expect(accountDialog).toBeHidden();
   await expect(deleteAccount).toBeFocused();
+  await settle(page);
   await activate(page, deleteAccount, findings, "Space");
   await expect(accountDialog).toBeVisible();
   await page.keyboard.press("Escape");
