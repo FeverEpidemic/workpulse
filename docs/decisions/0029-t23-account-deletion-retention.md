@@ -2,7 +2,7 @@
 
 Date: 10 Oktober 2026
 
-Status: draft for gate review (acceptance lokal; lihat `docs/verification/T23-account-deletion-retention.md`). Belum ada gate review independen; verdict dan penandaan DONE adalah wewenang reviewer.
+Status: Accepted (acceptance lokal, 10 Oktober 2026). Task: T23 (PRD R01, *Deletion*, *Data minimization*; Wireframe S12, S03, S14; DB §4/§5/§6). [Rencana](../verification/T23-implementation-plan.md), [bukti](../verification/T23-account-deletion-retention.md), [gate review](../verification/T23-gate-review.md).
 
 ## References
 
@@ -32,7 +32,7 @@ Ketujuh keputusan produk §2.4 handoff disetujui pengguna pada 8 Oktober 2026 ("
 6. snapshot export dikosongkan saat PDF dipurge dan 24 jam setelah export gagal;
 7. *Retry* ditolak bila CV berubah atau terblokir.
 
-Eksekusi dimulai sebelum Gate M4 memiliki verdict, berdasarkan perintah ulang pengguna ("Coba Eksekusi ulang Plan T23"); asumsi itu tercatat di receipt Fase 0.
+Eksekusi dimulai sebelum laporan Gate M4 memiliki verdict tertulis, berdasarkan perintah ulang pengguna ("Coba Eksekusi ulang Plan T23"); asumsi itu tercatat di receipt Fase 0. Pada gate review T23 (10 Oktober 2026) pengguna menegaskan Gate M4 sudah dikerjakan dan T23 boleh ditutup.
 
 ## Hasil probe Fase 0
 
@@ -75,7 +75,7 @@ Sebuah tulisan yang membaca `deleting_at` NULL sebelum `begin_account_deletion` 
 - **Access token JWT** yang sudah terbit tetap diterima PostgREST sampai `exp` (`jwt_expiry = 3600`, `supabase/config.toml:170`). Test integration membuktikan bahwa penulisan dengan token itu ditolak guard (`42501`), tetapi pembacaan yang diizinkan RLS untuk akun `deleting` dapat berlanjut sampai token kedaluwarsa. Ban dan sign-out global mencabut refresh token dan sesi Auth segera.
 - **Receipt tidak selamat dari restore backup yang lebih lama.** Receipt dipangkas 30 hari, tetapi restore ke titik sebelum penghapusan juga menghilangkan receipt-nya. Menerapkan ulang penghapusan setelah restore membutuhkan daftar user id yang disimpan di luar database; ini dicatat sebagai item T25 di runbook.
 - **Retensi backup ≤ 30 hari belum terverifikasi.** Hanya kebijakan; bergantung pada konfigurasi layanan hosted (T25).
-- **Export yang sudah dipurge sebelum T23** tidak dikosongkan oleh migration: expire_cv_exports hanya mengosongkan snapshot pada saat purge, dan edact_cv_export_snapshots hanya mencakup export gagal. README menyatakan belum ada deployment, jadi baris seperti itu hanya ada di database pengembangan; bila suatu hari ada, kosongkan dengan satu update terkontrol sebelum rilis.
+- **Export yang sudah dipurge sebelum T23** tidak dikosongkan oleh migration: `expire_cv_exports` hanya mengosongkan snapshot pada saat purge, dan `redact_cv_export_snapshots` hanya mencakup export gagal. README menyatakan belum ada deployment, jadi baris seperti itu hanya ada di database pengembangan; bila suatu hari ada, kosongkan dengan satu update terkontrol sebelum rilis.
 - **Tanggal pembatalan di S03** diformat UTC; untuk zona waktu jauh dari UTC dapat berselisih paling banyak satu hari.
 
 ## Alternatif yang ditolak
@@ -91,6 +91,14 @@ Sebuah tulisan yang membaca `deleting_at` NULL sebelum `begin_account_deletion` 
 
 - **T24:** event analytics (export terminal, penghapusan akun), p95, biaya reconcile, dan metrik backlog dari `get_account_deletion_backlog`.
 - **T25:** verifikasi retensi backup dan purge ≤ 24 jam pada layanan hosted, alert backlog penghapusan dan cleanup, deployment worker, dan runbook restore yang menerapkan ulang penghapusan dari ledger di luar database.
+
+## Gate review
+
+Gate review Claude (Opus) pada `f29e682`: tidak ada P0–P2 di database, Auth, service, worker, dan retensi ([T23-gate-review.md](../verification/T23-gate-review.md)). Reviewer menerima penyimpangan keputusan 2 (guard hanya untuk role `authenticated`) setelah probe lewat PostgREST menghasilkan `42501 ACCOUNT_DELETING`.
+
+Tinjauan UI antislop (mode *during*, dipilih pengguna) menemukan satu bug state yang diperbaiki reviewer di `7ad7d91`: error dari percobaan yang sudah ditutup tampil lagi saat dialog dibuka ulang, dan jawaban pratinjau yang terlambat dapat menimpa hitungan pembukaan baru. Bukti: unit `visibleDeletionState` dan langkah E2E baru, gagal pada kartu lama (`toHaveCount(0)` menerima 1) dan lulus sesudahnya.
+
+P3 yang dibiarkan terbuka tercantum di gate review (F1, F4, F6, F9).
 
 ## Perubahan pada test lama
 

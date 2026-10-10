@@ -7,26 +7,24 @@
 
 ## Verdict
 
-**Tidak ada temuan P0–P2 pada database, Auth, service/action, worker, dan retensi. Bagian itu lulus gate review.** Tujuh temuan P3 dicatat sebagai follow-up.
+**Tidak ada temuan P0–P2. T23 lulus gate review.** Sepuluh temuan P3: dua diperbaiki reviewer (F8 di `7ad7d91`, F10), dua koreksi dokumen dikerjakan saat closeout (F2, F3), sisanya follow-up atau diterima.
 
-Dua hal masih terbuka sebelum closeout:
-
-1. **Tinjauan UI antislop belum dijalankan.** Mode antislop sesi ini belum dipilih (tidak ada instruksi sesi, tidak ada `%APPDATA%\antislop\settings.json`). Bukti fungsional UI sudah diulang reviewer (E2E Axe, overflow, fokus lulus), tetapi penilaian UI terhadap aturan antislop menunggu pilihan mode pengguna dan akan ditambahkan ke dokumen ini.
-2. **Gate M4 belum punya verdict** (F1). Penandaan T23 DONE sebaiknya menunggu keputusan pengguna soal urutan ini.
-
-Status authoritative T23 di `IMPLEMENTATION_STATUS.md` belum diubah.
+Riwayat: verdict pertama (`4facf2c`) hanya mencakup bagian non-UI karena mode antislop belum dipilih dan Gate M4 belum punya verdict tertulis. Pada 10 Oktober 2026 pengguna memilih antislop *during* untuk sesi ini dan menegaskan Gate M4 sudah dikerjakan; reviewer lalu menjalankan tinjauan UI (bagian di bawah), memperbaiki F8 dan F10, dan menutup T23.
 
 ## Temuan
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| F1 | P3 | Proses: plan §0/§8 melarang mulai sebelum Gate M4 PASSED tanpa izin eksplisit. `M4-gate-review.md` masih DRAFT tanpa verdict (baris 6), dan `IMPLEMENTATION_STATUS.md:80-87` masih menyebut Gate M4 sebagai langkah berikutnya. Pelaksana menafsirkan "Coba Eksekusi ulang Plan T23" sebagai izin dan mencatatnya terbuka di receipt Fase 0. Tidak ada dampak kode (Gate M4 tidak menambah migration; suite `m4` lulus pada HEAD ini), tetapi urutan status menjadi T23 selesai sebelum M4 diputuskan. | Perlu keputusan pengguna |
-| F2 | P3 | `docs/decisions/0029-t23-account-deletion-retention.md:78` rusak: backtick hilang dan ada karakter CR tunggal, sehingga teks terbaca "...expire_cv_exports hanya ... dan `\r`edact_cv_export_snapshots...". Jejak escape `` `r `` PowerShell. Perbaikan: tulis ulang baris itu dengan tool Edit; cek `[regex]::Matches(text, "\r(?!\n)")` = 0. | Follow-up closeout |
-| F3 | P3 | Runbook `T23-retention-runbook.md:63` menyatakan job `failed` dikembalikan ke antrean "oleh reconcile kategori (evidence, import, export)". `reconcile_orphan_evidence_objects` melewati job yang statusnya bukan `succeeded` (`20260925100000_t10_evidence_backend.sql:1328`), jadi untuk evidence hanya purge yang mengantrekan ulang. Dampak praktis kecil: job cleanup hanya berakhir `failed` untuk `INVALID_OBJECT_KEY` (`workers/evidence-worker.ts:268`, `import-worker.ts:188`, `export-worker.ts:184`), yang tidak terjadi untuk key kanonis; error transien di-retry. Receipt yang tertahan tetap terlihat sebagai overdue. Perbaikan: koreksi kalimat runbook. | Follow-up closeout |
+| F1 | P3 | Proses: plan §0/§8 melarang mulai sebelum Gate M4 PASSED tanpa izin eksplisit. `M4-gate-review.md` masih DRAFT tanpa verdict (baris 6), dan `IMPLEMENTATION_STATUS.md` belum punya entry Gate M4. Pelaksana menafsirkan "Coba Eksekusi ulang Plan T23" sebagai izin dan mencatatnya terbuka di receipt Fase 0. Pengguna menegaskan (10 Oktober 2026) bahwa Gate M4 sudah dikerjakan. Tidak ada dampak kode (suite `m4` lulus pada HEAD ini). Sisa: verdict reviewer M4 (Fase 7 rencana M4) belum tertulis. | Diterima pengguna; verdict M4 follow-up |
+| F2 | P3 | `docs/decisions/0029-t23-account-deletion-retention.md:78` rusak: backtick hilang dan ada karakter CR tunggal, sehingga teks terbaca "...expire_cv_exports hanya ... dan `\r`edact_cv_export_snapshots...". Jejak escape `` `r `` PowerShell. Perbaikan: tulis ulang baris itu dengan tool Edit; cek `[regex]::Matches(text, "\r(?!\n)")` = 0. | Diperbaiki saat closeout |
+| F3 | P3 | Runbook `T23-retention-runbook.md:63` menyatakan job `failed` dikembalikan ke antrean "oleh reconcile kategori (evidence, import, export)". `reconcile_orphan_evidence_objects` melewati job yang statusnya bukan `succeeded` (`20260925100000_t10_evidence_backend.sql:1328`), jadi untuk evidence hanya purge yang mengantrekan ulang. Dampak praktis kecil: job cleanup hanya berakhir `failed` untuk `INVALID_OBJECT_KEY` (`workers/evidence-worker.ts:268`, `import-worker.ts:188`, `export-worker.ts:184`), yang tidak terjadi untuk key kanonis; error transien di-retry. Receipt yang tertahan tetap terlihat sebagai overdue. Perbaikan: koreksi kalimat runbook. | Diperbaiki saat closeout |
 | F4 | P3 | Test integration guard (`tests/integration/account-deletion.test.ts:186-191`) menerima `ACCOUNT_DELETING` **atau** `AUTH_REQUIRED` untuk semua 16 RPC, sehingga tidak mengunci bahwa RPC tanpa pemeriksaan sendiri ditolak oleh trigger lewat PostgREST. Reviewer membuktikannya terpisah dengan akun sekali pakai: `update_profile` lewat PostgREST setelah `begin_account_deletion` → `42501 ACCOUNT_DELETING` (sebelumnya sukses). Perbaikan: pesan per RPC dipin (`ACCOUNT_DELETING` untuk RPC di daftar "tidak memeriksa" receipt Fase 0). | Follow-up |
 | F5 | P3 | Proses: Fase 3 tidak TDD murni (diakui di receipt Fase 3), dan dokumen Fase 9 (decision 0029, runbook, laporan, README) ditulis sebelum gate, padahal plan §5 menempatkannya setelah gate. Isinya sudah saya tinjau; temuan F2 dan F3 berasal dari sana. | Diterima |
 | F6 | P3 | Batas yang diterima dan sudah tercatat jujur di decision 0029: objek non-kanonis di prefix menahan receipt di `purged` (terlihat sebagai overdue, butuh tindakan manual); race guard tulis hanya diargumentasikan, tidak diuji paralel; access token yang sudah terbit tetap dapat membaca sampai `exp` (tulisan ditolak); retensi backup ≤ 30 hari belum terverifikasi (T25). | Diterima, follow-up T25 |
 | F7 | P3 | `test:integration:cv-export` dan `test:integration:m4` gagal keras bila `WORKPULSE_PDF_GOTENBERG_URL` tidak diset (sesuai desain, tanpa fallback fake). Receipt Fase 8 tidak menyebut env itu; plan §7 menyebutnya. Dengan env diset, keduanya lulus 35/35 dan 17/17. | Ditutup oleh run reviewer |
+| F8 | P3 | UI S12: `useActionState` hidup lebih lama dari dialog, jadi error percobaan yang sudah ditutup (mis. *That password is not correct.* dengan `aria-invalid`) tampil lagi saat dialog dibuka ulang dengan field kosong (R-27, C-4). Jawaban pratinjau yang terlambat dari pembukaan sebelumnya juga dapat menimpa hitungan pembukaan baru. Perbaikan reviewer `7ad7d91`: `visibleDeletionState` menyembunyikan error yang correlation ID-nya sudah ditutup, dan nomor permintaan pratinjau mengabaikan jawaban lama. Bukti: unit baru merah lalu hijau; langkah E2E baru gagal pada kartu lama (`toHaveCount(0)` menerima 1) dan lulus sesudahnya (suite 7/7). | Diperbaiki |
+| F9 | P3 | Hermetisitas: `test:e2e:account-deletion` melakukan banyak sign-in dan percobaan password salah. Saat dijalankan berulang tanpa jeda, suite dapat gagal karena rate limit Auth lokal (`supabase/config.toml:212`, `sign_in_sign_ups = 30` per 5 menit per IP). Satu run reviewer gagal dengan cara ini; setelah jeda 5 menit suite lulus. Perbaikan yang mungkin: jeda atau akun bersama antar test, atau batas rate limit khusus test. | Follow-up |
+| F10 | P3 | Copy: `account.delete.confirmHelp` berbunyi *Type {email} exactly to confirm* (id: *persis seperti itu*), padahal pencocokan mengabaikan huruf besar dan spasi (`confirmationMatches`). Diubah reviewer menjadi *Type {email} to confirm.* / *Ketik {email} untuk konfirmasi.* | Diperbaiki |
 
 Catatan non-temuan: log server `[WebServer] The destination stream closed early` muncul juga di suite yang tidak disentuh T23 (`auth`, `m2`), sama seperti catatan gate T20.
 
@@ -61,9 +59,46 @@ Catatan non-temuan: log server `[WebServer] The destination stream closed early`
 | Redaksi snapshot tidak membuka mutasi lain | PASS | `guard_cv_export_row` `retention:83-89` hanya mengizinkan `snapshot → '{}'` bersama `snapshot_purged_at` NULL → nilai; kolom immutable lain tetap; CHECK `:61-63`; pgTAP lima kasus negatif |
 | Guard retry di database | PASS | `retention:201-208` (snapshot kosong, revision beda, blocker setelah lock sumber); selebihnya identik dengan T21 `:374-415` |
 | Suite T21/T22 tetap bermakna | PASS | `cv_export.test.sql` lama tanpa perubahan; perubahan unit `cv-export-view` sesuai §2.4.7; E2E `cv-export` lulus tanpa diubah |
-| UI: satu aksi utama, danger hanya di dialog, fokus, Axe, 360/1440 light/dark, copy backup | Fungsional PASS; tinjauan antislop **tertunda** | E2E `account-deletion` 7/7 diulang reviewer (Axe, overflow, fokus); copy 30 hari sebagai kebijakan |
+| UI: satu aksi utama, danger hanya di dialog, fokus, Axe, 360/1440 light/dark, copy backup | PASS (F8, F10 diperbaiki) | E2E `account-deletion` 7/7 diulang reviewer (Axe, overflow, fokus); tinjauan antislop di bawah; copy 30 hari sebagai kebijakan yang disetujui pemilik |
 | Hanya file §4, tanpa dependency baru, tanpa `console.` | PASS | `package.json` hanya dua script; file di luar §4 tercatat di receipt Fase 8 dan wajar; grep `console.` = 0; `CI01-implementation-plan.md` di diff adalah commit pengguna, bukan T23 |
 | Angka receipt cocok | PASS | lihat tabel di bawah |
+
+## Tinjauan UI antislop (mode *during*, session override)
+
+Cakupan: kartu *Privacy and account* dan dialog hapus akun di S12, notice sign-in, notice pembatalan otomatis S03, copy baru en/id, dan komentar kode di diff T23. Skill yang dibaca: core, ui, copywriting, human, layoutmobile, code.
+
+Design Read: dialog pengaturan S12 untuk pengguna yang mengelola workspace kariernya sendiri, mengikuti bahasa visual `Design.md` yang sudah ada, dial ENERGY 1 / RHYTHM 1 / MOTION 1 (sama dengan receipt Fase 5).
+
+Alasan keputusan (R-31), dicek terhadap kode:
+
+- Tombol pemicu sekunder, danger hanya pada *Delete account permanently* di dalam dialog: aksi destruktif tidak menyerupai aksi utama halaman (`Design.md` dialog destruktif).
+- Hitungan dari `get_account_deletion_preview`, bukan angka statis; gagal memuat menampilkan teks jujur, bukan nol palsu (R-17, R-38).
+- Konfirmasi dengan email akun, bukan frasa per locale: nama record netral bahasa (§2.4.2).
+- Tanpa ikon, badge, atau animasi baru: layar pengaturan dengan dial 1/1/1.
+
+Delivery Gate:
+
+| Item | Status | Bukti |
+| --- | --- | --- |
+| R-02 em dash | PASS | `account-deletion-i18n.test.ts` memeriksa semua kunci baru en dan id; copy F10 tanpa dash |
+| R-03 mobile | PASS | E2E nol overflow halaman dan dialog di 360 px; dua kolom hitungan baru mulai 480 px; tombol memakai `--touch-target-min` |
+| R-17, R-38 angka dan konten | PASS | hitungan dari database; fixture screenshot hanya akun `@workpulse.test` |
+| R-18, R-23, R-24, R-28 | n/a | tidak ada testimonial, aset baru, navigasi baru, atau FAQ |
+| R-25 kontras | PASS | Axe nol pelanggaran WCAG A/AA di light dan dark, 360 dan 1440 (diulang reviewer) |
+| R-26 kontrol berfungsi | PASS | pemicu membuka dialog, Cancel dan Escape menutup, submit mengirim, tautan *Sign in* hanya untuk `UNAUTHENTICATED` |
+| R-27 state | PASS setelah F8 | loading (`role=status`), pratinjau gagal, error per field dan blok; error yang ditutup tidak muncul lagi |
+| R-32 keyboard | PASS | E2E alur utama lewat keyboard, fokus masuk ke password dan kembali ke pemicu |
+| R-33 | PASS | tidak ada skrip patch; CSS di `globals.css` |
+| R-34 tema | PASS | screenshot dan Axe light/dark |
+| R-35 dijalankan dan diklik | PASS | `test:e2e:account-deletion` 7/7 pada `7ad7d91`: Delete account (Enter) → dialog dan fokus password; password salah → pesan di field, password kosong, email tetap; email salah → tombol nonaktif; email benar → `/sign-in?notice=accountDeleted`; Escape/Cancel → tutup dan fokus kembali; buka ulang → email dan error lama kosong; S03 notice tampil. F10 hanya mengubah teks bantuan yang tidak di-assert E2E (unit i18n 12/12, typecheck lulus) |
+| R-36 klaim | PASS, override pemilik | *Backup copies ... deleted within 30 days* adalah kebijakan yang disetujui pengguna (§2.4.4, 8 Oktober 2026) dan mengikat T25; runbook menandainya *belum terverifikasi* |
+| R-37 arah desain | PASS | `Design.md` ada; Design Read dicatat di atas |
+| Purpose-Gate R-01, R-04, R-06, R-07, R-08, R-09, R-10, R-12, R-13, R-14, R-19, R-22 | PASS | tidak ada gradien, glow, ikon, badge, pola latar, atau animasi baru; shadow hanya milik `Dialog` bersama |
+| Liveliness | PASS | dial 1/1/1 dinyatakan dan konsisten; fokus utama tombol danger di dialog; satu aksen merah hanya di titik keputusan |
+| C-1 sampai C-5, R-05, R-11, R-15, R-16, R-20, R-21, R-29, R-30 | PASS | CTA spesifik (*Delete account permanently*), tanpa buzzword, palet token yang ada |
+| Komentar kode (antislop-code) | PASS | komentar baru menjelaskan alasan atau batasan; pemisah `-- N. Bagian ---` di migration mengikuti konvensi T21 yang ada |
+
+Catatan visual yang tidak diubah (dari receipt Fase 7, dikonfirmasi pada screenshot): di 360 px setelah error, tombol danger berada di bawah lipatan dialog dan dapat dicapai dengan gulir atau Tab; email panjang terpotong secara visual di field 1440 px, sedangkan teks bantuan memuat email lengkap.
 
 ## Command yang saya jalankan ulang
 
@@ -84,6 +119,11 @@ Catatan non-temuan: log server `[WebServer] The destination stream closed early`
 | `test:e2e:cv-export` | 0 | 12 passed |
 | `test:e2e:auth` / `m2` | 0 | 1 passed / lulus (exit 0) |
 | Probe guard PostgREST (skrip scratch, akun sekali pakai, dibersihkan) | — | `update_profile` sukses sebelum, `42501 ACCOUNT_DELETING` sesudah `begin_account_deletion` |
+| F8: `vitest run tests/unit/delete-account-state.test.ts` sebelum implementasi | 1 | `visibleDeletionState is not a function` (merah) |
+| F8: langkah E2E baru dengan kartu lama (stash sementara) | 1 | `toHaveCount(0)` menerima 1 (merah) |
+| `pnpm test` / `lint` / `typecheck` setelah `7ad7d91` | 0 | 113 / 1035 |
+| `test:e2e:account-deletion` setelah `7ad7d91` (jeda 5 menit, F9) | 0 | 7 passed |
+| Unit `account-deletion-i18n` + `delete-account-state` setelah F10 | 0 | 12 passed |
 
 Tidak dijalankan ulang oleh reviewer: suite integration/E2E domain lain di §7 (`cv-freshness`, `cv-builder`, `achievements`, `projects`, `activity`, `dashboard`, `import-commit`, `ai`, `ai-review`, `m2`/`m3` integration, `e2e:ui`, `activity`, `import`, `import-review`, `ai`, `evidence`, `m3`, `m4`). Receipt Fase 8 mencatat semuanya exit 0 pada `56ff182`; kode tidak berubah sejak itu (commit setelahnya hanya dokumen).
 

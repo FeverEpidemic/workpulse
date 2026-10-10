@@ -1,11 +1,24 @@
-# T23 Account deletion dan retention — laporan verifikasi (draf)
+# T23 Account deletion dan retention — laporan verifikasi
 
 - Tanggal: 10 Oktober 2026
-- Eksekutor: Claude Sonnet 5.5 (single-agent, tanpa sub-agent)
-- Status dokumen: **DRAFT untuk gate review.** Bukan verdict dan bukan penandaan DONE. `IMPLEMENTATION_STATUS.md` tidak diubah.
-- HEAD yang diuji: `56ff182` (kode), `93b0861` (receipt Fase 8). HEAD Fase 0: `7e874b6`.
-- Independensi: seluruh fase dan pemeriksaan di dokumen ini dikerjakan oleh agen yang sama. Tidak ada gate review independen (Opus) yang berjalan; temuan reviewer dapat mengubah status baris mana pun di bawah.
-- Gate M4: belum memiliki verdict saat T23 dimulai; mulai berdasarkan perintah ulang pengguna ("Coba Eksekusi ulang Plan T23").
+- Eksekutor: Claude Sonnet 5.5 (Fase 0–8, draf Fase 9); reviewer Claude (Opus): gate review, perbaikan UI `7ad7d91`, dan finalisasi dokumen ini.
+- Status: **T23 DONE (acceptance lokal).** Gate review tanpa P0–P2 ([T23-gate-review.md](T23-gate-review.md)).
+- HEAD yang diuji: `56ff182` (kode, pelaksana), `f29e682` (reviewer), `7ad7d91` (perbaikan dialog S12, reviewer). HEAD Fase 0: `7e874b6`.
+- Gate M4: laporan belum memiliki verdict tertulis saat T23 dimulai; pengguna menegaskan Gate M4 sudah dikerjakan (10 Oktober 2026).
+
+## Verifikasi ulang reviewer
+
+| Command | Exit | Hasil |
+| --- | --- | --- |
+| `pnpm lint` / `typecheck` / `worker:check` / `db:lint` / `build` | 0 | bersih |
+| `pnpm test` | 0 | 113 / 1034 pada `f29e682`; 113 / **1035** setelah `7ad7d91` |
+| `pnpm db:test` | 0 | 17 / 1439 |
+| `supabase db diff --local --schema public,internal`, `db:types` | 0 | tanpa perubahan |
+| `test:integration:account-deletion` / `cv-export` / `import` / `import-review` / `evidence` / `storage` / `m4` | 0 | 14 / 35 / 21 / 6 / 14 / 1 / 17 |
+| `test:e2e:account-deletion` | 0 | 7 passed setelah `7ad7d91` (termasuk langkah baru dialog dibuka ulang) |
+| `test:e2e:cv-export` / `auth` / `m2` | 0 | 12 / 1 / lulus |
+
+`test:e2e:account-deletion` yang dijalankan berulang tanpa jeda dapat gagal karena rate limit Auth lokal (`sign_in_sign_ups = 30` per 5 menit); setelah jeda 5 menit suite lulus (gate review F9).
 
 Rujukan: [handoff](T23-implementation-plan.md), [decision 0029](../decisions/0029-t23-account-deletion-retention.md), [runbook](T23-retention-runbook.md), receipt fase `T23-phase0-baseline.md` sampai `T23-phase8-regression.md`, screenshot `T23-screenshots/`.
 
@@ -56,13 +69,13 @@ Rujukan: [handoff](T23-implementation-plan.md), [decision 0029](../decisions/002
 | 15 | Batch `review` ditinggalkan | Terbukti | pgTAP, integration, unit, E2E notice S03 |
 | 16 | Retensi snapshot export (0027 N2) | Terbukti dengan catatan | pgTAP dan integration; export yang dipurge sebelum T23 tidak dikosongkan (decision 0029) |
 | 17 | Retry export dijaga (0028 N4) | Terbukti | pgTAP, unit `export-view`, integration, E2E `cv-export` |
-| 18 | Aksesibilitas dan responsive S12 | Terbukti | Axe nol pelanggaran, nol overflow 360/1440 × light/dark, fokus, 12 screenshot |
-| 19 | Privasi dan log | Terbukti, dengan tinjauan manual yang disarankan | grep `console.` nol, unit error tanpa password atau email, keluaran worker tanpa sentinel |
+| 18 | Aksesibilitas dan responsive S12 | Terbukti | Axe nol pelanggaran, nol overflow 360/1440 × light/dark, fokus, 12 screenshot; error dialog yang ditutup tidak tampil lagi saat dibuka ulang (`7ad7d91`) |
+| 19 | Privasi dan log | Terbukti | grep `console.` nol, unit error tanpa password atau email, keluaran worker tanpa sentinel; tinjauan manual reviewer: `AccountDeletionError` dan kode receipt tanpa teks pengguna |
 | 20 | Tanpa regresi | Terbukti | Fase 8, dengan perubahan assertion lama yang tercatat |
 
-## Penyimpangan dan hal yang perlu diputuskan reviewer
+## Penyimpangan (semuanya diterima reviewer, lihat gate review)
 
-1. Kondisi guard tulis dipersempit ke role DB `authenticated` (decision 0029 keputusan 2).
+1. Kondisi guard tulis dipersempit ke role DB `authenticated` (decision 0029 keputusan 2); probe PostgREST reviewer membuktikan `ACCOUNT_DELETING`.
 2. Perubahan assertion lama, semuanya akibat keputusan yang dibekukan: Retry T22 saat CV terblokir, daftar kode error, kolom aman, kunci ringkasan worker.
 3. `.ui-dialog { margin: auto }` pada CSS bersama (cacat dialog lama).
 4. Dua tabel internal tanpa FK ikut dipurge: `evidence_scan_jobs` dan `evidence_reservation_requests`.

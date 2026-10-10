@@ -3,7 +3,7 @@
 Dokumen ini menjelaskan cara memeriksa penghapusan akun dan retensi data, apa yang terbukti lokal, dan apa yang belum terverifikasi. Tidak ada perintah di sini yang membaca isi karier pengguna.
 
 - Tanggal: 10 Oktober 2026
-- Status: draft untuk gate review
+- Status: berlaku (T23 DONE, acceptance lokal). Klaim *belum terverifikasi* tetap terbuka sampai T25.
 - Terkait: [decision 0029](../decisions/0029-t23-account-deletion-retention.md), [laporan T23](T23-account-deletion-retention.md)
 
 ## 1. Status klaim
@@ -60,7 +60,7 @@ where user_id = '<user_id>'::uuid and status in ('queued', 'running', 'failed')
 group by status;
 ```
 
-Job `failed` dikembalikan ke antrean oleh purge atau oleh reconcile kategori (evidence, import, export). Objek non-kanonis di prefix `<user_id>/` tidak dapat diantrekan dan menahan receipt di `purged`; hapus lewat Storage API setelah memeriksa kuncinya, lalu jalankan pass worker.
+Job `failed` dikembalikan ke antrean oleh purge, dan setelah purge oleh reconcile import dan export. Reconcile evidence hanya mengantrekan ulang job `succeeded` (`20260925100000_t10_evidence_backend.sql:1328`); job cleanup evidence yang `failed` setelah purge harus diantrekan ulang manual. Job cleanup hanya berakhir `failed` untuk `INVALID_OBJECT_KEY`; error transien di-retry. Objek non-kanonis di prefix `<user_id>/` tidak dapat diantrekan dan menahan receipt di `purged`; hapus lewat Storage API setelah memeriksa kuncinya, lalu jalankan pass worker.
 
 Kode error yang mungkin muncul: `ACCOUNT_PURGE_FAILED`, `AUTH_DELETE_FAILED`, `WORKER_BACKEND_UNAVAILABLE`. Penghapusan tidak berhenti diam-diam: retry tanpa batas attempt dengan backoff 1, 5, 15, 60 menit, lalu 60 menit.
 

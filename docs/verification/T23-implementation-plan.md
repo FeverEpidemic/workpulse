@@ -8,7 +8,7 @@
 > - Migration bersifat forward-only. Migration yang sudah diterapkan ke database lokal tidak boleh diedit; perbaikan masuk migration baru. Jangan pernah `db:reset`.
 
 - Tanggal: 8 Oktober 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status plan: **DONE** (10 Oktober 2026, acceptance lokal; [gate review](T23-gate-review.md)).
 - Dependensi:
   - T17 **DONE**: import review UI, `cancel_import_batch`, purge batch terminal T15.
   - T22 **DONE**: S14, aturan Retry/Regenerate `src/domain/cv/export-view.ts`, decision 0028 (P3 N4 ditunda ke T23).
