@@ -18,7 +18,7 @@
   - T06/T08/T09 **DONE**: RPC simpan activity, project, achievement.
 - Eksekutor: satu agent **Claude Sonnet 5.5** (pola T23). Bila pengguna menunjuk eksekutor lain, ikuti pengguna. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 6; Fase 7 (draft dokumen) dikerjakan setelah gate. Checkpoint Claude setelah Fase 0 **wajib**: angka baseline performa dan query plan menentukan apakah Fase 4 menambah migration indeks.
-- Keputusan produk §2.4: **menunggu persetujuan pengguna**. Fase 0 berhenti bila persetujuan belum tercatat di dokumen ini.
+- Keputusan produk: pengguna **menyetujui** (10 Oktober 2026, "Setuju semua") kedelapan keputusan §2.4 sesuai rekomendasi. Semuanya dibekukan; pelaksana tidak perlu menanyakannya ulang dan tidak perlu berhenti di Fase 0 untuk persetujuan. Checkpoint Claude setelah Fase 0 dan stop condition lain tetap berlaku.
 - Acuan:
   - **PRD §4** baris *Performance targets* (dataset staging 1.000 activities, 200 achievements, 50 projects; p95 dashboard dan list read < 2 detik; save < 1 detik, tanpa network dan AI) dan *Privacy*.
   - **PRD §5** *Pilot measures*: event tanpa teks catatan, teks CV, nama file, atau isi lampiran; definisi Activation, Value completion, Return capture, Export reliability; target adalah hipotesis, ditinjau ulang setelah 20 pengguna pilot yang memberi persetujuan. M5 *Instrumentation, access review, deletion, regression*.
@@ -223,9 +223,9 @@ T24 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - **Tidak diubah:** fungsi RPC T02–T23, state machine job, worker, UI, dan i18n.
 - **Bukan v0.1:** billing, team, public profile, dan fitur roadmap `Design.md`.
 
-### 2.4 Keputusan produk yang perlu disetujui pengguna
+### 2.4 Keputusan produk yang sudah disetujui pengguna (10 Oktober 2026)
 
-Rekomendasi adalah pilihan pertama di setiap poin. Setelah pengguna menyetujui, catat tanggal dan kutipan persetujuan di bawah, lalu bekukan. Bila implementasi menuntut penyimpangan, **stop** (§8).
+Kedelapannya disetujui sesuai rekomendasi (pilihan pertama di setiap poin). Catat persetujuan ini di receipt Fase 0 dan lanjutkan tanpa bertanya ulang. Bila implementasi menuntut penyimpangan dari salah satunya, **stop** (§8).
 
 1. **Event dicatat untuk semua akun; ukuran hanya untuk kohort yang didaftarkan operator.** Persetujuan pilot dikumpulkan di luar aplikasi (formulir pilot), lalu operator memanggil `set_pilot_participant` dengan versi persetujuan. Event tanpa konten tetap tercatat untuk akun non-pilot, tetapi tidak pernah dilaporkan. Alternatif:
    - event hanya dicatat untuk akun yang sudah terdaftar (lebih minim, tetapi aktivitas sebelum pendaftaran hilang sehingga jendela 24 jam sering tidak terukur);
@@ -238,7 +238,7 @@ Rekomendasi adalah pilihan pertama di setiap poin. Setelah pengguna menyetujui, 
 7. **Event dan baris peserta ikut terhapus saat akun dihapus.** Peserta yang menghapus akun keluar dari kohort; selisihnya terlihat dari daftar persetujuan di luar sistem. Alternatif: menyimpan baris peserta tanpa event sebagai penanda "keluar" (menyisakan UUID akun yang sudah dihapus).
 8. **Event disimpan selama akun ada**, tanpa purge berkala di T24; kebijakan setelah pilot diputuskan bersama hasil pilot. Alternatif: purge otomatis event > 180 hari (butuh langkah worker baru).
 
-Persetujuan pengguna: **belum tercatat**.
+Persetujuan pengguna: **tercatat** — 10 Oktober 2026, "Setuju semua".
 
 ## 3. Kontrak teknis
 
@@ -288,7 +288,6 @@ Script baru:
 
 ### Fase 0 — Baseline, persetujuan, dan pengukuran awal (tanpa edit kode)
 
-- [ ] Pastikan §2.4 berisi persetujuan pengguna yang tercatat. Bila belum, **stop**.
 - [ ] Catat `git status --short --branch` dan HEAD (harapan `d950073` atau turunannya, termasuk commit plan ini). Working tree harus bersih kecuali `.claude/`; jika tidak, **stop**.
 - [ ] Siapkan environment:
   - `pnpm install --frozen-lockfile`.
@@ -313,7 +312,7 @@ Script baru:
   - **Indeks yang ada** untuk `activities`, `achievements`, `projects`, `achievement_skills`, `evidence_files` (mis. `activities_user_occurred_on_id_idx`, `achievements_user_status_date_id_idx`).
   - **Helper test:** `tests/integration/cv-export-support.ts:61` (`sql()`), `createAccount`, `drain`, dan helper import commit yang dipakai `tests/integration/import-commit.test.ts`.
 - [ ] **Probe performa awal** (tanpa commit kode; skrip sementara di luar repo atau dihapus sebelum commit): seed akun P dan Q dengan volume §6, jalankan `EXPLAIN (ANALYZE, BUFFERS)` untuk query utama dashboard, list, dan timeline, dan ukur 20 sampel per operasi baca. Catat angka sebagai **baseline sebelum T24** (tanpa trigger event). Bersihkan akun probe.
-- [ ] Catat persetujuan §2.4 di receipt.
+- [ ] Catat di receipt bahwa pengguna menyetujui §2.4 (10 Oktober 2026).
 - [ ] Tulis receipt `docs/verification/T24-phase0-baseline.md` dan commit `docs(t24): add phase 0 baseline receipt`. Serahkan angka probe dan plan ke checkpoint Claude sebelum Fase 1.
 
 ### Fase 1 — Database: event, kohort, metrik (TDD pgTAP)
@@ -485,7 +484,7 @@ Aturan menjalankan suite:
 
 Berhenti dan laporkan bukti, jangan berimprovisasi, bila:
 
-- §2.4 belum disetujui, working tree tidak bersih di Fase 0, atau parity tidak **33/33**.
+- Working tree tidak bersih di Fase 0 atau parity tidak **33/33**.
 - Implementasi menuntut penyimpangan dari keputusan §2.4 yang disetujui.
 - Penyelesaian memerlukan:
   - mengedit migration yang sudah diterapkan atau `db reset`;
