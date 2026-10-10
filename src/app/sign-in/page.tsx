@@ -11,6 +11,8 @@ type SignInSearchParams = Promise<Record<string, string | string[] | undefined>>
 const noticeKeys: Record<string, MessageKey> = {
   verificationFailed: "auth.verificationFailed",
   passwordUpdated: "auth.passwordUpdated",
+  accountDeleted: "auth.accountDeleted",
+  accountDeleting: "auth.accountDeleting",
   invalidRecovery: "auth.invalidRecovery",
   serviceUnavailable: "error.unavailable",
 };
@@ -30,7 +32,7 @@ export default async function SignInPage({ searchParams }: { searchParams: SignI
     <SignInClient
       locale={locale}
       returnTo={returnTo}
-      notice={noticeKeys[noticeValue]}
+      notice={context.accountDeleting ? "auth.accountDeleting" : noticeKeys[noticeValue]}
       configured={context.configured}
     />
   );

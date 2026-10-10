@@ -76,7 +76,7 @@ describe("T22 GET /api/cv/exports/[id]", () => {
     const body = await response.json();
     expect(Object.keys(body).sort()).toEqual([
       "attempt_count", "byte_size", "created_at", "cv_id", "cv_revision", "error_code", "expired", "expires_at", "finished_at", "id",
-      "page_count", "purged_at", "revision", "started_at", "status", "updated_at",
+      "page_count", "purged_at", "revision", "snapshot_purged_at", "started_at", "status", "updated_at",
     ]);
     expect(body).toMatchObject({ id: EXPORT, status: "succeeded", expired: false, cv_revision: 4, page_count: 2 });
     expect(filters).toEqual([["id", EXPORT], ["user_id", OWNER]]);

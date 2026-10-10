@@ -21,8 +21,8 @@ type Client = SupabaseClient<Database>;
 /** Owned records offered by "Map to existing", per type. */
 export const REVIEW_TARGET_LIMIT = 200;
 
-const BATCH_COLUMNS = "id, filename, status, stage, error_code, revision, commit_result";
-const ITEM_COLUMNS = "id, entity_type, ordinal, action, target_id, confirm_requested, payload, source_excerpt, revision";
+const BATCH_COLUMNS = "id, filename, status, stage, error_code, revision, commit_result, updated_at";
+const ITEM_COLUMNS = "id, entity_type, ordinal, action, target_id, confirm_requested, payload, source_excerpt, revision, updated_at";
 const PROFILE_COLUMNS = `onboarding_completed_at, ${REVIEW_PROFILE_FIELDS.join(", ")}`;
 
 const batchSchema = z.object({
@@ -33,6 +33,7 @@ const batchSchema = z.object({
   error_code: z.string().nullable(),
   revision: z.number().int(),
   commit_result: z.unknown(),
+  updated_at: z.string().nullable().default(null),
 });
 
 const itemSchema = z.object({
@@ -45,6 +46,7 @@ const itemSchema = z.object({
   payload: z.record(z.string(), z.unknown()).nullable(),
   source_excerpt: z.string().nullable(),
   revision: z.number().int(),
+  updated_at: z.string().nullable().default(null),
 });
 
 const profileSchema = z.object({ onboarding_completed_at: z.string().nullable() }).catchall(z.unknown());
@@ -157,12 +159,16 @@ export function createImportReviewViewService(deps: { client: Client; actorId: s
         }
         // A stored result that no longer parses is shown without numbers rather than with invented ones.
         const stored = storedCommitResultSchema.safeParse(batch.data.commit_result);
+        const activity = [batch.data.updated_at, ...items.data.map((item) => item.updated_at)]
+          .flatMap((value) => (value !== null && !Number.isNaN(Date.parse(value)) ? [value] : []))
+          .sort((left, right) => Date.parse(right) - Date.parse(left))[0] ?? null;
         return {
           batch: {
             id: batch.data.id, filename: batch.data.filename, status: batch.data.status, stage: batch.data.stage,
             error_code: batch.data.error_code, revision: batch.data.revision, commit_result: stored.success ? stored.data : null,
+            last_activity_at: activity,
           },
-          items: items.data,
+          items: items.data.map(({ updated_at: _updatedAt, ...item }) => item),
           targets,
           errors,
           profile: { onboarded: profile.data.onboarding_completed_at !== null, current },

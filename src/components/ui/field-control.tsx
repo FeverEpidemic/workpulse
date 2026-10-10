@@ -1,6 +1,7 @@
 import type {
   InputHTMLAttributes,
   ReactNode,
+  Ref,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
@@ -9,7 +10,7 @@ function fieldClass(className = ""): string {
   return ["field-input", className].filter(Boolean).join(" ");
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+export function Input(props: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
   const { className, ...rest } = props;
   return <input {...rest} className={fieldClass(className)} />;
 }

@@ -1,5 +1,121 @@
 # WorkPulse Implementation Status
 
+## T23 — Account deletion dan retention, acceptance lokal — 10 Oktober 2026
+
+Status T23: **DONE** (acceptance lokal). Poin acceptance §1 terbukti lokal; §1.13 terbukti sebagian: durasi purge lokal tercatat, tetapi retensi backup ≤ 30 hari *belum terverifikasi* (T25).
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0–8, draf Fase 9). Gate review Claude (Opus) pada `f29e682`: tanpa P0–P2, sepuluh P3 (F1–F10).
+- Tinjauan UI antislop (mode *during*, dipilih pengguna) menemukan F8: error dialog yang sudah ditutup tampil lagi saat dibuka ulang. Reviewer memperbaikinya di `7ad7d91` dengan test yang terbukti gagal tanpa perbaikan. Reviewer juga memperbaiki copy F10 dan dokumen F2/F3 saat closeout. Bagian ini tidak independen penuh.
+- Dependensi T22, T21, T17, T10/T11, T05, T02/T03 **DONE**. Gate M4: Fase 0–6 dikerjakan dan suite `m4` lulus, tetapi verdict reviewer belum tertulis di `M4-gate-review.md`. Pengguna menegaskan (10 Oktober 2026) bahwa Gate M4 sudah dikerjakan dan T23 boleh ditutup (gate review F1).
+- Rujukan: R01, PRD *Deletion*/*Data minimization*/*Failures*, S12, S03, S14, DB §4/§5/§6.
+
+[Rencana](verification/T23-implementation-plan.md), [bukti](verification/T23-account-deletion-retention.md), [gate review](verification/T23-gate-review.md), [decision 0029](decisions/0029-t23-account-deletion-retention.md), [runbook retensi](verification/T23-retention-runbook.md), [screenshot](verification/T23-screenshots/), receipt [Fase 0](verification/T23-phase0-baseline.md)–[8](verification/T23-phase8-regression.md).
+
+Yang selesai:
+
+- **S12 *Privacy and account*.**
+  - Dialog meminta password saat ini. Password diverifikasi pada client Auth sekali pakai dengan email dari session.
+  - Dialog menampilkan hitungan data yang hilang dan meminta pengguna mengetik email akun.
+  - Lalu `begin_account_deletion` (service role), ban, sign-out global, hapus cookie, redirect `/sign-in?notice=accountDeleted`.
+  - Tanpa masa tenggang dan tanpa undo.
+- **Guard tulis.** Trigger `zz_guard_account_writable` ada pada 17 tabel `public` ber-`user_id` + `profiles` dan menolak request pengguna untuk akun `deleting` (`42501 ACCOUNT_DELETING`). Test katalog gagal bila ada tabel baru tanpa trigger.
+- **Antrean dan purge.**
+  - `internal.account_deletions` tanpa FK, dengan claim, lease 120 detik, token, dan CAS.
+  - `purge_account_data` mengantrekan semua key baris + objek kanonis di prefix sebelum DELETE berurutan dalam satu transaksi; profil disisakan sebagai tombstone.
+  - Worker lalu menghapus user Auth (404 = selesai). `verify_account_purges` menandai `completed` hanya bila prefix kosong dan tidak ada job cleanup terbuka.
+  - Backlog dibaca lewat `get_account_deletion_backlog`; receipt dipangkas setelah 30 hari.
+- **Session.** Akun `deleting` dianggap belum masuk (`getRequestContext`); sign-in ulang mendapat pesan kredensial generik (anti-enumerasi).
+- **Retensi.**
+  - Batch import `review` yang idle 30 hari dibatalkan dan dipurge.
+  - Snapshot export dikosongkan saat PDF dipurge dan 24 jam setelah export gagal.
+  - `retry_cv_export` menolak `EXPORT_RETRY_UNAVAILABLE` bila CV berubah, terblokir, atau snapshot kosong; S14 mengikuti aturan yang sama.
+  - S03 menampilkan tanggal pembatalan otomatis.
+
+File berubah:
+
+- Database: `supabase/migrations/20261009090000_t23_account_deletion.sql`, `20261009100000_t23_retention.sql`, `supabase/tests/database/{account_deletion,retention}.test.sql`, `database.types.ts`.
+- Domain dan server: `src/domain/account/deletion.ts`, `src/domain/import/{review-retention,review-view}.ts`, `src/domain/cv/{contracts,export-view}.ts`, `src/server/auth/{reauthenticate,clear-cookies,adapter,context,actions,errors}.ts`, `src/app/sign-in/page.tsx`.
+- Fitur dan UI: `src/features/account/{deletion-service,actions,delete-account-card,delete-account-state}.ts(x)`, `src/features/profile/profile-workspace.tsx`, `src/features/import/{import-review,import-review-view-service}.ts(x)`, `src/features/cv/{cv-errors,export-service}.ts`, `src/components/ui/field-control.tsx`, `src/i18n/messages.ts`, `src/app/globals.css`.
+- Worker: `workers/{account-deletion-worker,supabase-account-deletion-gateway}.ts` (baru), `workers/{run,bootstrap,import-worker,export-worker,supabase-import-gateway,supabase-export-gateway}.ts`.
+- Test: sembilan file unit baru dan perluasan unit lama; integration `account-deletion{,-support}.ts`, `retention.test.ts`; E2E `account-deletion.spec.ts`, `helpers/account-deletion-worker.ts`, `playwright.account-deletion.config.ts` (port 3015).
+- Konfigurasi dan dokumen: `package.json` (`test:integration:account-deletion`, `test:e2e:account-deletion`), README, decision, runbook, laporan verifikasi, screenshot.
+
+Migration dan keputusan: dua migration forward-only, parity **33/33**. `retry_cv_export`, `expire_cv_exports`, dan `guard_cv_export_row` diganti; fungsi T02–T22 lain tidak diubah. Decision 0029 mencatat tujuh keputusan produk §2.4 yang disetujui pengguna 8 Oktober 2026, hasil probe cascade/Auth, guard yang dipersempit ke role `authenticated` (diterima reviewer), argumen race, dan sisa risiko access token.
+
+Checks (hasil aktual):
+
+- **Reviewer:**
+  - lint, typecheck, `worker:check`, `db:lint`, build, `db:types` tanpa diff, `db diff` tanpa perubahan, dan `git diff --check` semuanya exit 0;
+  - unit **113/1034** pada `f29e682`, **113/1035** setelah `7ad7d91`; pgTAP **17/1439**;
+  - integration account-deletion **14**, cv-export **35**, import **21**, import-review **6**, evidence **14**, storage **1**, m4 **17**;
+  - E2E account-deletion **7** (setelah `7ad7d91`), cv-export **12**, auth **1**, m2 lulus;
+  - probe PostgREST: `ACCOUNT_DELETING` untuk RPC tanpa cek sendiri.
+- **Pelaksana (Fase 8, `56ff182`):** 44 command §7 exit 0, termasuk semua suite integration/E2E domain T02–T22 dan Gate M2/M3/M4. Requested → completed **1,9 detik** lokal.
+
+Belum dijalankan:
+
+- Reviewer tidak mengulang suite domain lain di §7; kode tidak berubah sejak run pelaksana, selain dialog S12 (`7ad7d91`) dan copy F10.
+- `test:ai:live` (T23 tanpa AI).
+- Verifikasi hosted: purge ≤ 24 jam dan backup ≤ 30 hari (T25).
+
+Risiko/batas: P3 terbuka (detail di gate review):
+
+- F1: verdict reviewer Gate M4 belum tertulis.
+- F4: test guard integration menerima dua pesan error.
+- F6: objek non-kanonis menahan receipt, race tidak diuji paralel, access token membaca sampai `exp`, backup belum terverifikasi.
+- F9: suite E2E sensitif terhadap rate limit Auth lokal bila diulang tanpa jeda.
+
+Bukti lokal saja; bukan bukti production.
+
+Berikutnya: **T24 Instrumentation dan performance** (event analytics termasuk penghapusan akun, p95, metrik backlog `get_account_deletion_backlog`). Sebelum milestone M5 ditutup, verdict Gate M4 sebaiknya dituliskan.
+
+## Gate M4 — Master CV dan PDF, integration review — 9–10 Oktober 2026
+
+Status Gate M4: **PASSED** (acceptance lokal). Verdict ditulis 10 Oktober 2026 pada HEAD `f10e6ac`, setelah T23 ditutup. Secara kronologis gate ini dikerjakan sebelum T23 (Fase 0–6 pada 9 Oktober 2026, `ea64239`…`7e874b6`). Kalimat gate: *F07 end-to-end lolos; snapshot/provenance/override terjaga dan PDF dapat dibaca serta dicari.* Dependensi T18–T22 **DONE**.
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0–6). Reviewer: Claude (Opus), Fase 7.
+- Independensi: perbaikan dikerjakan oleh pelaksana yang juga menemukan temuannya. Reviewer menilai ulang diff perbaikan dan menjalankan ulang suite-nya.
+
+[Laporan gate dan verdict](verification/M4-gate-review.md), [rencana](verification/M4-gate-review-plan.md), receipt [Fase 0](verification/M4-gate-phase0-baseline.md)–[5](verification/M4-gate-phase5-regression.md).
+
+Yang dikerjakan:
+
+- **Journey F07 di browser** `tests/e2e/m4-cv-journey.spec.ts` (`test:e2e:m4`, `playwright.m4.config.ts` port 3016). Alurnya: graduate dengan keyboard → S04 → S13 (parent ikut, label id, override berkarakter Indonesia, urutan) → S14 → renderer Chromium nyata → *Download PDF* → ekstraksi pdf.js. Lalu S08 *Add to CV*, *Keep my wording*, delete sumber yang memblokir, sha256 PDF lama tetap, Retry/Regenerate dengan keyboard, isolasi akun B, Axe, dan 360 dark.
+- **Integration lintas domain** `tests/integration/m4-cv-output.test.ts` (`test:integration:m4`, 17 test). Skenario:
+  - provenance import setelah purge, dan delete activity sumber;
+  - override, refresh, dan Replace;
+  - delete enam tipe sumber, reopen, relink, dan profil;
+  - evidence ClamAV tidak masuk PDF, dan edit saat export;
+  - nol panggilan AI, CV panjang multipage, dan isolasi di service, RPC, Storage, serta reconcile.
+- **Tiga perbaikan P2**, masing-masing dengan test yang terbukti gagal lebih dulu:
+  - RV-A11Y `3a6d8fb`: kolom preview S13/S14 yang dapat digulir menjadi region berlabel yang dapat difokuskan (WCAG 2.1.1);
+  - RV-QL `e67b8a6`: `onBeforeInput` Quick log tidak lagi melempar `TypeError` per ketikan;
+  - RV-F1 `3a6d8fb` + `41c4af0`: fokus pindah ke notice setelah `CV_SOURCE_CHANGED` (T20 F1, WCAG 2.4.3).
+- Tanpa migration, tanpa perubahan RPC/SQL atau worker, tanpa dependency baru.
+
+Hasil: 11/11 kriteria PASS.
+
+- **Pelaksana (Fase 5):** 47 command §7 exit 0 tanpa rerun. Termasuk unit 104/962, pgTAP 15/1290, m4 integration 17, E2E m4 1, cv-freshness 11, dan semua suite domain T02–T22, M2, dan M3.
+- **Reviewer pada `f10e6ac` (sudah memuat T23):**
+  - lint, typecheck, build, `worker:check` (9 job), `db:lint`, dan `git diff --check` exit 0;
+  - unit 113/1035, pgTAP 17/1439, `test:pdf` 46, migration 33/33;
+  - `test:integration:m4` 17/17, `test:e2e:m4` 1/1 dua kali (list dan html), `test:e2e:activity` 1/1;
+  - `test:e2e:cv-freshness` 10/11 lalu 11/11 saat diulang. Kegagalannya bertepatan dengan E2E T23 dari sesi lain yang menjalankan `next build` di checkout yang sama (R3).
+- Reviewer membuka sembilan screenshot journey, termasuk halaman PDF yang dirender.
+
+Temuan: tidak ada P0–P2 terbuka. P3:
+
+- dari pelaksana: T20 F2/F3/F4/F6, T21 N2–N8, T22 N1–N3/N5/N7/N8, N-M4-1, N-M4-2, E-1, E-2;
+- dari reviewer:
+  - R1: langkah S13/S14 journey memakai fokus programatik, bukan traversal Tab;
+  - R2: ketertelusuran commit RV-F1;
+  - R3: dua config Playwright `next build` jangan dijalankan bersamaan dari satu checkout.
+- T22 N6 (keyboard Retry/Regenerate/Download) tertutup.
+
+Belum dijalankan: `test:e2e` gabungan, `test:ai:live`, stres race berskala, p95 (T24), staging/production. Reviewer tidak mengulang suite domain §7 selain yang tercantum di atas. Bukti lokal saja; bukan bukti production.
+
+Berikutnya: **T24 Instrumentation dan performance**. T23 sudah DONE. Follow-up P3 tidak memblokir.
+
 ## T22 — Saved preview dan PDF QA, acceptance lokal — 8 Oktober 2026
 
 Status T22: **DONE** (acceptance lokal) — seluruh 18 poin acceptance §1 terbukti lokal.
@@ -899,7 +1015,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T20 | CV freshness dan deletion | DONE |
 | T21 | Export backend | DONE |
 | T22 | Preview dan PDF QA | DONE |
-| T23 | Account deletion dan retention | TODO |
+| T23 | Account deletion dan retention | DONE |
 | T24 | Instrumentation dan performance | TODO |
 | T25 | Regression dan release handoff | TODO |
 

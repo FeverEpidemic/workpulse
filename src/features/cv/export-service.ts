@@ -28,7 +28,7 @@ const INVALID_SESSION_AUTH_CODES = new Set(["bad_jwt", "invalid_jwt", "no_author
 
 /** Safe columns only: never the snapshot, the attempt token, the lease, the object key or the idempotency key. */
 const EXPORT_COLUMNS =
-  "id, cv_id, cv_revision, status, error_code, attempt_count, page_count, byte_size, started_at, finished_at, expires_at, purged_at, created_at, updated_at, revision";
+  "id, cv_id, cv_revision, status, error_code, attempt_count, page_count, byte_size, started_at, finished_at, expires_at, purged_at, snapshot_purged_at, created_at, updated_at, revision";
 const LIST_LIMIT = 10;
 
 const requestReceiptSchema = z.object({

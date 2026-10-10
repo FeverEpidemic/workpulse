@@ -134,13 +134,25 @@ describe("T22 export actions", () => {
       expect(RETRIABLE.length + PERMANENT.length).toBe(CV_EXPORT_ERROR_CODES.length);
     });
 
-    it("offers Retry (same snapshot) for a retriable failure of the saved revision with attempts left", () => {
+    it("offers Retry (same snapshot) for a retriable failure of the saved revision with attempts left, while the CV is ready", () => {
       for (const code of RETRIABLE) {
         for (const attempts of [1, 2]) {
-          for (const readiness of [READY, BLOCKED]) {
-            expect(actions(failed(code, attempts), readiness), `${code} #${attempts}`).toEqual({ primary: "retry", secondary: [], disabledReason: null });
-          }
+          expect(actions(failed(code, attempts), READY), `${code} #${attempts}`).toEqual({ primary: "retry", secondary: [], disabledReason: null });
         }
+      }
+    });
+
+    it("offers Regenerate instead of Retry when the CV is blocked or missing now (N4)", () => {
+      for (const code of RETRIABLE) {
+        expect(actions(failed(code, 1), BLOCKED)).toEqual({ primary: "regenerate", secondary: [], disabledReason: BLOCKED_REASON });
+        expect(actions(failed(code, 1), NO_CV)).toEqual({ primary: "regenerate", secondary: [], disabledReason: NO_CV_REASON });
+      }
+    });
+
+    it("offers Regenerate instead of Retry once the snapshot was emptied (N4)", () => {
+      for (const code of RETRIABLE) {
+        const purged = failed(code, 1, { snapshot_purged_at: "2026-10-08T03:00:00.000Z" });
+        expect(actions(purged), code).toEqual({ primary: "regenerate", secondary: [], disabledReason: null });
       }
     });
 
@@ -176,7 +188,10 @@ describe("T22 export actions", () => {
     const readinesses = [READY, BLOCKED, NO_CV];
     const rows: (CvExportRow | null)[] = [
       null, queued(), running(), row(), row({ cv_revision: SAVED - 1 }), row({ expires_at: "2026-10-07T01:00:00.000Z" }), row({ purged_at: "2026-10-07T01:00:00.000Z" }),
-      ...CV_EXPORT_ERROR_CODES.flatMap((code) => [1, 2, 3].flatMap((attempts) => [failed(code, attempts), failed(code, attempts, { cv_revision: SAVED - 1 })])),
+      ...CV_EXPORT_ERROR_CODES.flatMap((code) => [1, 2, 3].flatMap((attempts) => [
+        failed(code, attempts), failed(code, attempts, { cv_revision: SAVED - 1 }),
+        failed(code, attempts, { snapshot_purged_at: "2026-10-08T03:00:00.000Z" }),
+      ])),
     ];
 
     it("never offers Retry for another revision than the saved one, a permanent code, or a third attempt", () => {
@@ -190,6 +205,8 @@ describe("T22 export actions", () => {
             expect(candidate?.cv_revision).toBe(savedRevision);
             expect(isPermanentExportError(candidate?.error_code)).toBe(false);
             expect(candidate?.attempt_count).toBeLessThan(3);
+            expect(readiness.ready).toBe(true);
+            expect(candidate?.snapshot_purged_at).toBeNull();
           }
         }
       }

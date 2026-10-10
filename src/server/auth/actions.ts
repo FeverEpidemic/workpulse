@@ -11,6 +11,7 @@ import { emailSchema, passwordSchema } from "@/features/profile/schemas";
 import { actionFailure, actionSuccess, type ActionState } from "@/server/action-result";
 import { authFailureState } from "@/server/auth/errors";
 import { createAuthAdapter } from "@/server/auth/adapter";
+import { clearAuthCookies } from "@/server/auth/clear-cookies";
 import { hasRecentRecoveryProof } from "@/server/auth/recovery-session";
 import { getAuthCallbackUrl } from "@/server/supabase/config";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -46,21 +47,6 @@ function validationState(error: z.ZodError): ActionState {
   return actionFailure("VALIDATION", "error.validation", { fieldErrors });
 }
 
-function clearAuthCookies(cookieStore: Awaited<ReturnType<typeof cookies>>): void {
-  for (const cookie of cookieStore.getAll()) {
-    if (cookie.name.startsWith("sb-") && cookie.name.includes("auth-token")) {
-      cookieStore.delete(cookie.name);
-    }
-  }
-  cookieStore.set("wp-recovery-flow", "", {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0,
-  });
-}
-
 export async function signInAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = actionInputSchema.safeParse({
     email: formText(formData, "email"),
@@ -76,10 +62,16 @@ export async function signInAction(_previous: ActionState, formData: FormData): 
 
     const { data: profile, error } = await client
       .from("profiles")
-      .select("locale, onboarding_completed_at")
+      .select("locale, onboarding_completed_at, deleting_at")
       .eq("id", result.userId)
       .maybeSingle();
     if (error || !profile) return actionFailure("UNAVAILABLE", "error.unavailable");
+
+    if (profile.deleting_at) {
+      await auth.signOutLocal();
+      clearAuthCookies(await cookies());
+      return actionFailure("UNAUTHENTICATED", "auth.accountDeleting");
+    }
 
     if (profile.onboarding_completed_at) {
       try {

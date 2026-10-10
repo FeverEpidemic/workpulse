@@ -543,7 +543,7 @@ describe("local CV export backend integration", () => {
     for (const summary of allSummaries) {
       expect(Object.keys(summary).sort()).toEqual([
         "exportCleanupClaimed", "exportCleanupCompleted", "exportCleanupRetried", "exportErrored", "exportExpired", "exportFailed",
-        "exportJobsClaimed", "exportOrphansQueued", "exportStale", "exportSucceeded",
+        "exportJobsClaimed", "exportOrphansQueued", "exportSnapshotsRedacted", "exportStale", "exportSucceeded",
       ]);
     }
   });

@@ -12,17 +12,19 @@ export interface RequestContext {
   user: User | null;
   profile: ProfileRow | null;
   profileUnavailable: boolean;
+  /** The signed-in account is being deleted: treated as signed out so no workspace page redirects in a loop. */
+  accountDeleting: boolean;
 }
 
 export async function getRequestContext(): Promise<RequestContext> {
   if (!getSupabasePublicConfig()) {
-    return { configured: false, client: null, user: null, profile: null, profileUnavailable: false };
+    return { configured: false, client: null, user: null, profile: null, profileUnavailable: false, accountDeleting: false };
   }
 
   const client = await createSupabaseServerClient();
   const { data: authData, error: authError } = await client.auth.getUser();
   if (authError || !authData.user) {
-    return { configured: true, client, user: null, profile: null, profileUnavailable: false };
+    return { configured: true, client, user: null, profile: null, profileUnavailable: false, accountDeleting: false };
   }
 
   const { data: profile, error: profileError } = await client
@@ -31,12 +33,17 @@ export async function getRequestContext(): Promise<RequestContext> {
     .eq("id", authData.user.id)
     .maybeSingle();
 
+  if (profile?.deleting_at) {
+    return { configured: true, client, user: null, profile: null, profileUnavailable: false, accountDeleting: true };
+  }
+
   return {
     configured: true,
     client,
     user: authData.user,
     profile: profile as ProfileRow | null,
     profileUnavailable: Boolean(profileError || !profile),
+    accountDeleting: false,
   };
 }
 

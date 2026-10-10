@@ -47,6 +47,8 @@ export type ReviewBatch = {
   error_code: string | null;
   revision: number;
   commit_result: StoredImportCommitResult | null;
+  /** Later of the batch update and the latest item update; drives the automatic cancel notice. */
+  last_activity_at?: string | null;
 };
 
 export type ImportReviewSnapshot = {

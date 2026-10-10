@@ -22,6 +22,7 @@ function jobFor(bytes: Uint8Array, mime = "application/pdf", attempt = 1): Impor
 function database(job: ImportJob | null, overrides: Partial<ImportWorkerDatabase> = {}) {
   return {
     expireImportUploads: vi.fn(async () => 0),
+    expireAbandonedImportReviews: vi.fn(async () => 0),
     purgeExpiredImportBatches: vi.fn(async () => 0),
     reconcileOrphanImportObjects: vi.fn(async () => 0),
     claimImportJobs: vi.fn(async () => (job ? [job] : [])),
@@ -48,6 +49,14 @@ function options(bytes: Uint8Array, db: ImportWorkerDatabase, overrides: Partial
 }
 
 describe("T15 import worker", () => {
+  it("cancels abandoned reviews before the purge so one pass removes their file and text", async () => {
+    const bytes = cvPdf();
+    const db = database(null, { expireAbandonedImportReviews: vi.fn(async () => 2), purgeExpiredImportBatches: vi.fn(async () => 2) });
+    const summary = await runImportWorkerOnce(options(bytes, db, { housekeepingLimit: 9 }));
+    expect(db.expireAbandonedImportReviews).toHaveBeenCalledWith(9);
+    expect(vi.mocked(db.expireAbandonedImportReviews).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(db.purgeExpiredImportBatches).mock.invocationCallOrder[0]!);
+    expect(summary).toMatchObject({ importReviewsExpired: 2, importPurged: 2 });
+  });
   it("scans before parsing, then stores text and page count", async () => {
     const bytes = cvPdf();
     const db = database(jobFor(bytes));

@@ -27,7 +27,8 @@ export function mapSupabaseAuthError(error: AuthErrorShape): MappedAuthError {
   if (/email_not_confirmed|email not confirmed/.test(`${code} ${message}`)) {
     return { code: "UNAUTHENTICATED", messageKey: "auth.verificationPending" };
   }
-  if (/invalid_credentials|invalid login credentials|invalid password/.test(`${code} ${message}`)) {
+  // Auth checks the ban before the password, so a banned account looks the same as a wrong password.
+  if (/invalid_credentials|invalid login credentials|invalid password|user_banned|user is banned/.test(`${code} ${message}`)) {
     return { code: "UNAUTHENTICATED", messageKey: "auth.invalidCredentials" };
   }
   if (/weak_password|password should be|password is too/.test(`${code} ${message}`)) {

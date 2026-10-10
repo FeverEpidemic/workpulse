@@ -113,6 +113,9 @@ export function createSupabaseExportWorkerGateway(
     async expireCvExports(limit) {
       return count(await rpc("expire_cv_exports", { p_limit: limit }));
     },
+    async redactCvExportSnapshots(limit) {
+      return count(await rpc("redact_cv_export_snapshots", { p_limit: limit }));
+    },
     async reconcileOrphanExportObjects(minAgeSeconds, limit) {
       return count(await rpc("reconcile_orphan_export_objects", { p_min_age_seconds: minAgeSeconds, p_limit: limit }));
     },

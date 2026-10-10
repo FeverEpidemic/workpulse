@@ -9,6 +9,7 @@ export interface AuthAdapter {
   signUp(email: string, password: string, redirectTo: string): Promise<{ userId: string | null; sessionCreated: boolean; error: AuthError | null }>;
   signIn(email: string, password: string): Promise<{ userId: string | null; error: AuthError | null }>;
   signOutLocal(): Promise<{ error: AuthError | null }>;
+  signOutGlobal(): Promise<{ error: AuthError | null }>;
   requestRecovery(email: string, redirectTo: string): Promise<{ error: AuthError | null }>;
   verifyEmail(tokenHash: string, type: ConfirmEmailType): Promise<{ error: AuthError | null }>;
   exchangeCode(code: string): Promise<{ error: AuthError | null }>;
@@ -38,6 +39,10 @@ export function createAuthAdapter(client: SupabaseClient<Database>): AuthAdapter
     },
     async signOutLocal() {
       const { error } = await client.auth.signOut({ scope: "local" });
+      return { error };
+    },
+    async signOutGlobal() {
+      const { error } = await client.auth.signOut({ scope: "global" });
       return { error };
     },
     async requestRecovery(email, redirectTo) {
