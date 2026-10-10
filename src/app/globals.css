@@ -350,6 +350,12 @@ a {
   min-width: 0;
 }
 
+/* Titles and notes are the user's own words: a long word or URL wraps instead of widening the page at 200% text. */
+.workspace-content,
+.ui-dialog-panel {
+  overflow-wrap: anywhere;
+}
+
 .workspace-quick-log {
   white-space: nowrap;
 }
