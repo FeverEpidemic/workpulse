@@ -1,6 +1,6 @@
 # T25 Matriks acceptance rilis (R01–R10, skenario rilis, PRD §4)
 
-- Tanggal: 10 Oktober 2026. Status: **Fase 1, draf audit**; kolom "Run Fase 8" diisi pada Fase 8.
+- Tanggal: 10 Oktober 2026 (Fase 1); diperbarui 11 Oktober 2026 dengan hasil Fase 2 sampai 8 di bagian 6 dan 7. Bagian 1 sampai 5 adalah audit Fase 1 dan sengaja tidak ditulis ulang.
 - Sumber: `docs/WorkPulse_PRD_v0.1.docx` §2, §3, §4, §5 dan `docs/WorkPulse_Wireframe_Screen_by_Screen_v0.1.docx` (diekstrak ulang dari `word/document.xml`), `docs/IMPLEMENTATION_PLAN.md` §6 dan blok T25.
 - Nama test dikutip dari source: `tests/integration/*.test.ts`, `tests/e2e/*.spec.ts`, `tests/unit/*.test.ts`, `supabase/tests/database/*.test.sql`. Jenis: **U** unit, **P** pgTAP, **I** integration (PostgreSQL nyata), **E** E2E (Playwright, build produksi).
 - Status: **tercakup** (acceptance dibuktikan oleh test yang ada), **sebagian** (sebagian dibuktikan, sisanya jadi defect), **gap** (tanpa test). Setiap *sebagian*/*gap* punya defect `D<n>` (daftar di bagian akhir).
@@ -107,6 +107,34 @@ Tidak ada satu suite yang menyatakan matriks lengkap, jadi tidak ada penjaga yan
 | B2 | Retensi backup ≤ 30 hari dan replay penghapusan setelah restore belum terverifikasi pada proyek hosted. | Fase 7 §retensi; release checklist |
 | B3 | Otorisasi deploy production, domain, `WORKPULSE_SITE_URL`, SMTP Auth nyata. | Pengguna/operator |
 
-## 6. Kolom Run Fase 8
+## 6. Run Fase 8 (hasil aktual, 52 command)
 
-Diisi pada Fase 8 dengan hasil aktual per suite (exit code dan angka pass/fail). Sampai itu, baris di atas hanya membuktikan bahwa test **ada dan relevan**, bukan bahwa test lulus hari ini.
+Detail per command ada di [T25-phase8-regression.md](T25-phase8-regression.md). Ringkasan yang menjawab kolom "Run Fase 8":
+
+| Suite | Menjalankan baris matriks | Hasil Fase 8 |
+| --- | --- | --- |
+| `pnpm test` (unit) | R01 (auth, recovery), R04, R05, R08, kontras token, kalimat S12, release-docs, ops-check | 124 file / 1093 test lulus |
+| `pnpm db:test` | R01–R10 (pgTAP per domain), penjaga katalog, kesehatan operasional | 20 file / 1638 assertion lulus |
+| `pnpm test:integration:release` | R01 isolasi (semua tabel, RPC, storage, route), restore | 12 test lulus |
+| `test:integration:{activity,achievements,projects,dashboard,evidence,storage,ai,ai-review}` | R03–R07, R08 | semua lulus |
+| `test:integration:{import,import-review,import-commit}` | R02, skenario 1 | semua lulus |
+| `test:integration:{cv,cv-builder,cv-freshness,cv-export}`, `test:pdf`, `test:integration:m4` | R09, R10, skenario 2, 5, 6 (PDF), X1 | semua lulus |
+| `test:integration:{m2,m3}` | X2 (consent), X3 (lease), skenario 3 | semua lulus |
+| `test:integration:{account-deletion,product-events}` | PRD §4 Deletion, X4, instrumentasi | semua lulus |
+| `test:e2e:*` (20 suite) | R01–R10 pada UI, enam skenario rilis, `release` | semua lulus; dua flaky tercatat dan diselesaikan (F1, F2, D12) |
+| `test:perf` | PRD §4 Performance (lokal) | p95 baca ≤ 192,1 ms, simpan ≤ 130,6 ms |
+| `pnpm ops:check`, `worker:check`, `build` | health, build produksi | lulus |
+
+## 7. Status akhir
+
+| Bagian | Status Fase 1 | Status akhir | Dasar |
+| --- | --- | --- | --- |
+| R01 akun lain tidak dapat membaca atau mengubah | sebagian (D1, D2) | **tercakup** | `release_catalog.test.sql`, `release-ownership.test.ts`: 18 tabel, 47 parameter RPC, 59 RPC worker, 5 objek, 3 route |
+| Skenario 6 (kepemilikan setiap tabel dan path, PDF) | sebagian | **tercakup** | sama; PDF dari `m4-cv-output` #11 dan `cv-export-renderer-real` |
+| PRD §4 Privacy | sebagian (D1, D2, D6) | **tercakup** | isolasi, pemindaian bundle browser |
+| PRD §4 Usability | sebagian (D3, D4, D5) | **tercakup untuk otomatis**; pemeriksaan **NVDA nyata belum dijalankan** | kontras 37 pasangan, matriks 20 keadaan layar × 360/1440 × light/dark, keyboard, teks 200%, snapshot aria |
+| PRD §4 Deletion | sebagian (D8, B2) | **sebagian** | replay restore dan alert backlog terbukti; **retensi backup ≤ 30 hari belum terverifikasi** (BLOCKER B2) |
+| PRD §4 Performance | tercakup lokal, staging tidak diukur | tercakup lokal; staging **tidak diukur** (B1) | `test:perf` |
+| Lainnya (R02–R10, skenario 1–5, X1–X4, AI disclosure, File safety, Data minimization, Failures) | tercakup | tercakup | dijalankan ulang Fase 8 |
+
+Defect Fase 1: D1 sampai D8 tertutup (D8 sebagian oleh `ops:check`, prosedur restore, dan test). Defect Fase 4 dan 8: D9, D10, D11 diperbaiki; D12 adalah regresi perbaikan D11 yang ditemukan dan diperbaiki di Fase 8. Tidak ada P0 atau P1.
