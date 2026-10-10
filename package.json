@@ -24,6 +24,7 @@
     "test:e2e:evidence": "playwright test --config playwright.evidence.config.ts",
     "test:e2e:m2": "playwright test --config playwright.m2.config.ts tests/e2e/m2-manual-journey.spec.ts",
     "test:e2e:m3": "playwright test --config playwright.m3.config.ts tests/e2e/m3-assisted-journey.spec.ts",
+    "test:e2e:release": "playwright test --config playwright.release.config.ts",
     "test:e2e:m4": "playwright test --config playwright.m4.config.ts tests/e2e/m4-cv-journey.spec.ts",
     "test:e2e:ai-review": "playwright test --config playwright.ai-review.config.ts tests/e2e/ai-review.spec.ts",
     "test:e2e:import-review": "playwright test --config playwright.import-review.config.ts tests/e2e/import-review.spec.ts",
