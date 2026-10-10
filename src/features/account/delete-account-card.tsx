@@ -96,6 +96,7 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
   return (
     <div className="delete-account">
       <h2 className="text-xl font-semibold">{t(locale, "account.delete.title")}</h2>
+      <p className="text-sm text-[var(--wp-muted)]">{t(locale, "account.privacy.events")}</p>
       <p className="text-sm text-[var(--wp-muted)]">{t(locale, "account.delete.privacy")}</p>
       <div>
         <button ref={triggerRef} type="button" className="button-secondary" onClick={() => void openDialog()}>
