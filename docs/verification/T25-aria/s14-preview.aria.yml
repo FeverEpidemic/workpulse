@@ -40,7 +40,7 @@
       - paragraph: Export status
       - paragraph: PDF ready Revision 4
       - paragraph: "Pages: 1"
-      - paragraph: Available until Oct 11, 2026, <time> PM
+      - paragraph: Available until <date>, <time>
     - button "Download PDF"
   - region "Recent exports":
     - heading "Recent exports" [level=2]
@@ -48,7 +48,7 @@
       - listitem:
         - paragraph: Revision 4 PDF ready
         - paragraph:
-          - time: Oct 10, 2026, <time> PM
+          - time: <date>, <time>
           - text: "· Pages: 1"
         - button "Download PDF, Revision 4": Download PDF
   - region "Preview":
@@ -74,7 +74,7 @@
               - list:
                 - listitem:
                   - paragraph: Mempercepat laporan mingguan
-                  - paragraph: Oct 2, 2026
+                  - paragraph: <date>
                   - paragraph: Mempercepat laporan penjualan mingguan hingga satu jam.
         - region "Education":
           - heading "Education" [level=3]

@@ -58,19 +58,19 @@
         - /url: /activity
       - list "Recent activity":
         - listitem:
-          - link "Oct 5, 2026 Menjelaskan hasil analisis kepada manajer produk.":
+          - link "<date> Menjelaskan hasil analisis kepada manajer produk.":
             - /url: /activity/<id>
-            - time: Oct 5, 2026
+            - time: <date>
             - text: Menjelaskan hasil analisis kepada manajer produk.
         - listitem:
-          - link "Oct 3, 2026 Merapikan kueri laporan sehingga waktu muat turun.":
+          - link "<date> Merapikan kueri laporan sehingga waktu muat turun.":
             - /url: /activity/<id>
-            - time: Oct 3, 2026
+            - time: <date>
             - text: Merapikan kueri laporan sehingga waktu muat turun.
         - listitem:
-          - link "Oct 1, 2026 Menyusun laporan penjualan mingguan dan membagikannya ke tim.":
+          - link "<date> Menyusun laporan penjualan mingguan dan membagikannya ke tim.":
             - /url: /activity/<id>
-            - time: Oct 1, 2026
+            - time: <date>
             - text: Menyusun laporan penjualan mingguan dan membagikannya ke tim.
     - region "Current projects":
       - heading "Current projects" [level=2]

@@ -45,7 +45,7 @@
   - paragraph: Menyusun laporan penjualan mingguan dan membagikannya ke tim.
   - paragraph: Saved source excerpt
   - paragraph: Menyusun laporan penjualan mingguan dan membagikannya ke tim.
-  - text: "Project: Dasbor Penjualan Experience: Perusahaan Contoh · Analis Data Achieved on: Oct 2, 2026 Skills: SQL (1)"
+  - text: "Project: Dasbor Penjualan Experience: Perusahaan Contoh · Analis Data Achieved on: <date> Skills: SQL (1)"
   - region "Evidence":
     - heading "Evidence" [level=2]
     - paragraph: Attach a supporting file to this record. Files stay private.
@@ -57,7 +57,7 @@
   - text: Title
   - textbox "Title": Mempercepat laporan mingguan
   - text: Achieved on
-  - textbox "Achieved on": 2026-10-02
+  - textbox "Achieved on": <date>
   - text: Contribution
   - textbox "Contribution": Menulis ulang kueri dan menjadwalkan laporan.
   - text: Scope

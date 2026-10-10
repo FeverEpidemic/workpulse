@@ -268,7 +268,11 @@ function normalizeAria(snapshot: string, user: User): string {
   return snapshot
     .replaceAll(user.email, "<email>")
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, "<id>")
-    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, "<time>");
+    // Dates and times follow the clock (the capture form defaults to today, an export is available until tomorrow).
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, "<date>")
+    .replace(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4}\b/g, "<date>")
+    .replace(/\b\d{1,2} (?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des) \d{4}\b/g, "<date>")
+    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AP]M)?\b/g, "<time>");
 }
 
 test("accessibility tree of S04, S05, S08, S13 and S14 is locked (screen reader proxy)", async ({ browser }, testInfo) => {
@@ -288,7 +292,12 @@ test("accessibility tree of S04, S05, S08, S13 and S14 is locked (screen reader 
       else if (!existsSync(file)) mismatches.push(`${screen.id}: no locked snapshot (run once with WORKPULSE_RELEASE_WRITE_ARIA=1)`);
       else if (readFileSync(file, "utf8").trimEnd() !== snapshot.trimEnd()) {
         await testInfo.attach(`${screen.id}.actual.yml`, { body: snapshot, contentType: "text/plain" });
-        mismatches.push(`${screen.id}: accessibility tree differs from ${file}`);
+        const expectedLines = readFileSync(file, "utf8").trimEnd().split(/\r?\n/);
+        const actualLines = snapshot.trimEnd().split(/\r?\n/);
+        const first = actualLines.findIndex((line, index) => line !== expectedLines[index]);
+        mismatches.push(
+          `${screen.id}: accessibility tree differs from ${file} at line ${first + 1}: expected ${JSON.stringify(expectedLines[first])}, got ${JSON.stringify(actualLines[first])}`,
+        );
       }
       // Names the checklist relies on: a page always has a heading, and every control has a name.
       expect(snapshot, `${screen.id}: heading`).toMatch(/- heading "/);

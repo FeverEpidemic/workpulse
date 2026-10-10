@@ -117,7 +117,7 @@
         - list:
           - listitem:
             - paragraph: Mempercepat laporan mingguan
-            - paragraph: Oct 2, 2026
+            - paragraph: <date>
             - button "Edit wording for Mempercepat laporan mingguan": Edit wording
             - button "Move Mempercepat laporan mingguan up" [disabled]
             - button "Move Mempercepat laporan mingguan down" [disabled]
@@ -185,7 +185,7 @@
               - list:
                 - listitem:
                   - paragraph: Mempercepat laporan mingguan
-                  - paragraph: Oct 2, 2026
+                  - paragraph: <date>
                   - paragraph: Mempercepat laporan penjualan mingguan hingga satu jam.
         - region "Education":
           - heading "Education" [level=3]
