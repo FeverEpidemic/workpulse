@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T22 done locally; Gates M2 and M3 passed; Gate M4 (CV export integration review) next.** Auth/profile,
+Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -13,7 +13,7 @@ Achievement, and Project detail screens with upload/scan polling, retry, authori
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
 production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented, T21 adds the PDF export
-backend, T22 adds the S14 preview and export page with real-renderer PDF QA, and T23 adds account deletion and retention. See
+backend, T22 adds the S14 preview and export page with real-renderer PDF QA, T23 adds account deletion and retention, and T24 adds pilot product events and the performance measurement. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -81,6 +81,8 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:cv-export` | S14 preview and export: access and empty state, graduate journey with the keyboard and the real renderer (real PDF pages, download), unsaved S13 wording, PRD delete-source scenario, Keep saved wording, failure → Retry → Regenerate, expiry, PDF pages that fail to load, two-tab conflict, two-account isolation, 360/1440 light/dark with Axe, long id/en CV page screenshots; drains the worker as a child process on port 3014 and writes `docs/verification/T22-screenshots/` |
 | `pnpm test:integration:account-deletion` | T23 account deletion and retention against local Supabase, Auth, Storage and the real workers: guard on every user RPC, session revocation, ordered purge with real objects in three categories plus an orphan, crash at three points, isolation and re-registration, queued jobs never reach an adapter, abandoned import reviews, export snapshot redaction and the guarded retry |
 | `pnpm test:e2e:account-deletion` | S12 account deletion with the keyboard (wrong password, wrong email, then delete), two sessions, re-sign-in refused, real worker drain and re-registration, S03 automatic cancel notice, 360/1440 light/dark with Axe, reduced motion; port 3015 and writes `docs/verification/T23-screenshots/` |
+| `pnpm test:integration:product-events` | T24 product events against local Supabase, Auth and the real export worker: one event per save, import commit, AI apply and export transition, none for edits or retries, rollback leaves no event, private sentinels never reach event rows or the report, API roles refused, pilot cohort counts only enrolled accounts, events removed with the account through the T23 deletion path |
+| `pnpm test:perf` | T24 p95 of the page reads and saves at the service layer on the PRD dataset (1,000 activities, 200 achievements, 50 projects, seeded through the user RPCs); 50 warm samples per operation; writes `docs/verification/T24-perf-results.json` unless `WORKPULSE_PERF_OUT` points elsewhere. Run it alone |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -183,6 +185,19 @@ T23 adds account deletion in S12 and three retention rules.
 - **Not proven locally.** The 30-day backup window is a policy until it is checked on the hosted project; see the [retention runbook](docs/verification/T23-retention-runbook.md).
 
 See [decision 0029](docs/decisions/0029-t23-account-deletion-retention.md).
+
+T24 adds product events for the pilot measures and measures the PRD performance targets. There is no UI change.
+- **Events.** `AFTER` triggers on the canonical tables write one row to `internal.product_events` per saved activity, created career record, confirmed achievement, committed import and finished export, in the same transaction as the change. Properties are allowlisted enums and bounded integers: no text, record id, file name or email. No API role can read the table.
+- **Pilot cohort.** The operator enrolls consenting accounts with `set_pilot_participant` and reads `get_pilot_metrics(now())`; both are service-role only. Targets are pilot hypotheses. See the [pilot metrics runbook](docs/verification/T24-pilot-metrics-runbook.md).
+- **Performance.** `pnpm test:perf` seeds two accounts with the PRD dataset and measures the services the pages call. Across four local runs, every p95 stayed between 78 and 206 ms (targets: 2 s for reads, 1 s for saves). This is one development machine, not the hosted service.
+
+Run the perf suite with the local stack up and nothing else running in the checkout, with `SUPABASE_SECRET_KEY` and the `.env.local` values in the process env:
+
+```powershell
+pnpm test:perf
+```
+
+See [decision 0030](docs/decisions/0030-t24-instrumentation-performance.md).
 
 ## Local database (Supabase)
 

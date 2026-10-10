@@ -2097,6 +2097,18 @@ export type Database = {
           text: string
         }[]
       }
+      get_pilot_metrics: {
+        Args: { p_as_of?: string }
+        Returns: {
+          achieved: number
+          cohort_size: number
+          eligible: number
+          measure: string
+          pending: number
+          rate: number
+          target: number
+        }[]
+      }
       list_demonstrated_skills: {
         Args: { p_limit?: number }
         Returns: {
@@ -2470,6 +2482,18 @@ export type Database = {
           ai_consent_at: string
           ai_consent_version: string
           revision: number
+        }[]
+      }
+      set_pilot_participant: {
+        Args: {
+          p_consent_version: string
+          p_enrolled: boolean
+          p_user_id: string
+        }
+        Returns: {
+          enrolled_at: string
+          user_id: string
+          withdrawn_at: string
         }[]
       }
       skip_ai_questions: { Args: { p_job_id: string }; Returns: undefined }

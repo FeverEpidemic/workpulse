@@ -1,5 +1,70 @@
 # WorkPulse Implementation Status
 
+## T24 — Instrumentation dan performance, acceptance lokal — 10 Oktober 2026
+
+Status T24: **DONE** (acceptance lokal). Ke-18 poin acceptance §1 terbukti lokal. Target performa terbukti pada satu mesin pengembangan, bukan di layanan hosted (T25).
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0-6). Gate review Claude (Opus) pada `0f5aeeb`: tanpa P0-P2, delapan P3 (G1-G8).
+- Reviewer juga menulis dokumen Fase 7 (decision, runbook, laporan, README) setelah gate, jadi bagian dokumen itu tidak direview pihak independen.
+- Dependensi T23, T21/T22, T16, T12, T06/T08/T09 **DONE**; Gate M4 **PASSED**.
+- Rujukan: PRD §4 *Performance targets* dan *Privacy*, PRD §5 *Pilot measures*, rencana M5.
+
+[Rencana](verification/T24-implementation-plan.md), [bukti](verification/T24-instrumentation-performance.md), [gate review](verification/T24-gate-review.md), [decision 0030](decisions/0030-t24-instrumentation-performance.md), [runbook metrik pilot](verification/T24-pilot-metrics-runbook.md), [hasil perf](verification/T24-perf-results.json), receipt [Fase 0](verification/T24-phase0-baseline.md) sampai [6](verification/T24-phase6-regression.md).
+
+Yang selesai:
+
+- **Event produk.**
+  - Sepuluh trigger `AFTER` pada delapan tabel kanonis menulis `internal.product_events` dalam transaksi domain.
+  - Lima event: `activity_saved`, `career_record_created`, `achievement_confirmed`, `import_committed`, `cv_export_finished`.
+  - Properti dibatasi CHECK allowlist (enum dan integer berbatas). Tidak ada teks, ID record, nama file, atau email.
+  - Edit, baca, retry idempotent, dan transaksi yang rollback tidak menghasilkan event. `local_date` mengikuti zona waktu profil.
+- **Kohort pilot.**
+  - `set_pilot_participant` (service role) mendaftarkan akun yang dibuat setelah epoch instrumentasi. Penarikan diri bersifat final.
+  - Akun fixture dan test tidak pernah didaftarkan.
+- **Laporan.** `get_pilot_metrics(p_as_of)` (service role) menghitung activation 24 jam, value completion 7 hari, return capture 28 hari (minggu ISO di zona profil), dan export reliability per transisi terminal tanpa `ACCOUNT_DELETING`. Setiap ukuran punya `eligible`, `achieved`, `pending`, `rate` (NULL bila kosong), dan target hipotesis.
+- **Akses dan penghapusan.** Tabel internal tanpa privilege role API. Event dan baris peserta ikut terhapus lewat FK cascade ke `profiles` saat jalur T23 menghapus akun. Fungsi T23 tidak diubah.
+- **Performa.** `pnpm test:perf` men-seed dua akun dengan dataset PRD lewat RPC pengguna, lalu mengukur 10 operasi baca dan 6 operasi simpan di lapisan service dengan 50 sampel warm per operasi. Query plan Fase 4 tidak memenuhi kriteria indeks, jadi tidak ada migration indeks.
+
+File berubah:
+
+- Database: `supabase/migrations/20261011090000_t24_product_events.sql`, `supabase/tests/database/product_events.test.sql` (134 assertion), `src/server/supabase/database.types.ts` (dua fungsi `public`).
+- Test: `tests/integration/product-events.test.ts`, `tests/perf/{perf-support,seed,stats,read-write.test}.ts`, `tests/unit/perf-stats.test.ts`, `vitest.perf.config.ts`.
+- Konfigurasi dan dokumen: `package.json` (`test:integration:product-events`, `test:perf`), README, AGENTS, decision 0030, runbook, laporan verifikasi, `T24-perf-results.json`, receipt dan gate review.
+- Tidak ada perubahan UI, i18n, worker, atau fungsi RPC T02-T23.
+
+Migration dan keputusan: satu migration forward-only, parity **34/34**. Decision 0030 mencatat delapan keputusan produk §2.4 yang disetujui pengguna pada 10 Oktober 2026, alasan memakai trigger alih-alih mengubah RPC, allowlist, hasil dan batas metode perf, serta batas definisi yang diterima. G2 (draft achievement kosong menghitung Activation) diterima pengguna untuk pilot.
+
+Checks (hasil aktual):
+
+- **Reviewer pada `0f5aeeb`:**
+  - lint, typecheck, `worker:check`, `db:lint`, dan `git diff --check f6b5237..HEAD` semuanya exit 0;
+  - unit **114/1041**; pgTAP **18/1573**; migration **34/34**;
+  - integration product-events **9**, account-deletion **14**, import-commit **11**, cv-export **35**;
+  - `test:perf` 1 file / 3 test. p95 baca tertinggi **192,4 ms** (target 2.000), p95 simpan tertinggi **91,9 ms** (target 1.000). p95 dihitung ulang dari sampel mentah, baik run reviewer maupun file hasil pelaksana, dan cocok;
+  - katalog: tiga tabel internal hanya punya grant `postgres`, dua RPC hanya dapat dieksekusi `service_role`.
+- **Pelaksana (Fase 5-6):**
+  - tiga run `test:perf` dengan p95 tertinggi 206,2 ms (baca) dan 198,4 ms (simpan);
+  - seluruh command regresi §7 exit 0 tanpa rerun, termasuk semua suite integration/E2E T02-T23 dan Gate M2/M3/M4. Rinciannya: unit 114/1041, pgTAP 18/1573, product-events 9, E2E m2/m3/m4 lulus dengan env AI dikosongkan;
+  - nol akun `t24-*` tersisa.
+
+Belum dijalankan:
+
+- Reviewer tidak mengulang suite E2E dan `pnpm build`. T24 tidak mengubah UI, worker, atau kode aplikasi selain tipe, dan hasil pelaksana pada `d77d27f` berlaku.
+- `test:ai:live` (T24 tanpa AI).
+- Pengukuran performa di staging atau hosted, dan performa yang dirasakan browser (T25).
+
+Risiko/batas: P3 terbuka (detail di gate review):
+
+- G1 (sudah diperbaiki): `get_pilot_metrics` kini hanya membaca event sampai `p_as_of` lewat migration `20261011100000_t24_pilot_metrics_as_of.sql` (parity **35/35**), dengan pgTAP 9.6. `db:test` 18/1577, `db:lint`, `db:types` (tanpa diff), dan integration product-events 9 lulus.
+- G2: draft achievement kosong menghitung Activation (diterima untuk pilot).
+- G5: batas metode perf: satu mesin, satu pengguna, loopback, tanpa evidence, buffer tidak dikosongkan.
+- G7: loop N+1 di `get_cv_review_summary` dan `loadSkills` tanpa batas di `achievement-service.ts`.
+- Suite lama membocorkan akun di database lokal (226 profil sebelum T24, 229 sesudah regresi). Di luar scope T24.
+
+Bukti lokal saja; bukan bukti production.
+
+Berikutnya: **T25 Regression, aksesibilitas dan release handoff** (pengukuran staging, alert backlog penghapusan dan cleanup, verifikasi retensi backup, kalimat pemberitahuan event di S12, release checklist). Gate M5 ditinjau setelah T25.
+
 ## T23 — Account deletion dan retention, acceptance lokal — 10 Oktober 2026
 
 Status T23: **DONE** (acceptance lokal). Poin acceptance §1 terbukti lokal; §1.13 terbukti sebagian: durasi purge lokal tercatat, tetapi retensi backup ≤ 30 hari *belum terverifikasi* (T25).
@@ -1016,7 +1081,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T21 | Export backend | DONE |
 | T22 | Preview dan PDF QA | DONE |
 | T23 | Account deletion dan retention | DONE |
-| T24 | Instrumentation dan performance | TODO |
+| T24 | Instrumentation dan performance | DONE |
 | T25 | Regression dan release handoff | TODO |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
