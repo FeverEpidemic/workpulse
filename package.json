@@ -50,6 +50,7 @@
     "test:integration:cv": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-selection.test.ts",
     "test:integration:cv-freshness": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-freshness.test.ts",
     "test:pdf": "vitest run --config vitest.pdf.config.ts --configLoader native",
+    "test:perf": "vitest run --config vitest.perf.config.ts --configLoader native",
     "test:integration:account-deletion": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/account-deletion.test.ts tests/integration/retention.test.ts",
     "test:integration:product-events": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/product-events.test.ts",
     "test:integration:cv-export": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/cv-export.test.ts tests/integration/cv-export-renderer-real.test.ts tests/integration/cv-export-preview.test.ts",
