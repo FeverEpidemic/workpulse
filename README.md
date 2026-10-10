@@ -13,7 +13,7 @@ Achievement, and Project detail screens with upload/scan polling, retry, authori
 named remove, and atomic move of `ready` Activity evidence to its derived Achievement (T11).
 Unit, pgTAP, PostgreSQL/Storage/scanner integration, browser/Axe, worker, lint, typecheck, and
 production build checks pass locally; nothing is deployed. The master CV (T18 schema and selection, T19 S13 builder with wording overrides, T20 freshness review and source-delete invalidation) is implemented, T21 adds the PDF export
-backend, and T22 adds the S14 preview and export page with real-renderer PDF QA; account deletion remains deferred to T23. See
+backend, T22 adds the S14 preview and export page with real-renderer PDF QA, and T23 adds account deletion and retention. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for the task list and
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the current checkpoint.
 
@@ -79,6 +79,8 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:cv` | S13 CV builder: graduate journey (keyboard moves, wording override, Save, reload), CV language, parent removal dialog, two-session conflict, wording dropped by a removal elsewhere, Add to CV, 360/1440 light/dark with Axe, reduced motion; port 3012 |
 | `pnpm test:e2e:cv-freshness` | S13 freshness review and S04 CV checks: Refresh, Keep saved wording, Keep my wording, Replace, deleted/unconfirmed sources, profile review, Refresh all without manual wording, actions off while wording is unsaved, dashboard links, keyboard/focus/live region, 360/1440 light/dark with Axe, reduced motion; port 3013 |
 | `pnpm test:e2e:cv-export` | S14 preview and export: access and empty state, graduate journey with the keyboard and the real renderer (real PDF pages, download), unsaved S13 wording, PRD delete-source scenario, Keep saved wording, failure → Retry → Regenerate, expiry, PDF pages that fail to load, two-tab conflict, two-account isolation, 360/1440 light/dark with Axe, long id/en CV page screenshots; drains the worker as a child process on port 3014 and writes `docs/verification/T22-screenshots/` |
+| `pnpm test:integration:account-deletion` | T23 account deletion and retention against local Supabase, Auth, Storage and the real workers: guard on every user RPC, session revocation, ordered purge with real objects in three categories plus an orphan, crash at three points, isolation and re-registration, queued jobs never reach an adapter, abandoned import reviews, export snapshot redaction and the guarded retry |
+| `pnpm test:e2e:account-deletion` | S12 account deletion with the keyboard (wrong password, wrong email, then delete), two sessions, re-sign-in refused, real worker drain and re-registration, S03 automatic cancel notice, 360/1440 light/dark with Axe, reduced motion; port 3015 and writes `docs/verification/T23-screenshots/` |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -172,6 +174,15 @@ T22 adds S14 `/cv/preview`, opened from S13 through *Preview and export*. The li
 - **Print template.** Long unbroken words wrap instead of shrinking the page. An entry taller than one page may break between its children, so no page is left blank before it.
 
 See [decision 0028](docs/decisions/0028-t22-saved-preview-pdf-qa.md).
+
+T23 adds account deletion in S12 and three retention rules.
+- **Start.** *Delete account* asks for the current password (checked on a throwaway Auth client with the email of the session) and the account email. `begin_account_deletion` is service-role only; it marks the profile `deleting` and creates a receipt in one transaction, then the account is banned, every session is revoked and the browser leaves the workspace. There is no grace period and no undo.
+- **Write guard.** A trigger on every user-owned table rejects the writes of a user request for a `deleting` account (`42501`, `ACCOUNT_DELETING`). Service-role requests, the worker and the purge are not affected.
+- **Purge.** The worker's `account-deletion` pass queues every known object key and every object under the user prefix, deletes the rows in a fixed order in one transaction (the profile stays as a tombstone), deletes the Auth user, and completes the receipt only when the prefix is empty and no cleanup job is open. `get_account_deletion_backlog` reports pending and overdue (more than 24 hours) deletions.
+- **Retention.** A review batch idle for 30 days is cancelled and purged; an export snapshot is emptied when the PDF expires or 24 hours after a failure; *Retry* is refused when the CV changed, is blocked, or the snapshot is gone.
+- **Not proven locally.** The 30-day backup window is a policy until it is checked on the hosted project; see the [retention runbook](docs/verification/T23-retention-runbook.md).
+
+See [decision 0029](docs/decisions/0029-t23-account-deletion-retention.md).
 
 ## Local database (Supabase)
 
