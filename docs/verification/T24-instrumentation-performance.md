@@ -2,7 +2,7 @@
 
 - Tanggal: 10 Oktober 2026
 - Eksekutor: Claude Sonnet 5.5 (Fase 0-6); reviewer Claude (Opus): gate review dan dokumen Fase 7.
-- Status: **acceptance lokal terbukti; menunggu closeout.** Gate review tanpa P0-P2 ([T24-gate-review.md](T24-gate-review.md)).
+- Status: **T24 DONE (acceptance lokal).** Gate review tanpa P0-P2 ([T24-gate-review.md](T24-gate-review.md)).
 - HEAD yang diuji: `0f5aeeb` (pelaksana, regresi Fase 6 pada `d77d27f`; reviewer pada `0f5aeeb`). HEAD Fase 0: `f6b5237`.
 
 Rujukan: [handoff](T24-implementation-plan.md), [decision 0030](../decisions/0030-t24-instrumentation-performance.md), [runbook metrik pilot](T24-pilot-metrics-runbook.md), hasil mentah [T24-perf-results.json](T24-perf-results.json), receipt `T24-phase0-baseline.md` sampai `T24-phase6-regression.md`.
