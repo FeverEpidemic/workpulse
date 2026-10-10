@@ -1,11 +1,72 @@
-# Gate M4 — laporan draft (integration review Master CV dan PDF)
+# Gate M4 — integration review Master CV dan PDF
 
-- Tanggal: 9 Oktober 2026.
+- Tanggal: 9 Oktober 2026 (Fase 0–6), 10 Oktober 2026 (verdict Fase 7).
 - Branch: `claude/clever-archimedes-gbu7qd`. Baseline handoff `7a93932`.
 - Pelaksana: Claude Sonnet 5.5, satu sesi tanpa sub-agent, Fase 0–6 dari [`M4-gate-review-plan.md`](M4-gate-review-plan.md).
-- **Status dokumen: DRAFT. Belum ada verdict.** Verdict Gate M4 dan pembaruan `IMPLEMENTATION_STATUS.md`/`AGENTS.md` adalah wewenang reviewer (Fase 7).
+- Reviewer: Claude (Opus), Fase 7. **Verdict: PASSED** (acceptance lokal). Lihat [§0](#0-verdict-reviewer-fase-7). Bagian §1–§6 di bawahnya adalah laporan draft pelaksana; isinya tidak diubah reviewer kecuali judul §1.
 - Kalimat gate (`IMPLEMENTATION_PLAN.md:277`): *F07 end-to-end lolos; snapshot/provenance/override terjaga dan PDF dapat dibaca serta dicari.*
 - Receipt: [Fase 0](M4-gate-phase0-baseline.md), [1](M4-gate-phase1-acceptance-audit.md), [2](M4-gate-phase2-code-review.md), [3](M4-gate-phase3-cv-journey.md), [4](M4-gate-phase4-cross-domain.md), [5](M4-gate-phase5-regression.md).
+
+## 0. Verdict reviewer (Fase 7)
+
+**Gate M4: PASSED** (acceptance lokal), 10 Oktober 2026, pada HEAD `f10e6ac`.
+
+Kesebelas kriteria §1 PASS. Tidak ada P0–P2 terbuka. Tiga P2 yang ditemukan gate (RV-A11Y, RV-QL, RV-F1) sudah diperbaiki dan diuji ulang. Reviewer menambah tiga P3 (R1–R3), semuanya tidak memblokir.
+
+HEAD yang diuji ulang sudah memuat T23 (`67464ed`…`f10e6ac`): migration `20261009090000`/`20261009100000`, pengosongan snapshot export, dan aturan `retry_cv_export` baru. Suite M4 tetap lulus di atas perubahan itu. Jadi T23 tidak merusak bukti M4.
+
+### 0.1 Yang diperiksa reviewer
+
+- **Receipt Fase 0–5 dan draft ini.** Setiap klaim "lulus" punya command, exit code, dan angka. Tujuh run merah selama penyusunan journey dijelaskan satu per satu (Fase 3). Tidak ada asersi yang dilemahkan.
+- **Diff perbaikan `3a6d8fb`, `e67b8a6`, `41c4af0`.**
+  - RV-A11Y: kolom preview S13/S14 menjadi `role="region"` berlabel dengan `tabIndex=0`. Perbaikan minimal, label en/id dari kunci yang ada.
+  - RV-QL: `insertedTextOf` membaca `data` dari event React dan memakai `inputType?.` opsional. Penjaga 10.000 code point kini berjalan saat mengetik. Unit menutup kasus `textInput` tanpa `inputType`, delete, dan line break.
+  - RV-F1: notice error mendapat `tabIndex=-1` dan fokus lewat penghitung `noticeFocus` setelah `CV_SOURCE_CHANGED`. Test E2E baru menegaskan `cv-notice` berfokus, bukan sekadar "bukan `body`".
+- **Test gate.**
+  - `tests/e2e/m4-cv-journey.spec.ts`: PDF diunduh lalu teksnya diekstrak dengan pdf.js. Ukuran A4 diperiksa per halaman. sha256 unduhan = objek tersimpan. Override dicek ada, teks sumber dicek tidak ada. Isolasi mencakup tujuh halaman, route, RPC, dan Storage. Web server difilter dari env AI dan renderer. Journey menolak `pageerror`.
+  - `tests/integration/m4-cv-output.test.ts`: menolak renderer selain `gotenberg`. `expectLayers` mencocokkan empat lapis. `expectUntouched` membandingkan snapshot, key, revision, dan sha256 byte. Isolasi membandingkan hasil id A dengan id acak di tujuh operasi service, dua RPC mentah, dan Storage.
+- **Screenshot dan PDF journey.** Laporan HTML run reviewer menghasilkan sembilan lampiran, semuanya dibuka. Isinya: S13 selection, override belum disimpan, review *Source changed* dengan tabel *Saved on CV / Current source*, S13 360 dark, S14 siap, S14 terblokir (`ITEM_DELETED`, *Earlier revision*, riwayat), S14 sukses dengan halaman PDF nyata, S14 360 dark dengan lima baris riwayat. Halaman PDF yang digambar pdf.js memuat nama, *Pendidikan* sebelum *Proyek*, dan override `Rp1,5 miliar — “tepat waktu”`. Tidak ada teks terpotong dan tidak ada overflow. Byte PDF unduhan dihapus `afterAll`; isinya diverifikasi lewat asersi ekstraksi teks dan halaman yang dirender.
+
+### 0.2 Verifikasi ulang independen
+
+Lingkungan: Supabase lokal (parity **33/33**, termasuk dua migration T23), `workpulse-t21-pdf` (127.0.0.1:13401), `workpulse-t15-gotenberg`, dan `workpulse-t10-clamav`, semuanya hidup. `WORKPULSE_PDF_GOTENBERG_URL=http://127.0.0.1:13401` dan `SUPABASE_SECRET_KEY` (JWT `SERVICE_ROLE_KEY` lokal) hanya di env proses. `AI_AGENT` dan `ANTHROPIC_BASE_URL` dikosongkan. Tanpa `db reset`.
+
+| Command | Exit | Hasil |
+| --- | ---: | --- |
+| `pnpm lint` | 0 | bersih (60 s) |
+| `pnpm typecheck` | 0 | bersih |
+| `pnpm test` | 0 | 113 file / 1035 test (angka naik dari 104/962 karena unit T23) |
+| `pnpm worker:check` | 0 | `ready`, 9 job (termasuk `account-deletion` T23) |
+| `pnpm test:pdf` | 0 | 46 |
+| `pnpm test:integration:m4` | 0 | 17/17 (114 s) |
+| `pnpm test:e2e:m4` | 0 | 1/1 (1,7 menit); PDF-1/2/3 masing-masing 1 halaman |
+| `pnpm test:e2e:m4 --reporter=html` | 0 | 1/1 (1,3 menit); sembilan screenshot di `playwright-report/` (tidak di-track) |
+| `pnpm test:e2e:cv-freshness` (run 1) | 1 | 10/11. `cv-freshness.spec.ts:420` (test T20 lama, bukan test RV-F1): `locator.focus` timeout menunggu `[id^="cv-review-open-"]`. Lihat R3 |
+| `pnpm test:e2e:cv-freshness` (rerun) | 0 | 11/11, termasuk test RV-F1 |
+| `pnpm test:e2e:activity` | 0 | 1/1 (jalur Quick log RV-QL) |
+| `pnpm db:test` | 0 | 17 file / 1439 assertion, PASS |
+| `pnpm db:lint` | 0 | `results: []` |
+| `pnpm build` | 0 | berhasil |
+| `pnpm exec supabase migration list --local` | 0 | 33/33 |
+| `git diff --check 7a93932 HEAD` | 0 | bersih |
+
+Hash run reviewer (jejak saja; metadata waktu membuat nilainya berubah tiap run): PDF-1 `4234e5fb…d07`, PDF-2 `053becb1…dd1`, PDF-3 `2b8458fb…fe`. Run HTML: PDF-1 `3c20a144…766`, PDF-2 `8af8125d…f39`, PDF-3 `faf3e414…cc8`.
+
+Tidak diulang reviewer: suite domain §7 lainnya (cv-export, cv-builder, cv, achievements, projects, dashboard, import*, m2, m3, ai*, evidence, storage, dan E2E padanannya). Pelaksana menjalankannya di Fase 5 (47 command, exit 0). Reviewer T23 mengulang cv-export, import, import-review, evidence, storage, dan m4 pada `f29e682` (lihat `IMPLEMENTATION_STATUS.md`). Kode produk M4 tidak berubah sejak itu.
+
+### 0.3 Temuan reviewer
+
+| ID | Level | Temuan | Status |
+| --- | --- | --- | --- |
+| R1 | P3 | Langkah S13/S14 journey memakai `press()`, yaitu `locator.focus()` lalu Enter/Space, bukan traversal Tab. Aktivasi keyboard terbukti. Keterjangkauan lewat Tab hanya terbukti di langkah 1–2 (`tabTo`) dan di `cv-freshness.spec.ts:420`. Semua kontrol aksi adalah `<button>`/`<a>` standar; grep `tabIndex={-1}` di `src/features/cv` hanya mengenai heading, status, dan notice, jadi risikonya rendah | Follow-up: ganti `press` dengan `tabTo` untuk *Retry*, *Regenerate*, *Download PDF* |
+| R2 | P3 | Ketertelusuran commit: kode RV-F1 masuk `3a6d8fb` dengan pesan RV-A11Y, sedangkan `41c4af0` berjudul "give the CV notice the focus" tetapi hanya berisi test. Laporan ini sudah mencatatnya; history tidak diubah | Catat |
+| R3 | P3 | `cv-freshness.spec.ts:420` gagal sekali dan lulus saat diulang tanpa perubahan. Run itu berjalan 10:20–10:21. Pada waktu yang sama sesi lain di checkout yang sama menjalankan E2E T23: `next build` ke `.next` bersama, dan screenshot T23 ditulis 10:22. Dugaan: bundle `next start` tertimpa sehingga hidrasi gagal. Bukan regresi produk | Catat. Jangan menjalankan dua config Playwright yang memakai `next build` bersamaan dari satu checkout |
+
+Temuan P3 pelaksana (§3) diterima apa adanya. Reklasifikasi T20 F1 → P2 (sudah diperbaiki) dan T20 F2 tetap P3 juga disetujui. Dasarnya pemeriksaan pelaksana atas `cv-review-360-light.png` (Fase 1) dan test `cv-freshness.spec.ts:473` (item *changed*/*deleted*/*unconfirmed*, 360 dan 1440 px, light dan dark, tanpa overflow dan tanpa temuan Axe), yang lulus pada rerun reviewer.
+
+### 0.4 Langkah berikutnya
+
+T23 sudah DONE (10 Oktober 2026). Berikutnya **T24 Instrumentation dan performance**, termasuk follow-up biaya baca freshness/blocker (T20 F6, N-M4-2) dan biaya reconcile (T21 N7). Follow-up P3 M4 tidak memblokir.
 
 ## Ringkasan
 
@@ -14,7 +75,7 @@
 - Tidak ada migration, perubahan RPC/SQL, perubahan worker, dependency baru, atau `db reset`. Suite lama tidak diubah kecuali penambahan satu test E2E dan dua test unit.
 - **Batas independensi:** perbaikan RV-A11Y, RV-QL, dan RV-F1 dikerjakan pelaksana yang sama dengan penemu temuan. Reviewer perlu menilai ulang diff perbaikan (§3).
 
-## 1. Kriteria lulus §1 (usulan pelaksana, menunggu penilaian reviewer)
+## 1. Kriteria lulus §1 (usulan pelaksana, disetujui reviewer di §0)
 
 | # | Kriteria | Status | Bukti |
 | --- | --- | --- | --- |

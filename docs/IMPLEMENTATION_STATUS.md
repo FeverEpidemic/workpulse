@@ -69,6 +69,53 @@ Bukti lokal saja; bukan bukti production.
 
 Berikutnya: **T24 Instrumentation dan performance** (event analytics termasuk penghapusan akun, p95, metrik backlog `get_account_deletion_backlog`). Sebelum milestone M5 ditutup, verdict Gate M4 sebaiknya dituliskan.
 
+## Gate M4 — Master CV dan PDF, integration review — 9–10 Oktober 2026
+
+Status Gate M4: **PASSED** (acceptance lokal). Verdict ditulis 10 Oktober 2026 pada HEAD `f10e6ac`, setelah T23 ditutup. Secara kronologis gate ini dikerjakan sebelum T23 (Fase 0–6 pada 9 Oktober 2026, `ea64239`…`7e874b6`). Kalimat gate: *F07 end-to-end lolos; snapshot/provenance/override terjaga dan PDF dapat dibaca serta dicari.* Dependensi T18–T22 **DONE**.
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0–6). Reviewer: Claude (Opus), Fase 7.
+- Independensi: perbaikan dikerjakan oleh pelaksana yang juga menemukan temuannya. Reviewer menilai ulang diff perbaikan dan menjalankan ulang suite-nya.
+
+[Laporan gate dan verdict](verification/M4-gate-review.md), [rencana](verification/M4-gate-review-plan.md), receipt [Fase 0](verification/M4-gate-phase0-baseline.md)–[5](verification/M4-gate-phase5-regression.md).
+
+Yang dikerjakan:
+
+- **Journey F07 di browser** `tests/e2e/m4-cv-journey.spec.ts` (`test:e2e:m4`, `playwright.m4.config.ts` port 3016). Alurnya: graduate dengan keyboard → S04 → S13 (parent ikut, label id, override berkarakter Indonesia, urutan) → S14 → renderer Chromium nyata → *Download PDF* → ekstraksi pdf.js. Lalu S08 *Add to CV*, *Keep my wording*, delete sumber yang memblokir, sha256 PDF lama tetap, Retry/Regenerate dengan keyboard, isolasi akun B, Axe, dan 360 dark.
+- **Integration lintas domain** `tests/integration/m4-cv-output.test.ts` (`test:integration:m4`, 17 test). Skenario:
+  - provenance import setelah purge, dan delete activity sumber;
+  - override, refresh, dan Replace;
+  - delete enam tipe sumber, reopen, relink, dan profil;
+  - evidence ClamAV tidak masuk PDF, dan edit saat export;
+  - nol panggilan AI, CV panjang multipage, dan isolasi di service, RPC, Storage, serta reconcile.
+- **Tiga perbaikan P2**, masing-masing dengan test yang terbukti gagal lebih dulu:
+  - RV-A11Y `3a6d8fb`: kolom preview S13/S14 yang dapat digulir menjadi region berlabel yang dapat difokuskan (WCAG 2.1.1);
+  - RV-QL `e67b8a6`: `onBeforeInput` Quick log tidak lagi melempar `TypeError` per ketikan;
+  - RV-F1 `3a6d8fb` + `41c4af0`: fokus pindah ke notice setelah `CV_SOURCE_CHANGED` (T20 F1, WCAG 2.4.3).
+- Tanpa migration, tanpa perubahan RPC/SQL atau worker, tanpa dependency baru.
+
+Hasil: 11/11 kriteria PASS.
+
+- **Pelaksana (Fase 5):** 47 command §7 exit 0 tanpa rerun. Termasuk unit 104/962, pgTAP 15/1290, m4 integration 17, E2E m4 1, cv-freshness 11, dan semua suite domain T02–T22, M2, dan M3.
+- **Reviewer pada `f10e6ac` (sudah memuat T23):**
+  - lint, typecheck, build, `worker:check` (9 job), `db:lint`, dan `git diff --check` exit 0;
+  - unit 113/1035, pgTAP 17/1439, `test:pdf` 46, migration 33/33;
+  - `test:integration:m4` 17/17, `test:e2e:m4` 1/1 dua kali (list dan html), `test:e2e:activity` 1/1;
+  - `test:e2e:cv-freshness` 10/11 lalu 11/11 saat diulang. Kegagalannya bertepatan dengan E2E T23 dari sesi lain yang menjalankan `next build` di checkout yang sama (R3).
+- Reviewer membuka sembilan screenshot journey, termasuk halaman PDF yang dirender.
+
+Temuan: tidak ada P0–P2 terbuka. P3:
+
+- dari pelaksana: T20 F2/F3/F4/F6, T21 N2–N8, T22 N1–N3/N5/N7/N8, N-M4-1, N-M4-2, E-1, E-2;
+- dari reviewer:
+  - R1: langkah S13/S14 journey memakai fokus programatik, bukan traversal Tab;
+  - R2: ketertelusuran commit RV-F1;
+  - R3: dua config Playwright `next build` jangan dijalankan bersamaan dari satu checkout.
+- T22 N6 (keyboard Retry/Regenerate/Download) tertutup.
+
+Belum dijalankan: `test:e2e` gabungan, `test:ai:live`, stres race berskala, p95 (T24), staging/production. Reviewer tidak mengulang suite domain §7 selain yang tercantum di atas. Bukti lokal saja; bukan bukti production.
+
+Berikutnya: **T24 Instrumentation dan performance**. T23 sudah DONE. Follow-up P3 tidak memblokir.
+
 ## T22 — Saved preview dan PDF QA, acceptance lokal — 8 Oktober 2026
 
 Status T22: **DONE** (acceptance lokal) — seluruh 18 poin acceptance §1 terbukti lokal.
