@@ -5,6 +5,7 @@ import {
   deletionErrorIsFieldBound,
   deletionFocusTarget,
   previewLines,
+  visibleDeletionState,
 } from "@/features/account/delete-account-state";
 import { actionFailure, actionSuccess, IDLE_ACTION_STATE } from "@/server/action-result";
 
@@ -39,6 +40,16 @@ describe("T23 delete account dialog state", () => {
     expect(deletionErrorIsFieldBound(actionFailure("RATE_LIMITED", "auth.rateLimited"))).toBe(false);
     expect(deletionErrorIsFieldBound(actionFailure("UNAUTHENTICATED", "auth.signInRequired"))).toBe(false);
     expect(deletionErrorIsFieldBound(IDLE_ACTION_STATE)).toBe(false);
+  });
+
+  it("hides the error of an attempt the user dismissed by closing the dialog, but shows a new attempt's error", () => {
+    const first = actionFailure("VALIDATION", "account.delete.error.invalidPassword", { fieldErrors: { password: "account.delete.error.invalidPassword" } });
+    if (first.status !== "error") throw new Error("expected an error state");
+    expect(visibleDeletionState(first, null)).toBe(first);
+    expect(visibleDeletionState(first, first.error.correlationId)).toBe(IDLE_ACTION_STATE);
+    const second = actionFailure("RATE_LIMITED", "auth.rateLimited");
+    expect(visibleDeletionState(second, first.error.correlationId)).toBe(second);
+    expect(visibleDeletionState(IDLE_ACTION_STATE, first.error.correlationId)).toBe(IDLE_ACTION_STATE);
   });
 
   it("lists each kind of lost data once, with the real counts", () => {

@@ -13,7 +13,7 @@ import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
 
 import { deleteAccountAction, getAccountDeletionPreviewAction } from "./actions";
-import { deletionConfirmEnabled, deletionErrorIsFieldBound, deletionFocusTarget, previewLines } from "./delete-account-state";
+import { deletionConfirmEnabled, deletionErrorIsFieldBound, deletionFocusTarget, previewLines, visibleDeletionState } from "./delete-account-state";
 
 const FORM_ID = "delete-account-form";
 const errorIds = {
@@ -31,10 +31,13 @@ type PreviewState =
  * The password and the typed email are only sent with the single submit; a failed attempt clears the password.
  */
 export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: string; locale: Locale }) {
-  const [state, formAction, pending] = useActionState(deleteAccountAction, IDLE_ACTION_STATE);
+  const [actionState, formAction, pending] = useActionState(deleteAccountAction, IDLE_ACTION_STATE);
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [preview, setPreview] = useState<PreviewState>({ status: "loading" });
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
+  const previewRequest = useRef(0);
+  const state = visibleDeletionState(actionState, dismissedError);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmationRef = useRef<HTMLInputElement>(null);
@@ -46,14 +49,20 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
     setTyped("");
     setPreview({ status: "loading" });
     setOpen(true);
+    const request = ++previewRequest.current;
     const result = await getAccountDeletionPreviewAction();
+    // A slow answer from an earlier opening must not replace the counts of this one.
+    if (request !== previewRequest.current) return;
     const parsed = result.status === "success" ? accountDeletionPreviewSchema.safeParse(result.data) : null;
     setPreview(parsed?.success ? { status: "ready", preview: parsed.data } : { status: "unavailable" });
   }
 
   function changeOpen(next: boolean) {
     setOpen(next);
-    if (!next) setTyped("");
+    if (!next) {
+      setTyped("");
+      if (actionState.status === "error") setDismissedError(actionState.error.correlationId);
+    }
   }
 
   // Focus enters the password field when the dialog opens and returns to the trigger when it closes.

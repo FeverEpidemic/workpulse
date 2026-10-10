@@ -254,6 +254,17 @@ test("S12 dialog: Escape and Cancel return focus to the trigger, and reduced mot
   await page.keyboard.press("Escape");
   await openDialog(page);
   await expect(confirmationOf(page)).toHaveValue("");
+
+  // The error of a closed attempt is not shown again on the next opening.
+  await passwordOf(page).fill("wrong-password-Aa1!");
+  await confirmationOf(page).fill(user.email);
+  await confirmButton(page).click();
+  await expect(dialogOf(page).getByText("That password is not correct.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await openDialog(page);
+  await expect(dialogOf(page).getByText("That password is not correct.")).toHaveCount(0);
+  await expect(passwordOf(page)).not.toHaveAttribute("aria-invalid", "true");
+  expect(receiptStatus(user.id)).toBe("none");
 });
 
 for (const theme of ["light", "dark"] as const) {

@@ -1,6 +1,6 @@
 import { confirmationMatches, type AccountDeletionPreview } from "../../domain/account/deletion.ts";
 import type { MessageKey } from "../../i18n/messages.ts";
-import type { ActionState } from "../../server/action-result.ts";
+import { IDLE_ACTION_STATE, type ActionState } from "../../server/action-result.ts";
 
 /** The confirm button stays disabled until the typed email equals the account email and no request is running. */
 export function deletionConfirmEnabled(accountEmail: string, typedConfirmation: string, pending: boolean): boolean {
@@ -23,6 +23,12 @@ export function deletionErrorIsFieldBound(state: ActionState): boolean {
   if (state.status !== "error") return false;
   const fields = state.error.fieldErrors ?? {};
   return Boolean(fields.password || fields.confirmation);
+}
+
+/** The action state persists across dialog openings; an error the user closed the dialog on is not shown again. */
+export function visibleDeletionState(state: ActionState, dismissedCorrelationId: string | null): ActionState {
+  if (state.status === "error" && state.error.correlationId === dismissedCorrelationId) return IDLE_ACTION_STATE;
+  return state;
 }
 
 export type PreviewLine = { key: MessageKey; params?: { count: number } };
