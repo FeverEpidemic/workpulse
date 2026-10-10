@@ -61,6 +61,7 @@
     "worker:check": "node workers/check.ts",
     "worker:run": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.ai.local workers/run.ts",
     "worker:once": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.ai.local workers/run.ts --once",
+    "ops:check": "node --env-file-if-exists=.env.local workers/ops-check.ts",
     "db:start": "supabase start",
     "db:status": "supabase status",
     "db:stop": "supabase stop",

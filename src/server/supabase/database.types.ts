@@ -2097,6 +2097,13 @@ export type Database = {
           text: string
         }[]
       }
+      get_operational_health: {
+        Args: { p_now?: string }
+        Returns: {
+          metric: string
+          value: number
+        }[]
+      }
       get_pilot_metrics: {
         Args: { p_as_of?: string }
         Returns: {
