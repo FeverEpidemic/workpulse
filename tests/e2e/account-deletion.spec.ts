@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Browser, type Cookie, type Page, type TestInfo } from "@playwright/test";
 
 import type { Database } from "../../src/server/supabase/database.types";
 import { expectNoWcagViolations } from "./helpers/accessibility";
@@ -18,8 +18,6 @@ const BUCKET = "workpulse-private";
 const clientOptions = { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } };
 
 let admin: Client;
-let supabaseUrl: string;
-let publishableKey: string;
 const users: User[] = [];
 const uploaded: string[] = [];
 
@@ -47,25 +45,24 @@ async function createUser(label: string, locale: "en" | "id" = "en"): Promise<Us
   return user;
 }
 
-async function asUser(user: User): Promise<Client> {
-  const client = createClient<Database>(supabaseUrl, publishableKey, clientOptions);
-  if ((await client.auth.signInWithPassword({ email: user.email, password: user.password })).error) throw new Error("T23 fixture sign-in failed");
-  return client;
-}
-
-/** Some owner data so the dialog has real counts to show: an activity with the private sentinel and an orphan object. */
+/**
+ * Some owner data so the dialog has real counts to show: an activity with the private sentinel and an orphan object.
+ * The activity goes through the user RPC with the user's JWT claims set in the database, so seeding costs no Auth
+ * sign-in (local Auth allows 30 sign-ins per 5 minutes per IP, and this suite must pass when run twice in a row).
+ */
 async function seedData(user: User): Promise<void> {
-  const client = await asUser(user);
-  const created = await client.rpc("create_activity_idempotent", {
-    p_operation_key: randomUUID(), p_raw_text: `${SENTINEL} aktivitas`, p_occurred_on: "2026-10-01", p_capture_mode: "note",
-    p_role: null as never, p_scope: null as never, p_outcome: null as never, p_experience_id: null as never, p_project_id: null as never,
-  });
-  if (created.error) throw new Error("T23 activity fixture failed");
+  const created = sql(
+    `begin; set local role authenticated; ` +
+    `select set_config('request.jwt.claims', '{"sub":"${user.id}","role":"authenticated"}', true); ` +
+    `select count(*) from public.create_activity_idempotent(p_operation_key => gen_random_uuid(), p_raw_text => '${SENTINEL} aktivitas', ` +
+    `p_occurred_on => '2026-10-01', p_capture_mode => 'note', p_role => null, p_scope => null, p_outcome => null, p_experience_id => null, p_project_id => null); ` +
+    `commit;`,
+  );
+  if (!created.endsWith("1")) throw new Error("T23 activity fixture failed");
   const key = `${user.id}/evidence/${randomUUID()}`;
   const upload = await admin.storage.from(BUCKET).upload(key, new TextEncoder().encode("%PDF-1.4\nwp-t23\n"), { contentType: "application/pdf", upsert: false });
   if (upload.error) throw new Error("T23 object fixture failed");
   uploaded.push(key);
-  await client.auth.signOut();
 }
 
 async function signIn(page: Page, user: User, expectUrl: RegExp = /\/dashboard$/): Promise<void> {
@@ -74,6 +71,28 @@ async function signIn(page: Page, user: User, expectUrl: RegExp = /\/dashboard$/
   await page.locator('input[type="password"]').first().fill(user.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(expectUrl);
+}
+
+let shared: { user: User; cookies: Cookie[] } | undefined;
+
+/**
+ * The dialog and screenshot tests never delete their account, so they share one account and one browser sign-in.
+ * The session cookies are copied into each test's own page.
+ */
+async function signInShared(page: Page, browser: Browser): Promise<User> {
+  if (!shared) {
+    const user = await createUser("shared");
+    const context = await browser.newContext({ baseURL: BASE_URL });
+    await signIn(await context.newPage(), user);
+    shared = { user, cookies: (await context.storageState()).cookies };
+    await context.close();
+  }
+  await page.context().addCookies(shared.cookies);
+  await page.goto("/settings/profile");
+  await expect(page).toHaveURL(/\/settings\/profile$/);
+  // The page is the first one this context loads; wait for its scripts so the trigger is hydrated before a key press.
+  await page.waitForLoadState("networkidle");
+  return shared.user;
 }
 
 const dialogOf = (page: Page) => page.getByRole("dialog", { name: "Delete your account permanently?" });
@@ -87,6 +106,13 @@ async function openDialog(page: Page): Promise<void> {
   await page.keyboard.press("Enter");
   await expect(dialogOf(page)).toBeVisible();
   await expect(passwordOf(page)).toBeFocused();
+}
+
+/** Waits for the modal to close: while it is open the trigger is inert, so reopening at once would press nothing. */
+async function closeWithEscape(page: Page): Promise<void> {
+  await page.keyboard.press("Escape");
+  await expect(dialogOf(page)).toBeHidden();
+  await expect(triggerOf(page)).toBeFocused();
 }
 
 async function overflow(page: Page): Promise<{ page: boolean; dialog: boolean }> {
@@ -104,9 +130,7 @@ async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
 }
 
 test.beforeAll(() => {
-  const { url, secretKey, publishable } = config();
-  supabaseUrl = url;
-  publishableKey = publishable;
+  const { url, secretKey } = config();
   admin = createClient<Database>(url, secretKey, clientOptions);
   mkdirSync(SHOTS, { recursive: true });
 });
@@ -224,17 +248,13 @@ test("S12 deletion with the keyboard: wrong password, wrong email, then the acco
   await bystander.close();
 });
 
-test("S12 dialog: Escape and Cancel return focus to the trigger, and reduced motion changes nothing", async ({ page }, testInfo) => {
-  const user = await createUser("dialog");
-  await signIn(page, user);
-  await page.goto("/settings/profile");
+test("S12 dialog: Escape and Cancel return focus to the trigger, and reduced motion changes nothing", async ({ page, browser }, testInfo) => {
+  const user = await signInShared(page, browser);
   await expectNoWcagViolations(page, testInfo, "s12-delete-closed");
 
   await openDialog(page);
   await expectNoWcagViolations(page, testInfo, "s12-delete-open");
-  await page.keyboard.press("Escape");
-  await expect(dialogOf(page)).toBeHidden();
-  await expect(triggerOf(page)).toBeFocused();
+  await closeWithEscape(page);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openDialog(page);
@@ -251,7 +271,7 @@ test("S12 dialog: Escape and Cancel return focus to the trigger, and reduced mot
   // The typed email does not survive a closed dialog.
   await openDialog(page);
   await confirmationOf(page).fill(user.email);
-  await page.keyboard.press("Escape");
+  await closeWithEscape(page);
   await openDialog(page);
   await expect(confirmationOf(page)).toHaveValue("");
 
@@ -260,7 +280,7 @@ test("S12 dialog: Escape and Cancel return focus to the trigger, and reduced mot
   await confirmationOf(page).fill(user.email);
   await confirmButton(page).click();
   await expect(dialogOf(page).getByText("That password is not correct.")).toBeVisible();
-  await page.keyboard.press("Escape");
+  await closeWithEscape(page);
   await openDialog(page);
   await expect(dialogOf(page).getByText("That password is not correct.")).toHaveCount(0);
   await expect(passwordOf(page)).not.toHaveAttribute("aria-invalid", "true");
@@ -269,13 +289,10 @@ test("S12 dialog: Escape and Cancel return focus to the trigger, and reduced mot
 
 for (const theme of ["light", "dark"] as const) {
   for (const [width, height] of [[360, 780], [1440, 900]] as const) {
-    test(`S12 states at ${width}px in ${theme}: no overflow, Axe clean, screenshots`, async ({ page }, testInfo: TestInfo) => {
-      const user = await createUser(`shots-${theme}-${width}`);
+    test(`S12 states at ${width}px in ${theme}: no overflow, Axe clean, screenshots`, async ({ page, browser }, testInfo: TestInfo) => {
       await setTheme(page, theme);
       await page.setViewportSize({ width, height });
-      await signIn(page, user);
-      await page.goto("/settings/profile");
-      await page.waitForLoadState("networkidle");
+      const user = await signInShared(page, browser);
 
       const card = page.locator(".delete-account");
       await card.scrollIntoViewIfNeeded();

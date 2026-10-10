@@ -183,11 +183,13 @@ describe("T23 account deletion: the Auth admin adapter", () => {
   });
 });
 
-const DELETING = ["ACCOUNT_DELETING", "AUTH_REQUIRED"];
+// ACCOUNT_DELETING comes from the T23 write guard (or the preview itself). AUTH_REQUIRED comes from an older
+// `deleting_at is null` check in the RPC or its internal helper, which runs before any row is written.
+type Refusal = "ACCOUNT_DELETING" | "AUTH_REQUIRED";
 
-function expectDenied(result: { error: { code?: string; message?: string } | null }, label: string) {
+function expectDenied(result: { error: { code?: string; message?: string } | null }, label: string, message: Refusal) {
   expect(result.error?.code, `${label}: code`).toBe("42501");
-  expect(DELETING, `${label}: message`).toContain(result.error?.message);
+  expect(result.error?.message, `${label}: message`).toBe(message);
 }
 
 describe("T23 guard: a deleting account cannot write or download through any RPC, even with a live session", () => {
@@ -202,25 +204,28 @@ describe("T23 guard: a deleting account cannot write or download through any RPC
     // Starting the deletion bumped the profile revision; use the current one so the refusal comes from the guard.
     const profile = required((await getAdmin().from("profiles").select("revision").eq("id", g.id).single()).data, null, "profile");
 
-    const calls: [string, string, Record<string, unknown>][] = [
-      ["profile", "update_profile", { p_expected_revision: profile.revision, p_changes: { headline: "x" } }],
-      ["foundation create", "create_education_idempotent", { p_operation_key: randomUUID(), p_institution: "Inst", p_qualification: "S1", p_field_of_study: null, p_description: null, p_start_date: null, p_start_precision: null, p_end_date: null, p_end_precision: null, p_is_current: false }],
-      ["foundation update", "update_skill", { p_skill_id: skill.id, p_expected_revision: skill.revision, p_changes: { name: "Baru" } }],
-      ["foundation delete", "delete_skill", { p_skill_id: skill.id, p_expected_revision: skill.revision }],
-      ["activity", "create_activity_idempotent", { p_operation_key: randomUUID(), p_raw_text: "Teks", p_occurred_on: "2026-10-01", p_capture_mode: "note", p_role: null, p_scope: null, p_outcome: null, p_experience_id: null, p_project_id: null }],
-      ["project", "create_project_idempotent", { p_operation_key: randomUUID(), p_title: "Proyek", p_description: null, p_user_role: null, p_outcome: null, p_status: "ongoing", p_start_date: null, p_start_precision: null, p_end_date: null, p_end_precision: null, p_is_current: false, p_experience_id: null }],
-      ["achievement", "create_achievement_idempotent", { p_operation_key: randomUUID(), p_activity_id: seeded.activityId, p_project_id: null, p_experience_id: null }],
-      ["import start", "begin_import_batch", { p_idempotency_key: randomUUID(), p_filename: "cv.pdf", p_bytes: 10, p_mime_type: "application/pdf", p_sha256: "a".repeat(64) }],
-      ["AI request", "request_ai_analysis", { p_activity_id: seeded.activityId, p_expected_revision: 1 }],
-      ["AI consent", "set_ai_consent", { p_expected_revision: profile.revision, p_consented: true }],
-      ["CV select", "select_cv_source", { p_expected_revision: seeded.cvRevision, p_source_type: "skill", p_source_id: skill.id }],
-      ["CV save", "save_cv_edits", { p_expected_revision: seeded.cvRevision, p_edits: { item_overrides: [] } }],
-      ["export request", "request_cv_export", { p_expected_revision: seeded.cvRevision, p_idempotency_key: randomUUID() }],
-      ["export retry", "retry_cv_export", { p_export_id: seeded.exportId }],
-      ["export download", "get_cv_export_download", { p_export_id: seeded.exportId }],
-      ["deletion preview", "get_account_deletion_preview", {}],
+    const calls: [string, string, Record<string, unknown>, Refusal][] = [
+      // No deleting_at check of their own: only the write guard stops these.
+      ["profile", "update_profile", { p_expected_revision: profile.revision, p_changes: { headline: "x" } }, "ACCOUNT_DELETING"],
+      ["foundation update", "update_skill", { p_skill_id: skill.id, p_expected_revision: skill.revision, p_changes: { name: "Baru" } }, "ACCOUNT_DELETING"],
+      ["foundation delete", "delete_skill", { p_skill_id: skill.id, p_expected_revision: skill.revision }, "ACCOUNT_DELETING"],
+      ["deletion preview", "get_account_deletion_preview", {}, "ACCOUNT_DELETING"],
+      // Checked in internal.create_foundation_record, internal.create_activity, internal.import_actor or internal.cv_actor.
+      ["foundation create", "create_education_idempotent", { p_operation_key: randomUUID(), p_institution: "Inst", p_qualification: "S1", p_field_of_study: null, p_description: null, p_start_date: null, p_start_precision: null, p_end_date: null, p_end_precision: null, p_is_current: false }, "AUTH_REQUIRED"],
+      ["activity", "create_activity_idempotent", { p_operation_key: randomUUID(), p_raw_text: "Teks", p_occurred_on: "2026-10-01", p_capture_mode: "note", p_role: null, p_scope: null, p_outcome: null, p_experience_id: null, p_project_id: null }, "AUTH_REQUIRED"],
+      ["import start", "begin_import_batch", { p_idempotency_key: randomUUID(), p_filename: "cv.pdf", p_bytes: 10, p_mime_type: "application/pdf", p_sha256: "a".repeat(64) }, "AUTH_REQUIRED"],
+      ["CV select", "select_cv_source", { p_expected_revision: seeded.cvRevision, p_source_type: "skill", p_source_id: skill.id }, "AUTH_REQUIRED"],
+      ["CV save", "save_cv_edits", { p_expected_revision: seeded.cvRevision, p_edits: { item_overrides: [] } }, "AUTH_REQUIRED"],
+      ["export request", "request_cv_export", { p_expected_revision: seeded.cvRevision, p_idempotency_key: randomUUID() }, "AUTH_REQUIRED"],
+      ["export retry", "retry_cv_export", { p_export_id: seeded.exportId }, "AUTH_REQUIRED"],
+      // Checked in the RPC body.
+      ["project", "create_project_idempotent", { p_operation_key: randomUUID(), p_title: "Proyek", p_description: null, p_user_role: null, p_outcome: null, p_status: "ongoing", p_start_date: null, p_start_precision: null, p_end_date: null, p_end_precision: null, p_is_current: false, p_experience_id: null }, "AUTH_REQUIRED"],
+      ["achievement", "create_achievement_idempotent", { p_operation_key: randomUUID(), p_activity_id: seeded.activityId, p_project_id: null, p_experience_id: null }, "AUTH_REQUIRED"],
+      ["AI request", "request_ai_analysis", { p_activity_id: seeded.activityId, p_expected_revision: 1 }, "AUTH_REQUIRED"],
+      ["AI consent", "set_ai_consent", { p_expected_revision: profile.revision, p_consented: true }, "AUTH_REQUIRED"],
+      ["export download", "get_cv_export_download", { p_export_id: seeded.exportId }, "AUTH_REQUIRED"],
     ];
-    for (const [label, name, args] of calls) expectDenied(await rpcAny(g.client, name, args), label);
+    for (const [label, name, args, message] of calls) expectDenied(await rpcAny(g.client, name, args), label, message);
 
     // The same code reaches the services, which map it to UNAUTHENTICATED.
     await expect(createProjectService(g.client).createProject({
@@ -277,7 +282,7 @@ describe("T23 sessions: deletion revokes access at once", () => {
     });
     expectDenied(await rpcAny(stale, "update_skill", {
       p_skill_id: sql(`select id from public.skills where user_id = '${account.id}' limit 1`) || randomUUID(), p_expected_revision: 1, p_changes: { name: "Baru" },
-    }), "stale token write");
+    }), "stale token write", "ACCOUNT_DELETING");
   }, LONG);
 });
 
