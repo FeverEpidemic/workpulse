@@ -370,14 +370,12 @@ describe("T24 product events across the real write paths", () => {
   }, LONG);
 
   it("keeps private text, file names, ids and emails out of every event column and out of the report", async () => {
-    const owned = Number(sql(
-      `select (select count(1) from public.activities where raw_text like '%${SENTINEL}%') + ` +
-      `(select count(1) from public.projects where title like '%${SENTINEL}%') + ` +
-      `(select count(1) from public.achievements where title like '%${SENTINEL}%') + ` +
-      `(select count(1) from public.import_batches where filename like '%${SENTINEL}%') + ` +
-      `(select count(1) from public.cv_documents where title like '%${SENTINEL}%')`,
-    ));
-    expect(owned).toBeGreaterThanOrEqual(5);
+    // The search below is only meaningful when the sentinel really sits in each kind of private content.
+    for (const [table, column] of [
+      ["activities", "raw_text"], ["projects", "title"], ["achievements", "title"], ["import_batches", "filename"], ["cv_documents", "title"],
+    ] as const) {
+      expect(Number(sql(`select count(1) from public.${table} where ${column} like '%${SENTINEL}%'`)), `${table}.${column}`).toBeGreaterThan(0);
+    }
     const leaks = Number(sql(
       `select count(1) from internal.product_events e where e::text ilike '%${SENTINEL}%' or e::text ilike '%WP-PRIVATE%' ` +
       `or e::text ilike '%@workpulse.test%' or e.properties::text ~* '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'`,
