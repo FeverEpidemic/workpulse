@@ -17,7 +17,7 @@
   - CI01 (GitHub Actions) **belum dieksekusi**; `.github/` tidak ada. Bukan dependensi T25.
 - Eksekutor: satu agent **Claude Sonnet 5.5** (pola T23/T24). Bila pengguna menunjuk eksekutor lain, ikuti pengguna.
 - Reviewer: **Claude** (Opus). Checkpoint Claude setelah Fase 1 **wajib** (daftar gap acceptance menentukan isi Fase 2–5). Gate review read-only wajib setelah Fase 8; Fase 9 (draft dokumen) dikerjakan setelah gate.
-- Keputusan produk §2.4: **menunggu persetujuan pengguna.** Pelaksana tidak boleh mulai Fase 2 sebelum persetujuan tercatat di receipt Fase 0 atau Fase 1.
+- Keputusan produk: pengguna **menyetujui** (10 Oktober 2026, "Setuju semua") keenam keputusan §2.4 sesuai rekomendasi. Semuanya dibekukan; pelaksana tidak perlu menanyakannya ulang. Staging belum disediakan saat persetujuan, jadi Fase 7 berstatus BLOCKED kecuali pengguna kemudian menyediakan environment dan otorisasi.
 - Mode antislop: **during** (dipilih pengguna untuk sesi plan ini, 10 Oktober 2026). Setiap perubahan UI atau copy di T25 mengikuti `.claude/skills/antislop/SKILL.md`, `antislop-human`, `antislop-layoutmobile`, dan `antislop-copywriting`, termasuk Delivery Gate dan Human Skill Checklist.
 - Acuan:
   - **PRD §2** R01–R10 (acceptance condition per requirement) dan *Shared validation*.
@@ -185,9 +185,9 @@ T25 lulus hanya jika setiap poin berikut dibuktikan dengan hasil nyata:
 - **P3 lama:** T24 G1 (`p_as_of` lampau), G7 (N+1 `get_cv_review_summary`, `loadSkills` terpotong `max_rows = 1000`), T23 F4/F6/F9, kebocoran akun suite lama. Dicatat ulang di laporan; diperbaiki hanya bila audit Fase 1 menaikkannya ke P2 dengan bukti.
 - **Bukan v0.1:** fitur roadmap `Design.md`, SDK analitik, dashboard metrik di aplikasi, status page publik, readiness endpoint publik.
 
-### 2.4 Keputusan produk yang perlu disetujui pengguna
+### 2.4 Keputusan produk yang sudah disetujui pengguna (10 Oktober 2026)
 
-Setiap poin punya rekomendasi (pilihan pertama). Catat jawaban pengguna di receipt Fase 0 atau Fase 1. Bila implementasi menuntut penyimpangan dari yang disetujui, **stop** (§8).
+Keenamnya disetujui sesuai rekomendasi (pilihan pertama di setiap poin). Catat persetujuan ini di receipt Fase 0 dan lanjutkan tanpa bertanya ulang. Bila implementasi menuntut penyimpangan dari salah satunya, **stop** (§8).
 
 1. **Staging.** *Rekomendasi:* T25 menyiapkan semuanya secara lokal dan runbook; Fase 7 dijalankan hanya bila pengguna menyediakan proyek Supabase hosted + host web + host worker dan memberi otorisasi tertulis. Tanpa itu, T25 ditutup **PARTIAL** dengan blocker "staging belum tersedia", dan Gate M5 tidak dapat PASSED. Alternatif:
    - pengguna menyediakan staging sekarang (sebutkan penyedia; Fase 7 menjadi wajib);
@@ -198,7 +198,7 @@ Setiap poin punya rekomendasi (pilihan pertama). Catat jawaban pengguna di recei
 5. **Alert.** *Rekomendasi:* `ops:check` + ambang §2.2.8, dijalankan cron/monitor di host worker; integrasi notifikasi (email, Slack) di luar T25 dan cukup ditulis di runbook sebagai langkah operator. Alternatif: tambahkan pengiriman notifikasi di T25 (butuh credential dan keputusan kanal).
 6. **Defect yang ditemukan di T25.** *Rekomendasi:* P0–P2 diperbaiki di T25 dengan test; bila satu perbaikan butuh lebih dari satu migration baru atau mengubah kontrak RPC lama, **stop** dan minta keputusan. Alternatif: semua defect dicatat dan diperbaiki di task remediasi terpisah.
 
-Persetujuan pengguna: **belum tercatat.**
+Persetujuan pengguna: **tercatat** — 10 Oktober 2026, "Setuju semua".
 
 ## 3. Kontrak teknis
 
@@ -294,7 +294,7 @@ Script baru:
   - **Cakupan aksesibilitas yang ada:** spec yang memanggil `expectNoWcagViolations` dan viewport/tema yang dipakai (19 spec memakai helper aksesibilitas atau viewport).
   - **Token warna** di `src/app/globals.css` untuk light dan dark.
 - [ ] Periksa `netsh int ipv4 show excludedportrange protocol=tcp` untuk blok port §2.2.6.
-- [ ] Minta dan catat jawaban pengguna untuk §2.4 bila belum tercatat.
+- [ ] Catat di receipt bahwa pengguna menyetujui §2.4 (10 Oktober 2026), dan apakah environment staging sudah disediakan sejak itu.
 - [ ] Tulis receipt `docs/verification/T25-phase0-baseline.md`, commit `docs(t25): add phase 0 baseline receipt`.
 
 ### Fase 1 — Audit acceptance dan matriks rilis (tanpa edit kode)
@@ -491,7 +491,7 @@ Aturan menjalankan suite (sama dengan T24 §7):
 Berhenti dan laporkan bukti, jangan berimprovisasi, bila:
 
 - Working tree tidak bersih di Fase 0 atau parity tidak **34/34**.
-- Persetujuan §2.4 belum tercatat saat akan memulai Fase 2, atau implementasi menuntut penyimpangan darinya.
+- Implementasi menuntut penyimpangan dari keputusan §2.4 yang disetujui.
 - Penyelesaian memerlukan:
   - mengedit migration yang sudah diterapkan atau `db reset` pada stack aktif;
   - lebih dari satu migration baru selain §2.2.12, atau mengubah kontrak RPC T02–T24, tanpa persetujuan §2.4.6;
