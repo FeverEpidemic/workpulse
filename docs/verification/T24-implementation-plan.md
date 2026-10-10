@@ -9,6 +9,7 @@
 
 - Tanggal: 10 Oktober 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE** (10 Oktober 2026). Fase 0-6 oleh pelaksana, gate review tanpa P0-P2, Fase 7 dan closeout oleh reviewer.
 - Dependensi:
   - T23 **DONE** (10 Oktober 2026): guard tulis `zz_guard_account_writable`, `purge_account_data`, `internal.account_deletions`, `get_account_deletion_backlog`, decision 0029. Follow-up F4/F9 sudah masuk (`d950073`).
   - Gate M4 **PASSED** (verdict 10 Oktober 2026, `M4-gate-review.md`).

@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T22 done locally; Gates M2 and M3 passed; Gate M4 (CV export integration review) next.** Auth/profile,
+Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) next.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
