@@ -1,6 +1,14 @@
 # Rencana Remediasi Review T25 · Regression, aksesibilitas, dan release handoff
 
-Status plan: **TODO**.
+Status plan: **DONE · 11 Oktober 2026** (RV1 ditutup; bukti `T25-phase8b-remediation.md`, commit `617cae3`).
+
+- Pengguna (11 Oktober 2026, "kamu aja langsung yang ngerjain RV1"): remediasi dikerjakan reviewer sendiri.
+- **Review ulang (11 Oktober 2026): LULUS · tidak ada P0–P2 terbuka.**
+  - Unit baru gagal sebelum helper ada, lulus sesudahnya (4 test). Mutasi tanpa normalisasi CRLF menggagalkan 2 dari 4.
+  - Di worktree baru dengan golden CRLF: `test:e2e:release` 15 passed, unit 118/1068, lint dan typecheck exit 0.
+  - Mutasi golden menghasilkan pesan dengan nomor baris dan isi yang benar.
+  - Review ulang tidak independen penuh karena reviewer juga mengerjakan perbaikannya.
+- Status T25 tetap **PARTIAL** (staging B1, retensi backup B2). Langkah berikutnya: Fase 9.
 
 - Tanggal: 11 Oktober 2026.
 - Reviewer: Claude (Opus). Gate review read-only setelah Fase 8, mengacu ke `T25-implementation-plan.md` §9–§10.
@@ -22,7 +30,7 @@ Status plan: **TODO**.
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | `pnpm test:e2e:release` gagal pada checkout bersih di Windows: snapshot aria S04, S05, S08, S13, S14 dibaca sebagai CRLF (`core.autocrlf=true`) dan dibandingkan dengan snapshot LF tanpa normalisasi. Pesan kegagalannya juga salah ("line 0: expected undefined, got undefined"). Bukti §1.11 tidak dapat diulang di clone baru | Terbuka |
+| RV1 | P2 | `pnpm test:e2e:release` gagal pada checkout bersih di Windows: snapshot aria S04, S05, S08, S13, S14 dibaca sebagai CRLF (`core.autocrlf=true`) dan dibandingkan dengan snapshot LF tanpa normalisasi. Pesan kegagalannya juga salah ("line 0: expected undefined, got undefined"). Bukti §1.11 tidak dapat diulang di clone baru | FIXED (`T25-phase8b-remediation.md`) |
 | N1 | P3 | `T25-release-checklist.md` bagian 3 belum diperbarui setelah Fase 8: "Regresi penuh" masih `[ ]`, tanggal masih 10 Oktober | Perbaiki di Fase 9 |
 | N2 | P3 | Receipt Fase 8, tabel "Perubahan source", menulis "integration 2 file (13 test)"; run nyata dan tabel di atasnya 12 test | Perbaiki di Fase 9 |
 | N3 | P3 | `release-ownership.test.ts:524` hanya memeriksa insert B menghasilkan error apa pun; receipt Fase 2 menyatakan `42501`. Saat ini benar (`authenticated` tidak punya privilege `INSERT`, O5), tetapi error lain (mis. `23502` not null) juga akan lulus bila privilege suatu saat dibuka dan RLS `with check` longgar. Itu persis risiko §10.2 | Follow-up: assert `42501`, atau `42501`/`23xxx` hanya dengan alasan per tabel |
