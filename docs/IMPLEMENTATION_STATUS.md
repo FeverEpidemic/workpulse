@@ -1,5 +1,54 @@
 # WorkPulse Implementation Status
 
+## T25 Regression, aksesibilitas dan release handoff: PARTIAL, 11 Oktober 2026
+
+Status T25: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **BLOCKED** karena environment dan otorisasi belum disediakan, dan retensi backup ≤ 30 hari belum terverifikasi. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi.
+
+- Pelaksana: Claude Sonnet 5.5 (Fase 0-8). Gate review Claude (Opus) pada `4574d9a`: satu P2 (RV1), enam P3 (N1-N6), tanpa P0/P1.
+- RV1 (snapshot aria gagal pada checkout CRLF) diperbaiki reviewer atas permintaan pengguna di `617cae3`; review ulang lulus. Fase 9 (decision, laporan handoff, README) juga ditulis reviewer, jadi remediasi dan dokumen itu tidak direview pihak independen.
+- Dependensi T24, T23 **DONE**; Gate M4 **PASSED**. Keenam keputusan produk §2.4 disetujui pengguna 10 Oktober 2026 ("Setuju semua").
+- Rujukan: PRD §2 R01-R10, §4, §5 M5; rencana T25 dan Gate M5.
+
+[Rencana](verification/T25-implementation-plan.md), [laporan handoff](verification/T25-release-handoff.md), [matriks](verification/T25-release-matrix.md), [gate review dan remediasi](verification/T25-review-remediation-plan.md), [decision 0031](decisions/0031-t25-release-handoff.md), [runbook rilis](verification/T25-release-runbook.md), [checklist](verification/T25-release-checklist.md), receipt [Fase 0](verification/T25-phase0-baseline.md) sampai [8](verification/T25-phase8-regression.md) dan [8b](verification/T25-phase8b-remediation.md).
+
+Yang selesai:
+
+- **Penjaga katalog.** `release_catalog.test.sql` membaca katalog dan gagal pada tabel `public` tanpa RLS atau guard tulis, privilege `anon`, grant API pada `internal`, `security definer` tanpa `search_path`, fungsi `public` untuk `anon`, `USAGE` skema `internal` untuk `anon`, dan bucket publik. Setiap aturan terbukti dapat gagal.
+- **Isolasi dua akun.** `test:integration:release`: 18 tabel dan 47 parameter RPC ber-ID dari katalog, ID asing dijawab sama dengan ID acak, RPC worker ditolak untuk peran API, storage tiga kategori dan tiga route unduh tertutup, penghapusan diterapkan ulang setelah restore.
+- **Health operasional.** `get_operational_health()` (service role) dengan delapan hitungan tanpa konten; `pnpm ops:check` exit 0/2/1.
+- **Aksesibilitas.** Kontras 37 pasangan token dua tema; matriks 20 keadaan layar S01-S14 × 360/1440 × light/dark plus 8 tampilan id dengan Axe; teks 200%; journey keyboard dan empat dialog; snapshot aria terkunci; bundle browser tanpa rahasia server.
+- **Copy S12.** Satu kalimat en/id bahwa WorkPulse mencatat jenis aksi tanpa isinya.
+- **Rebuild dan build.** 36 migration dari nol di stack sekali pakai, pgTAP 20/1638, tipe identik; `pnpm build`, `/api/health` 200, `worker:check`.
+- **Runbook dan checklist** rilis dengan delapan BLOCKER production.
+
+File berubah:
+
+- Database: `supabase/migrations/20261012090000_t25_operational_health.sql`, `supabase/tests/database/{release_catalog,operational_health}.test.sql`, `src/server/supabase/database.types.ts`.
+- Source: `src/styles/tokens.css`, `src/app/globals.css`, `src/i18n/messages.ts`, `src/features/account/delete-account-card.tsx`, `src/features/{achievement/achievement-detail,project/project-detail}.tsx`; worker `workers/ops-check.ts`.
+- Test: `tests/integration/release-{ownership,restore}.test.ts`, `tests/unit/{theme-contrast,ops-check,release-docs,aria-snapshot-compare}.test.ts`, `tests/e2e/release-{a11y,keyboard}.spec.ts`, `tests/e2e/helpers/{release-fixture,aria-snapshot}.ts`, `playwright.release.config.ts`.
+- Konfigurasi dan dokumen: `package.json` (`test:integration:release`, `test:e2e:release`, `ops:check`), `.env.example` (ambang alert), README, decision 0031, dokumen dan receipt T25.
+
+Migration dan keputusan: satu migration forward-only, parity **36/36** (merge `origin/main` di Fase 0 membawa fix T24 G1 sebagai migration ke-35). Defect yang diperbaiki: D9, D11/D12 (P2), D10 (P3), RV1 (P2).
+
+Checks (hasil aktual):
+
+- **Reviewer pada `4574d9a` (worktree bersih):** lint, typecheck, `db:lint`, `worker:check`, `git diff --check` exit 0; unit **117/1064**; pgTAP **20/1638**; migration **36/36**; `test:integration:release` **12**; `ops:check` exit 0 dan exit 1 untuk env tidak valid, backend tidak terjangkau, key salah; `test:e2e:m2` 1, `test:e2e:evidence` 8, `test:e2e:account-deletion` 7; `test:e2e:release` 14/15 (RV1).
+- **Setelah RV1 pada `617cae3` (worktree baru, golden CRLF):** `test:e2e:release` **15/15**; unit **118/1068**; lint, typecheck exit 0.
+- **Pelaksana (Fase 8):** 52 command regresi §7 lulus, termasuk semua suite T02-T24 dan Gate M2/M3/M4; `test:perf` p95 baca ≤ 192,1 ms, simpan ≤ 130,6 ms; nol akun `t25-*` tersisa.
+
+Belum dijalankan:
+
+- Fase 7 staging: auth email nyata, scanner dan renderer di host, export dan penghapusan di hosted, p95 hosted.
+- Verifikasi retensi backup ≤ 30 hari pada paket hosted; restore hosted (termasuk objek Storage yang tidak ikut restore).
+- Pemeriksaan screen reader NVDA oleh manusia.
+- Reviewer tidak mengulang clean rebuild Fase 5, `test:perf`, dan suite §7 lain; hasil pelaksana berlaku.
+
+Risiko/batas: P3 terbuka N3 (assertion insert belum spesifik `42501`), N5 (skenario 2/3 sebagai rangkaian test), N6 (NVDA), O1-O13 di receipt fase, termasuk kebocoran akun `wp-*` suite lama (O3).
+
+Bukti lokal saja; bukan bukti production. Release checklist: **tidak siap untuk production**.
+
+Berikutnya: Fase 7 setelah pengguna menyediakan proyek Supabase hosted, host web dan worker, SMTP nyata, dan otorisasi tertulis; lalu Gate M5 (tidak dapat PASSED sebelum staging dan retensi backup terverifikasi).
+
 ## T24 — Instrumentation dan performance, acceptance lokal — 10 Oktober 2026
 
 Status T24: **DONE** (acceptance lokal). Ke-18 poin acceptance §1 terbukti lokal. Target performa terbukti pada satu mesin pengembangan, bukan di layanan hosted (T25).
