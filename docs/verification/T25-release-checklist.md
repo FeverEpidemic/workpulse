@@ -5,8 +5,8 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 - Item yang selesai dicentang dan punya bukti yang ditautkan.
 - Item berlabel **BLOCKER** menghalangi publish production dan tidak boleh dicentang tanpa bukti dari lingkungan yang dimaksud.
 
-- Tanggal: 10 Oktober 2026
-- Status: **tidak siap untuk production**. Delapan BLOCKER terbuka. Status T25 yang direkomendasikan pelaksana: **PARTIAL** (staging belum tersedia).
+- Tanggal: 10 Oktober 2026; diperbarui 11 Oktober 2026 setelah regresi Fase 8 dan gate review.
+- Status: **tidak siap untuk production**. Delapan BLOCKER terbuka. Status T25 yang direkomendasikan reviewer: **PARTIAL** (staging belum tersedia, retensi backup belum terverifikasi).
 - Pemilik: pelaksana (agen T25), reviewer (Claude), operator (menjalankan host), pemilik produk (keputusan dan otorisasi).
 
 ## 1. BLOCKER production
@@ -36,13 +36,14 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 | [x] | Tidak ada rahasia server di bundle browser | pelaksana | [Fase 4](T25-phase4-accessibility.md) |
 | [x] | Build produksi, `/api/health` 200, `worker:check` | pelaksana | [Fase 5](T25-phase5-rebuild-build.md) |
 | [x] | Runbook rilis memuat setiap variabel `.env.example` (dijaga test) | pelaksana | [runbook](T25-release-runbook.md) |
+| [x] | Regresi penuh T02–T24 dan Gate M2–M4 tanpa pelemahan assertion (52 command) | pelaksana | [Fase 8](T25-phase8-regression.md) |
+| [x] | Gate review Claude atas Fase 0–8; RV1 (snapshot aria pada checkout CRLF) diperbaiki dan review ulang lulus | reviewer | [rencana remediasi](T25-review-remediation-plan.md), [Fase 8b](T25-phase8b-remediation.md) |
 
 ## 3. Belum dikerjakan atau menunggu
 
 | Status | Item | Pemilik | Catatan |
 | --- | --- | --- | --- |
-| [ ] | Regresi penuh T02–T24 dan Gate M2–M4 tanpa pelemahan assertion | pelaksana | Fase 8; receipt dan matriks diperbarui di sana |
-| [ ] | Gate review Claude atas Fase 0–8 | reviewer | plan §9 |
+| [ ] | Setelah restore hosted pertama: cleanup dan penghapusan akun untuk objek Storage yang tidak ikut restore (`storage_cleanup_failed`, `account_deletion_overdue` tetap 0) | operator | runbook §7; belum diuji terhadap restore hosted |
 | [ ] | Pemeriksaan **screen reader nyata** (NVDA + Chrome atau Edge) mengikuti checklist plan §6.4 | pengguna atau penguji manusia | belum dijalankan; hanya proxy snapshot aria otomatis yang ada |
 | [ ] | Ukuran p95 baca dan simpan pada dataset staging | operator | tergantung staging; lokal sudah di bawah target (T24) |
 | [ ] | Pasang CI (GitHub Actions) | pelaksana task CI01 | di luar T25; direkomendasikan sebelum pilot |

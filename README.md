@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) next.** Auth/profile,
+Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) partial: local release evidence complete, staging not available yet.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -83,6 +83,9 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:e2e:account-deletion` | S12 account deletion with the keyboard (wrong password, wrong email, then delete), two sessions, re-sign-in refused, real worker drain and re-registration, S03 automatic cancel notice, 360/1440 light/dark with Axe, reduced motion; port 3015 and writes `docs/verification/T23-screenshots/` |
 | `pnpm test:integration:product-events` | T24 product events against local Supabase, Auth and the real export worker: one event per save, import commit, AI apply and export transition, none for edits or retries, rollback leaves no event, private sentinels never reach event rows or the report, API roles refused, pilot cohort counts only enrolled accounts, events removed with the account through the T23 deletion path |
 | `pnpm test:perf` | T24 p95 of the page reads and saves at the service layer on the PRD dataset (1,000 activities, 200 achievements, 50 projects, seeded through the user RPCs); 50 warm samples per operation; writes `docs/verification/T24-perf-results.json` unless `WORKPULSE_PERF_OUT` points elsewhere. Run it alone |
+| `pnpm test:integration:release` | T25 release isolation against local Supabase, Auth, Storage and the real workers: tables and record-id RPC parameters read from the catalog, two accounts per run, foreign ids answered like random ids, worker RPCs refused to API roles, storage and download routes closed, plus the deletion replay after a restore |
+| `pnpm test:e2e:release` | T25 release matrix on a production build (port 3017): S01–S14 at 360/1440 px in light and dark with Axe, 200% text, keyboard journey and dialogs, locked accessibility trees in `docs/verification/T25-aria/`, browser bundle scan; writes `docs/verification/T25-screenshots/` |
+| `pnpm ops:check` | One pass over `get_operational_health()` with the service role: prints one JSON line of counts and thresholds; exit 0 ok, 2 alert, 1 cannot run |
 | `pnpm build` | Next.js production build |
 
 Run the Playwright browser once per machine:
@@ -198,6 +201,14 @@ pnpm test:perf
 ```
 
 See [decision 0030](docs/decisions/0030-t24-instrumentation-performance.md).
+
+T25 is the release check for v0.1. It adds verification and operator tooling, not features.
+- **Release guards.** A pgTAP suite reads the catalog and fails on a `public` table without RLS or the account write guard, any `anon` privilege, an API grant on `internal`, a security definer function without `search_path`, or a public bucket. `test:integration:release` covers every owner table and every RPC that takes a record id, read from the same catalog.
+- **Accessibility.** `test:e2e:release` checks every screen at 360 and 1440 px in both themes, 200% text, a keyboard-only journey, and locked accessibility trees. Two dark-theme tokens were fixed for contrast, and S12 now says that WorkPulse records which actions happen, without their content.
+- **Operations.** `get_operational_health()` (service role only) counts overdue deletions, cleanup and purge backlogs, stuck uploads, failed jobs and expired leases. Run `pnpm ops:check` from the worker host every 5 minutes and alert on a non-zero exit. Thresholds come from the `WORKPULSE_ALERT_*` variables in `.env.example`.
+- **Not production yet.** Staging, the backup retention window and a real screen reader check are still open. The [release runbook](docs/verification/T25-release-runbook.md) covers deploy, worker, health, rollback as a forward fix, restore and privacy incidents; the [release checklist](docs/verification/T25-release-checklist.md) lists the eight production blockers.
+
+See [decision 0031](docs/decisions/0031-t25-release-handoff.md) and the [release handoff](docs/verification/T25-release-handoff.md).
 
 ## Local database (Supabase)
 

@@ -145,6 +145,8 @@ Status klaim (jujur, dari [T23 §1](T23-retention-runbook.md)):
 
 Prosedur ini dibuktikan oleh `tests/integration/release-restore.test.ts` (akun dengan data dan objek, receipt dan penanda `deleting` dikembalikan ke keadaan sebelum permintaan, penghapusan berjalan ulang sampai `completed`).
 
+**Objek Storage tidak ikut restore.** Restore database memulihkan baris, bukan objek di bucket. Setelah restore, baris dapat merujuk objek yang sudah dihapus. Test di atas memakai objek yang masih ada, jadi perilaku cleanup dan penghapusan akun untuk objek yang hilang **belum diuji terhadap restore hosted**. Setelah langkah 4, periksa `storage_cleanup_failed` dan `account_deletion_overdue` di `pnpm ops:check`; bila salah satunya naik, lihat `error_code` job sebelum mengulang.
+
 ## 8. Insiden privasi
 
 Bila ada dugaan kebocoran data, key, atau akses lintas akun:

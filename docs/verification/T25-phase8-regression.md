@@ -104,7 +104,7 @@ Spec itu rapuh terhadap timing hidrasi (ia memilih `<select>` dan menekan panah 
 | Database | satu migration `20261012090000_t25_operational_health.sql`; tipe diregenerasi |
 | Source `src/` | `tokens.css` (dark `border-control`, token `selection-bg`), `globals.css` (`::selection`), `messages.ts` dan `delete-account-card.tsx` (kalimat S12), dua `h1` (`wrap-anywhere`) |
 | Worker | `workers/ops-check.ts` |
-| Test baru | pgTAP 2 file; integration 2 file (13 test); unit 3 file (+1 test di i18n); E2E 2 spec, 1 config, 1 helper |
+| Test baru | pgTAP 2 file; integration 2 file (12 test); unit 3 file (+1 test di i18n); E2E 2 spec, 1 config, 1 helper |
 
 ## Acceptance yang belum terbukti
 
