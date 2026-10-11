@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 import { collectWcagViolations, expectNoWcagViolations } from "./helpers/accessibility";
+import { compareAriaSnapshot } from "./helpers/aria-snapshot";
 import { drainExportWorker, requireRealRenderer } from "./helpers/export-worker";
 import { drainImportWorker } from "./helpers/import-worker";
 import {
@@ -290,14 +291,14 @@ test("accessibility tree of S04, S05, S08, S13 and S14 is locked (screen reader 
       const file = join(ARIA, `${screen.id}.aria.yml`);
       if (WRITE_ARIA) writeFileSync(file, snapshot + "\n");
       else if (!existsSync(file)) mismatches.push(`${screen.id}: no locked snapshot (run once with WORKPULSE_RELEASE_WRITE_ARIA=1)`);
-      else if (readFileSync(file, "utf8").trimEnd() !== snapshot.trimEnd()) {
-        await testInfo.attach(`${screen.id}.actual.yml`, { body: snapshot, contentType: "text/plain" });
-        const expectedLines = readFileSync(file, "utf8").trimEnd().split(/\r?\n/);
-        const actualLines = snapshot.trimEnd().split(/\r?\n/);
-        const first = actualLines.findIndex((line, index) => line !== expectedLines[index]);
-        mismatches.push(
-          `${screen.id}: accessibility tree differs from ${file} at line ${first + 1}: expected ${JSON.stringify(expectedLines[first])}, got ${JSON.stringify(actualLines[first])}`,
-        );
+      else {
+        const mismatch = compareAriaSnapshot(readFileSync(file, "utf8"), snapshot);
+        if (mismatch) {
+          await testInfo.attach(`${screen.id}.actual.yml`, { body: snapshot, contentType: "text/plain" });
+          mismatches.push(
+            `${screen.id}: accessibility tree differs from ${file} at line ${mismatch.line}: expected ${JSON.stringify(mismatch.expected)}, got ${JSON.stringify(mismatch.actual)}`,
+          );
+        }
       }
       // Names the checklist relies on: a page always has a heading, and every control has a name.
       expect(snapshot, `${screen.id}: heading`).toMatch(/- heading "/);
