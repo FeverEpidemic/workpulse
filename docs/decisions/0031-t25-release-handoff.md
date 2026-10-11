@@ -73,7 +73,7 @@ Kalimat berada di kartu privasi S12 sebelum paragraf penghapusan. Isinya sesuai 
 
 ## Batas yang diterima
 
-- **Staging tidak diverifikasi.** Auth email nyata, scanner dan renderer di host, p95 hosted, dan restore hosted belum dibuktikan. Delapan BLOCKER di checklist menahan production.
+- **Staging tidak diverifikasi.** Auth email nyata, scanner dan renderer di host, p95 hosted, dan restore hosted belum dibuktikan. Sembilan BLOCKER di checklist menahan production.
 - **Retensi backup ≤ 30 hari belum terverifikasi.** Copy S12 menjanjikannya; checklist memblokir production sampai operator mencatat paket, retensi, tautan dokumentasi resmi, dan tanggal akses.
 - **NVDA nyata belum dijalankan.** Snapshot aria hanya proxy.
 - **Skenario rilis 2 dan 3** dibuktikan oleh rangkaian test bernama, bukan satu journey dari awal sampai akhir.
@@ -97,6 +97,8 @@ Kalimat berada di kartu privasi S12 sebelum paragraf penghapusan. Isinya sesuai 
 ## Gate review
 
 Gate review Claude (Opus) pada `4574d9a` menemukan satu P2 (RV1) dan enam P3. Reviewer menjalankan ulang lint, typecheck, unit, pgTAP, `db:lint`, `test:integration:release`, `ops:check` (exit 0 dan 1), `worker:check`, `test:e2e:release`, serta `test:e2e:m2`, `evidence`, dan `account-deletion` di worktree bersih, dan membandingkan cakupan tabel dengan query katalog sendiri. RV1 diperbaiki di `617cae3` dan review ulang lulus (15/15 pada checkout CRLF). Review ulang tidak independen penuh karena reviewer juga memperbaikinya.
+
+Saat menyiapkan migrasi hosted, reviewer menemukan P2 kedua yang terlewat di gate review (N7): runbook §3 hanya menyebut `db push`, padahal bucket `workpulse-private`, template email Auth, dan Site URL hanya dideklarasikan di `supabase/config.toml`, dan `config push` non-interaktif akan menimpa pengaturan hosted dengan nilai lokal. Runbook §3 dan checklist diperbaiki sebelum migrasi hosted dijalankan (BLOCKER kesembilan). Perbaikan ini hanya dokumen dan belum dibuktikan terhadap proyek hosted.
 
 ## Perubahan pada test lama
 

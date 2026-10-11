@@ -4,7 +4,7 @@
 
 Status T25: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **BLOCKED** karena environment dan otorisasi belum disediakan, dan retensi backup ≤ 30 hari belum terverifikasi. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi.
 
-- Pelaksana: Claude Sonnet 5.5 (Fase 0-8). Gate review Claude (Opus) pada `4574d9a`: satu P2 (RV1), enam P3 (N1-N6), tanpa P0/P1.
+- Pelaksana: Claude Sonnet 5.5 (Fase 0-8). Gate review Claude (Opus) pada `4574d9a`: satu P2 (RV1), enam P3 (N1-N6), tanpa P0/P1. P2 susulan N7 (runbook §3 tidak mencakup bucket, template email, dan konfigurasi Auth hosted) ditemukan reviewer saat menyiapkan migrasi hosted dan ditutup sebagai perbaikan dokumen; bukti hosted menunggu Fase 7.
 - RV1 (snapshot aria gagal pada checkout CRLF) diperbaiki reviewer atas permintaan pengguna di `617cae3`; review ulang lulus. Fase 9 (decision, laporan handoff, README) juga ditulis reviewer, jadi remediasi dan dokumen itu tidak direview pihak independen.
 - Dependensi T24, T23 **DONE**; Gate M4 **PASSED**. Keenam keputusan produk §2.4 disetujui pengguna 10 Oktober 2026 ("Setuju semua").
 - Rujukan: PRD §2 R01-R10, §4, §5 M5; rencana T25 dan Gate M5.
@@ -19,7 +19,7 @@ Yang selesai:
 - **Aksesibilitas.** Kontras 37 pasangan token dua tema; matriks 20 keadaan layar S01-S14 × 360/1440 × light/dark plus 8 tampilan id dengan Axe; teks 200%; journey keyboard dan empat dialog; snapshot aria terkunci; bundle browser tanpa rahasia server.
 - **Copy S12.** Satu kalimat en/id bahwa WorkPulse mencatat jenis aksi tanpa isinya.
 - **Rebuild dan build.** 36 migration dari nol di stack sekali pakai, pgTAP 20/1638, tipe identik; `pnpm build`, `/api/health` 200, `worker:check`.
-- **Runbook dan checklist** rilis dengan delapan BLOCKER production.
+- **Runbook dan checklist** rilis dengan sembilan BLOCKER production. `db push` saja bukan deploy: bucket `workpulse-private`, template email Auth, dan Site URL hanya ada di `config.toml` dan diatur terpisah (runbook §3 langkah 2-3).
 
 File berubah:
 
@@ -47,7 +47,7 @@ Risiko/batas: P3 terbuka N3 (assertion insert belum spesifik `42501`), N5 (skena
 
 Bukti lokal saja; bukan bukti production. Release checklist: **tidak siap untuk production**.
 
-Berikutnya: Fase 7 setelah pengguna menyediakan proyek Supabase hosted, host web dan worker, SMTP nyata, dan otorisasi tertulis; lalu Gate M5 (tidak dapat PASSED sebelum staging dan retensi backup terverifikasi).
+Berikutnya: migrasi hosted ke staging oleh ChatGPT mengikuti [brief Fase 7a](verification/T25-phase7-hosted-migration-handoff.md), lalu review receipt oleh Claude. Sisa Fase 7 setelah pengguna menyediakan proyek Supabase hosted, host web dan worker, SMTP nyata, dan otorisasi tertulis; lalu Gate M5 (tidak dapat PASSED sebelum staging dan retensi backup terverifikasi).
 
 ## T24 — Instrumentation dan performance, acceptance lokal — 10 Oktober 2026
 

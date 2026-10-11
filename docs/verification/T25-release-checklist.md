@@ -6,7 +6,7 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 - Item berlabel **BLOCKER** menghalangi publish production dan tidak boleh dicentang tanpa bukti dari lingkungan yang dimaksud.
 
 - Tanggal: 10 Oktober 2026; diperbarui 11 Oktober 2026 setelah regresi Fase 8 dan gate review.
-- Status: **tidak siap untuk production**. Delapan BLOCKER terbuka. Status T25 yang direkomendasikan reviewer: **PARTIAL** (staging belum tersedia, retensi backup belum terverifikasi).
+- Status: **tidak siap untuk production**. Sembilan BLOCKER terbuka. Status T25 yang direkomendasikan reviewer: **PARTIAL** (staging belum tersedia, retensi backup belum terverifikasi).
 - Pemilik: pelaksana (agen T25), reviewer (Claude), operator (menjalankan host), pemilik produk (keputusan dan otorisasi).
 
 ## 1. BLOCKER production
@@ -18,6 +18,7 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 | [ ] | **BLOCKER** otorisasi deploy tertulis untuk lingkungan production | pemilik produk | pesan tertulis yang menyebut lingkungan itu |
 | [ ] | **BLOCKER** domain production dan `WORKPULSE_SITE_URL` diisi domain sebenarnya (https) | operator | nilai terpasang di host web, redirect Auth berfungsi |
 | [ ] | **BLOCKER** SMTP Auth nyata: email verifikasi dan recovery terkirim ke kotak masuk sungguhan | operator | bukti pengiriman pada staging (Fase 7) |
+| [ ] | **BLOCKER** konfigurasi proyek hosted di luar migration: bucket `workpulse-private` privat dengan batas dan MIME sesuai `config.toml`, template email konfirmasi dan recovery terpasang, Site URL dan redirect `/auth/confirm` domain sebenarnya, tanpa nilai lokal dari `config.toml` | operator | runbook §3 langkah 2–3; hasil query `storage.buckets` dan nilai Auth akhir (tanpa secret) di receipt staging |
 | [ ] | **BLOCKER** scanner nyata di host worker: `WORKPULSE_SCANNER_MODE=clamav` dan EICAR ditolak | operator | satu run `evidence-scanner-real` atau smoke staging |
 | [ ] | **BLOCKER** renderer nyata (DOCX dan PDF) di host worker; PDF diunduh dan teksnya cocok | operator | smoke staging: export, unduh, ekstraksi teks |
 | [ ] | **BLOCKER** mode AI dan wording persetujuan diputuskan pemilik produk (aktif dengan key, atau tetap `unavailable`) | pemilik produk | keputusan tertulis; bila aktif, smoke dengan key staging yang disetujui |

@@ -9,6 +9,7 @@ Status plan: **DONE · 11 Oktober 2026** (RV1 ditutup; bukti `T25-phase8b-remedi
   - Mutasi golden menghasilkan pesan dengan nomor baris dan isi yang benar.
   - Review ulang tidak independen penuh karena reviewer juga mengerjakan perbaikannya.
 - Status T25 tetap **PARTIAL** (staging B1, retensi backup B2). Langkah berikutnya: Fase 9.
+- **Temuan susulan N7 (P2, 11 Oktober 2026)**, ditemukan reviewer saat menyiapkan migrasi hosted setelah review ulang: runbook §3 tidak lengkap untuk proyek hosted (lihat §1). Ditutup sebagai perbaikan dokumen sebelum migrasi hosted; belum dibuktikan terhadap proyek hosted. Gate review awal seharusnya menangkapnya: reviewer memeriksa isi runbook terhadap §3.4 rencana, bukan terhadap apa yang dideklarasikan `config.toml`.
 
 - Tanggal: 11 Oktober 2026.
 - Reviewer: Claude (Opus). Gate review read-only setelah Fase 8, mengacu ke `T25-implementation-plan.md` §9–§10.
@@ -37,6 +38,7 @@ Status plan: **DONE · 11 Oktober 2026** (RV1 ditutup; bukti `T25-phase8b-remedi
 | N4 | P3 | Runbook §7 (restore) tidak menyebut bahwa restore database hosted tidak memulihkan objek Storage. Setelah restore, baris dapat merujuk objek yang sudah tidak ada. Perilaku cleanup dan penghapusan akun untuk objek yang hilang hanya diuji lokal dengan objek yang masih ada (`release-restore.test.ts`) | Tambah satu kalimat di runbook §7 + item verifikasi di checklist (Fase 7 atau operator) |
 | N5 | P3 | Skenario rilis 2 dan 3 ditutup sebagai *rangkaian* test, bukan satu journey dari onboarding sampai PDF / dari AI unavailable sampai stale. Diterima oleh §1.2 ("rangkaian test bernama") | Diterima |
 | N6 | P3 | NVDA nyata (§6.4) belum dijalankan; proxy snapshot aria ada | Diterima; tetap tercatat di checklist |
+| N7 | P2 | Runbook §3 hanya `migration list` + `db push`. Bucket `workpulse-private` (`config.toml:119`) tidak dibuat migration mana pun, sehingga proyek hosted tidak punya bucket (upload, import, export gagal). Template email (`supabase/templates/*.html`, link `token_hash` yang dibutuhkan `/auth/confirm`), Site URL, dan redirect juga hanya ada di `config.toml`; `supabase config push` non-interaktif menulis nilai lokal (`site_url = "http://127.0.0.1:3000"`, rate limit 30) tanpa konfirmasi | FIXED (dokumen): runbook §3 langkah 2–3 (`seed buckets --linked`, query `storage.buckets`, `config diff` sebelum `config push`, template dan Site URL di dashboard), BLOCKER kesembilan di checklist, brief [Fase 7 hosted](T25-phase7-hosted-migration-handoff.md). Bukti hosted menunggu Fase 7 |
 
 Catatan P3 pelaksana (O1–O13, D10, F1–F4) sudah dibaca reviewer. Klasifikasinya diterima.
 
@@ -151,7 +153,7 @@ Tidak dijalankan ulang oleh reviewer: clean rebuild Fase 5 (stack sekali pakai),
 - **Screenshot.** Reviewer membuka `s12-settings-360-dark`, `s12-delete-dialog-1440-light`, `s08-achievement-confirmed-360-light`, `s14-preview-1440-dark`: tanpa overflow, email di-mask, judul panjang S08 terbungkus, kalimat S12 tampil. Tombol pudar di dialog dan S14 adalah state disabled (dikecualikan WCAG 1.4.3).
 - **Copy S12.** en dan id setara dan sesuai §2.4.3. Klaimnya benar: trigger T24 mencatat nama aksi dan properti allowlist tanpa teks, nama file, id, atau email (`product-events` integration + pgTAP). Tanpa em dash, tanpa angka, tanpa klaim keamanan baru.
 - **Defect UI.** D9/D10 (token), D11 → D12 (wrap hanya pada dua `h1` berisi judul pengguna). Komponen lain yang menampilkan teks pengguna sudah punya `overflow-wrap: anywhere` per kelas di `globals.css` (35 aturan sebelum T25), jadi pencabutan aturan global D11 tidak membuka overflow baru; matriks 200% dan 360 px lulus di run reviewer.
-- **Runbook dan checklist.** Rollback forward-fix tanpa langkah yang menghapus data. Retensi backup dan restore hosted tertulis **belum terverifikasi**. Delapan BLOCKER production. Paritas env dijaga `release-docs.test.ts`.
+- **Runbook dan checklist.** Rollback forward-fix tanpa langkah yang menghapus data. Retensi backup dan restore hosted tertulis **belum terverifikasi**. Delapan BLOCKER production (sembilan setelah N7). Paritas env dijaga `release-docs.test.ts`.
 - **Matriks.** Sampel enam nama test dari matriks (`cv-export` graduate scenario, `cv-freshness` override, `ai-jobs` 10, `evidence-backend` last-slot, `import-commit` 1, `import-review.spec` R02) ada di source.
 - **Hygiene.** Migration baru hanya `20261012090000_t25_operational_health.sql` (ditambah migration T24 dari merge `origin/main`). Tidak ada dependency baru. `git diff --check` bersih.
 
