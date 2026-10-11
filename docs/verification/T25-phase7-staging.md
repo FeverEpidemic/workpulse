@@ -1,9 +1,9 @@
 # T25 Fase 7 · Verifikasi staging
 
 - Tanggal pemeriksaan hosted: 11 Oktober 2026.
-- Status: **BLOCKED pada repair riwayat migration**. Tiga migration telah diterapkan pada eksekusi MCP sebelumnya; 33 migration tersisa. Migrasi hosted belum selesai.
+- Status: **SEBAGIAN · migrasi hosted selesai**. Repair riwayat dan parity 36/36 terbukti. Pemeriksaan berikutnya dihentikan pada check tipe yang tidak identik; konfigurasi Auth dan sisa verifikasi belum selesai.
 - Eksekutor pemeriksaan ini: ChatGPT, mengikuti `T25-phase7-hosted-migration-handoff.md`. Receipt awal ditulis Claude Sonnet 5.5.
-- Commit acuan: `cccdc43a3a0ead21e1e440ae02cd390bae72358b`.
+- Commit acuan handoff: `cccdc43a3a0ead21e1e440ae02cd390bae72358b`; commit awal sesi lanjutan: `19a0d194dea1433df74495b81dd8ce7f0964683c`.
 - Target: Supabase Workpulse, region `ap-northeast-2`, PostgreSQL 17.11. Paket belum diperiksa.
 - URL staging yang ditetapkan pengguna: `https://myworkpulse.my.id`. Konfigurasi Auth untuk URL ini belum diterapkan.
 
@@ -13,7 +13,9 @@ Pengguna mengizinkan pekerjaan pada project Workpulse dalam percakapan yang seda
 
 Pemeriksaan remote memicu stop condition handoff §2: versi remote tidak ada dalam daftar versi lokal. Eksekusi sebelumnya memakai MCP `apply_migration`, yang mencatat timestamp baru untuk SQL dari tiga file lokal. Pemeriksaan ulang tidak menerapkan migration tambahan.
 
-Setelah pelaksana meminta persetujuan repair riwayat tiga migration tanpa mengulang SQL atau reset database, pengguna menjawab "Yes dan Antislop nya During aja". Repair telah diizinkan, tetapi belum dijalankan. Handoff §3 mensyaratkan credential yang dipasang pengguna di env proses; pemeriksaan boolean menunjukkan credential CLI dan server staging belum tersedia. Nilainya tidak dibaca dari file atau dicetak.
+Setelah pelaksana meminta persetujuan repair riwayat tiga migration tanpa mengulang SQL atau reset database, pengguna menjawab "Yes dan Antislop nya During aja". Credential belum tersedia pada percobaan awal. Pengguna kemudian menulis "Env sudah dipasang. Cek keberadaan keempat variabel tanpa mencetak nilainya, lalu lanjutkan repair." Pemeriksaan boolean sesi lanjutan membuktikan keempat variabel tersedia. URL env cocok dengan target Workpulse; nilai credential tidak dicetak atau ditulis ke file.
+
+Repair melalui CLI berhasil, diikuti dry-run dan push tepat 33 migration tersisa. Riwayat akhir memuat seluruh 36 versi lokal tanpa versi tambahan. Stop condition riwayat telah ditutup dengan otorisasi pengguna. Stop condition baru terpicu pada perbandingan tipe: hosted generator menambahkan metadata PostgREST yang tidak ada di file lokal. Tidak ada perubahan source untuk menutup kegagalan ini.
 
 T25 tetap **PARTIAL**. Gate M5 belum dinilai ulang. Tidak ada deployment web/worker atau smoke hosted pada percobaan ulang ini.
 
@@ -32,12 +34,51 @@ T25 tetap **PARTIAL**. Gate M5 belum dinilai ulang. Tidak ada deployment web/wor
 | `pnpm install --frozen-lockfile` | Exit 0, `Already up to date`, pnpm 11.19.0. |
 | `pnpm exec supabase --version` | Exit 0, 2.117.0. CLI memberi pemberitahuan versi baru; upgrade tidak dilakukan. |
 | `pnpm exec supabase migration repair --help` | Exit 0; flag `--linked` dan status `applied`/`reverted` tersedia. Hanya help, belum menjalankan repair. |
-| Pemeriksaan boolean env proses | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, dan `SUPABASE_SECRET_KEY` tidak tersedia. Scope pengguna Windows juga tidak memuat ketiga variabel tersebut. |
+| Pemeriksaan boolean env proses awal | Credential belum tersedia; pemeriksaan scope pengguna Windows juga negatif. |
+| Pemeriksaan boolean env proses lanjutan | `SUPABASE_ACCESS_TOKEN=true`, `SUPABASE_DB_PASSWORD=true`, `SUPABASE_URL=true`, `SUPABASE_SECRET_KEY=true`. Hanya keberadaan dicetak. |
 | MCP `list_migrations` | Berhasil; 3 versi remote, seluruhnya tidak cocok dengan versi lokal. Ini bukan output CLI `migration list --linked`. |
 | MCP `execute_sql`, hitungan saja | Berhasil; 0 pengguna Auth, 3 migration, 0 bucket. Tidak membaca isi karier atau membuat akun uji. |
 | Perbandingan SQL tersimpan dengan file lokal | Berhasil untuk ketiga migration: panjang karakter dan MD5 identik. |
 | `git diff --check -- docs/verification/T25-phase7-staging.md` | Exit 0; Git hanya memberi warning normalisasi LF menjadi CRLF. |
 | Pemindaian receipt untuk key, JWT, URI koneksi, dan assignment credential | Semua pemeriksaan false; hanya nama variabel dicatat. |
+
+### Eksekusi lanjutan setelah env tersedia
+
+Semua CLI menggunakan pnpm 11.19.0 dan Supabase CLI 2.117.0. Output CLI disaring di memori untuk menyembunyikan credential apabila tool mencetaknya. Semua command berikut exit 0 kecuali perbandingan tipe yang dicatat khusus.
+
+| Command | Hasil |
+| --- | --- |
+| `pnpm exec supabase link --project-ref <ref Workpulse>` | Berhasil menautkan staging Workpulse. |
+| `pnpm exec supabase migration list --linked`, sebelum repair | 36 lokal, 3 remote; remote terakhir `20261011054746`. Ketiga versi remote ada pada tabel riwayat sebelum repair di bawah. |
+| MCP query ulang panjang dan MD5 SQL remote | Tetap cocok dengan ketiga file lokal sebelum repair. |
+| `pnpm exec supabase migration repair --linked --status applied 20260916090000 20260916120000 20260916124500` | Ketiga versi lokal tercatat applied; hanya tracking riwayat berubah. |
+| `pnpm exec supabase migration repair --linked --status reverted 20261011054646 20261011054733 20261011054746` | Tracking tiga versi MCP dihapus; tidak menjalankan SQL skema ulang. Penyimpangan repair telah disetujui pengguna. |
+| `pnpm exec supabase migration list --linked`, setelah repair | 36 lokal, 3 remote yang cocok: `20260916090000`, `20260916120000`, `20260916124500`; 33 pending, tanpa versi remote tambahan. |
+| `pnpm exec supabase db push --linked --dry-run` | Tepat 33 file lokal pending, dari `20260916150000_auth_onboarding_locale_timezone.sql` sampai `20261012090000_t25_operational_health.sql`, berurutan. Output `seeds=[]`, `roles=[]`; tidak meminta include-all. |
+| `pnpm exec supabase db push --linked` | Semua 33 file di atas diterapkan, tanpa seed. |
+| `pnpm exec supabase migration list --linked`, setelah push | Seluruh 36 baris memiliki versi lokal = remote; pertama `20260916090000`, terakhir `20261012090000`. |
+| `pnpm exec supabase seed buckets --linked` | `buckets_updated=[workpulse-private]`; tidak mengunggah objek. Bucket telah dibuat oleh migration T05 aktual di checkout ini. |
+| `pnpm exec supabase db query --linked`, query bucket pada handoff §4.3 | Satu bucket `workpulse-private`, `public=false`, limit 52428800; MIME persis PDF, PNG, JPEG, DOCX. Tidak ada bucket publik. |
+| `pnpm exec supabase config diff --project-ref <ref Workpulse>` | Exit 0; 15 perubahan. Nilai diff ditahan dalam memori; hanya nama struktur output dicetak. Daftar path bagian belum diekstrak lengkap sebelum stop. Tidak menjalankan config push. |
+| Dashboard Workpulse | Awalnya meminta login; pengguna kemudian menulis "udah login di browser codex nya ya". Dashboard menampilkan Healthy dan migration terakhir `t25_operational_health`. Navigasi Authentication dibuka; pengaturan belum disimpan. |
+| `pnpm exec supabase test db --linked supabase/tests/database/release_catalog.test.sql` | PASS, 1 file, 26 assertion. Extension pgtap sudah tersedia. Semua probe dijalankan dalam transaksi rollback. Tidak menjalankan pgTAP lain. |
+| `pnpm exec supabase gen types typescript --linked --schema public` | Generator exit 0. Output disimpan sementara di luar repo, dibandingkan, lalu dihapus. |
+| Perbandingan tipe setelah normalisasi CRLF ke LF | **FAIL**, wrapper exit 2. Hosted 82391 karakter, lokal 82184 karakter. |
+| `git diff --no-index`, file tipe lokal vs hasil generate hosted | Exit diff 1, menunjukkan hanya metadata `__InternalSupabase.PostgrestVersion` dan satu baris kosong akhir berbeda. Wrapper diagnostik exit 0; kedua file sementara dihapus. |
+
+### Kegagalan check tipe dan batas diagnosis
+
+Hosted generator menambahkan properti berikut pada `Database` sebelum `public`, beserta dua komentar generator:
+
+```ts
+__InternalSupabase: {
+  PostgrestVersion: "14.18"
+}
+```
+
+Diff juga menghapus satu baris kosong terakhir. Tidak ada perbedaan pada definisi `public` yang terlihat dalam diff lengkap. Hal ini tetap **gagal terhadap syarat identik** handoff §4.5; diagnosis metadata bukan pengganti acceptance dan belum disetujui sebagai pengecualian. File lokal tidak diubah. Check privilege health, `ops:check`, dan backup belum dijalankan setelah stop ini.
+
+Dokumen handoff menyatakan bucket hanya berasal dari config; SQL migration T05 aktual juga membuatnya. Bukti `seed buckets` berupa update, lalu query nilai bucket lulus. Dokumen sumber tidak diubah dalam scope receipt ini.
 
 ### Riwayat sebelum repair
 
@@ -55,18 +96,20 @@ Setiap baris remote menyimpan satu elemen `statements` berisi SQL yang panjang d
 - [x] `pnpm install --frozen-lockfile` lulus.
 - [x] Otorisasi pengguna dan region dicatat; paket belum diketahui.
 - [x] Isi tiga migration remote dibandingkan dengan file lokal sebelum repair.
-- [ ] Credential CLI staging tersedia di env proses; `link` dan `migration list --linked` dijalankan.
-- [ ] Repair CLI yang disetujui dijalankan dan diverifikasi: tandai tiga versi lokal sebagai `applied`, hapus tracking tiga versi MCP dengan status `reverted`, lalu periksa daftar. Repair mengubah riwayat saja.
-- [ ] `db push --linked --dry-run` menunjukkan tepat 33 migration tersisa, berurutan.
-- [ ] `db push --linked` dan parity akhir 36/36 terbukti.
-- [ ] `seed buckets --linked` dan query bucket terbukti sesuai handoff.
+- [x] Credential CLI staging tersedia di env proses; `link` dan `migration list --linked` dijalankan.
+- [x] Repair CLI yang disetujui dijalankan dan diverifikasi. Repair mengubah riwayat saja.
+- [x] `db push --linked --dry-run` menunjukkan tepat 33 migration tersisa, berurutan.
+- [x] `db push --linked` dan parity akhir 36/36 terbukti.
+- [x] `seed buckets --linked` dan query bucket terbukti sesuai handoff.
 - [ ] `config diff` diperiksa; Site URL, redirect, konfirmasi email, rate limit pilihan pengguna, dan dua template Auth diatur melalui dashboard.
-- [ ] `release_catalog.test.sql`, perbandingan tipe, privilege health, dan `ops:check` lulus.
+- [x] `release_catalog.test.sql` lulus, 26 assertion.
+- [ ] Perbandingan tipe identik: gagal pada metadata generator; perlu keputusan reviewer/pengguna sebelum langkah berikutnya.
+- [ ] Privilege health dan `ops:check` lulus.
 - [ ] Paket, jenis backup, dan retensi diperiksa dari dashboard serta dokumentasi resmi. Retensi ≤ 30 hari **tidak dapat dipastikan** saat ini.
 
-Tidak ada reset, drop, `db push --include-seed`, `db push --include-all`, `config push`, atau SQL manual yang mengubah skema pada percobaan ulang ini. Tidak ada akun uji dibuat. Tidak ada secret ditulis ke receipt.
+Tidak ada reset, drop, `db push --include-seed`, `db push --include-all`, `config push`, atau SQL manual yang mengubah skema pada percobaan ulang ini. Skema hanya berubah melalui db push; repair riwayat memakai CLI dengan persetujuan pengguna. Tidak ada akun uji dibuat. Tidak ada secret ditulis ke receipt.
 
-Belum ada item parity hosted, bucket/Auth hosted, atau retensi backup yang siap diterima sebagai selesai. Reviewer tetap perlu memeriksa receipt setelah langkah yang tertahan dijalankan.
+Parity hosted, bucket privat, dan katalog hosted siap direview berdasarkan hasil di atas. Konfigurasi Auth, tipe identik, privilege health, `ops:check`, dan retensi backup belum selesai. BLOCKER release tidak dicentang oleh pelaksana.
 
 ## Yang dibutuhkan agar Fase 7 dapat dijalankan
 
@@ -106,4 +149,4 @@ Belum ada item parity hosted, bucket/Auth hosted, atau retensi backup yang siap 
 
 ## Langkah berikutnya
 
-Pengguna memasang credential staging ke env proses host Codex. Lanjutkan dari repair riwayat yang sudah diizinkan, lalu ikuti urutan handoff Fase 7a. Hanya receipt ini yang diubah untuk pencatatan; status authoritative T25 dan checklist release tidak diubah. Sisa deploy web/worker dan smoke hosted mengikuti Fase 7 berikutnya.
+Reviewer atau pengguna memutuskan apakah selisih metadata generator boleh dicatat sebagai pengecualian syarat tipe identik, atau memerlukan task perbaikan tersendiri. Setelah keputusan itu, lanjutkan pengaturan Auth dan sisa pemeriksaan Fase 7a. Hanya receipt ini yang diubah untuk pencatatan; status authoritative T25 dan checklist release tidak diubah. Sisa deploy web/worker dan smoke hosted mengikuti Fase 7 berikutnya.
