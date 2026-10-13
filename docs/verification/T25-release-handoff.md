@@ -26,7 +26,7 @@
 | 13 | Health operasional | **PASS** | `operational_health.test.sql` 35 assertion; `ops-check.test.ts`; run nyata exit 0, dan exit 1 untuk env tidak valid, backend tidak terjangkau, key salah |
 | 14 | Clean migration rebuild | **PASS** | Fase 5: 36 migration dari nol di stack sekali pakai, pgTAP 20/1638, tipe identik byte demi byte, stack aktif utuh |
 | 15 | Production build | **PASS** | `pnpm build`, `/api/health` 200 `no-store`, `worker:check` dua konfigurasi |
-| 16 | Runbook dan checklist | **PASS** | `release-docs.test.ts` (paritas env, ambang = kode, BLOCKER tidak bercentang); runbook §3 dilengkapi untuk bucket dan konfigurasi Auth hosted (N7) |
+| 16 | Runbook dan checklist | **PASS** | `release-docs.test.ts` (paritas env, ambang = kode, BLOCKER tidak bercentang); runbook §3 dilengkapi untuk konfigurasi Auth hosted dan pemeriksaan bucket (N7) |
 | 17 | Backup dan restore jujur | **WARNING** | prosedur restore terbukti lokal (`release-restore.test.ts`); retensi backup ≤ 30 hari **belum terverifikasi**, tercatat BLOCKER |
 | 18 | Staging | **TIDAK DIJALANKAN** (BLOCKED) | [Fase 7](T25-phase7-staging.md): tidak ada environment dan otorisasi |
 | 19 | Tanpa regresi | **PASS** | [Fase 8](T25-phase8-regression.md): 52 command lulus; reviewer mengulang sampel di worktree bersih |
@@ -85,7 +85,7 @@ Semuanya dijalankan ulang di Fase 8 terhadap stack lokal. Nama test lengkap ada 
 
 ## 6. Defect dan temuan
 
-- Diperbaiki: D1–D8 (gap Fase 1), D9, D11, D12 (P2), D10 (P3), RV1 (P2, gate review), N7 (P2, temuan susulan: runbook §3 kini mencakup bucket, template email, dan konfigurasi Auth hosted; perbaikan dokumen, bukti hosted menunggu Fase 7).
+- Diperbaiki: D1–D8 (gap Fase 1), D9, D11, D12 (P2), D10 (P3), RV1 (P2, gate review), N7 (P2, temuan susulan: runbook §3 kini mencakup template email dan konfigurasi Auth hosted; klaim bahwa bucket tidak dibuat migration keliru dan sudah dikoreksi). Fase 7a hosted: lihat [review](T25-phase7a-review.md).
 - Tidak ada P0 atau P1 sepanjang T25.
 - P3 terbuka: O1–O13 di receipt fase, N3 (assertion insert belum spesifik `42501`), N5 (skenario 2/3 sebagai rangkaian), N6 (NVDA). N1, N2, dan N4 gate review ditutup di Fase 9 (checklist, angka receipt Fase 8, kalimat objek Storage di runbook §7).
 

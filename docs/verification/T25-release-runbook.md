@@ -65,14 +65,14 @@ Proses web tidak membutuhkan, dan sebaiknya tidak menerima, variabel `WORKPULSE_
 
 ## 3. Deploy
 
-Urutan: **migrate → worker → web**. Migrate mencakup langkah 1 sampai 3: skema, bucket, dan konfigurasi Auth. Build dari lockfile (`pnpm install --frozen-lockfile`).
+Urutan: **migrate → worker → web**. Migrate mencakup langkah 1 sampai 3: skema, pemeriksaan bucket, dan konfigurasi Auth. Build dari lockfile (`pnpm install --frozen-lockfile`).
 
 1. **Migrate.** Dari mesin operator dengan Supabase CLI (versi devDependency repo) yang sudah login, pada proyek yang sudah ditautkan dengan `supabase link --project-ref <ref>`:
    - `supabase migration list` (bandingkan lokal dan remote), lalu `supabase db push`;
    - ulangi `migration list`: jumlah dan versi terakhir harus sama (36 migration, terakhir `20261012090000`);
    - migration yang sudah diterapkan tidak pernah diedit, dan database proyek hosted tidak pernah diatur ulang.
-2. **Bucket.** Bucket `workpulse-private` **tidak** dibuat oleh migration; ia hanya dideklarasikan di `supabase/config.toml` (`[storage.buckets.workpulse-private]`: privat, 50 MiB, PDF/PNG/JPEG/DOCX). `db push` saja menghasilkan proyek tanpa bucket, sehingga upload evidence, import, dan export gagal.
-   - `supabase seed buckets --linked`;
+2. **Bucket.** Migration T05 (`20260917090000_t05_private_storage_foundation.sql`) membuat bucket `workpulse-private` (privat, 50 MiB, PDF/PNG/JPEG/DOCX) dan `supabase/config.toml` mendeklarasikan nilai yang sama.
+   - `supabase seed buckets --linked` tidak wajib; aman dijalankan karena hanya menyelaraskan nilai yang sama;
    - periksa dengan service role: `select id, public, file_size_limit, allowed_mime_types from storage.buckets;` harus memuat `workpulse-private` dengan `public = false` dan nilai yang sama dengan `config.toml`.
 3. **Konfigurasi Auth dan API.** `config.toml` berisi nilai untuk pengembangan lokal (`site_url = "http://127.0.0.1:3000"`, redirect lokal, rate limit `sign_in_sign_ups = 30`). `supabase config push` menulis semua nilai yang dideklarasikan file itu, dan pada run non-interaktif (`--yes`, tanpa TTY, atau dijalankan agen) **langsung menulis tanpa konfirmasi**.
    - Jangan menjalankan `supabase config push` tanpa `supabase config diff` lebih dulu, dan jangan menjalankannya sama sekali bila diff memuat nilai lokal.

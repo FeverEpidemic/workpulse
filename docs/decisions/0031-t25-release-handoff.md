@@ -98,7 +98,9 @@ Kalimat berada di kartu privasi S12 sebelum paragraf penghapusan. Isinya sesuai 
 
 Gate review Claude (Opus) pada `4574d9a` menemukan satu P2 (RV1) dan enam P3. Reviewer menjalankan ulang lint, typecheck, unit, pgTAP, `db:lint`, `test:integration:release`, `ops:check` (exit 0 dan 1), `worker:check`, `test:e2e:release`, serta `test:e2e:m2`, `evidence`, dan `account-deletion` di worktree bersih, dan membandingkan cakupan tabel dengan query katalog sendiri. RV1 diperbaiki di `617cae3` dan review ulang lulus (15/15 pada checkout CRLF). Review ulang tidak independen penuh karena reviewer juga memperbaikinya.
 
-Saat menyiapkan migrasi hosted, reviewer menemukan P2 kedua yang terlewat di gate review (N7): runbook §3 hanya menyebut `db push`, padahal bucket `workpulse-private`, template email Auth, dan Site URL hanya dideklarasikan di `supabase/config.toml`, dan `config push` non-interaktif akan menimpa pengaturan hosted dengan nilai lokal. Runbook §3 dan checklist diperbaiki sebelum migrasi hosted dijalankan (BLOCKER kesembilan). Perbaikan ini hanya dokumen dan belum dibuktikan terhadap proyek hosted.
+Saat menyiapkan migrasi hosted, reviewer menemukan P2 kedua yang terlewat di gate review (N7): runbook §3 hanya menyebut `db push`, padahal template email Auth dan Site URL hanya dideklarasikan di `supabase/config.toml`, dan `config push` non-interaktif akan menimpa pengaturan hosted dengan nilai lokal. Runbook §3 dan checklist diperbaiki sebelum migrasi hosted dijalankan (BLOCKER kesembilan). Klaim awal N7 bahwa bucket `workpulse-private` juga tidak dibuat migration keliru: migration T05 membuatnya. Pelaksana Fase 7a menemukannya, dan reviewer mengoreksi dokumen.
+
+Fase 7a (migrasi hosted ke staging Workpulse oleh ChatGPT) direview pada 13 Oktober 2026 tanpa P0–P2 ([review](../verification/T25-phase7a-review.md)): parity 36/36, bucket, katalog, privilege health, dan `ops:check` terbukti di hosted. Template email belum terpasang karena paket Free mensyaratkan SMTP kustom, dan paket Free tidak menyediakan backup proyek, sehingga prosedur restore §6 tidak dapat dijalankan pada paket itu.
 
 ## Perubahan pada test lama
 

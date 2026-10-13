@@ -6,6 +6,8 @@
 > - Jangan mengubah kode, migration, test, atau `supabase/config.toml`. Tugas ini hanya menerapkan dan memverifikasi.
 > - Jangan pernah mencetak, menyalin ke chat, atau menulis ke file: access token, password database, secret key, atau JWT.
 
+> **Ralat (13 Oktober 2026, reviewer):** §1 butir 2 dan §4.3 menganggap bucket hanya berasal dari `config.toml`. Itu keliru: migration T05 sudah membuat `workpulse-private`. `seed buckets --linked` tetap aman tetapi tidak wajib; query `storage.buckets` tetap menjadi buktinya.
+
 - Tanggal: 11 Oktober 2026.
 - Eksekutor: ChatGPT (ditunjuk pengguna). Reviewer: Claude (Opus), read-only atas receipt.
 - Commit acuan: HEAD branch `claude/clever-archimedes-gbu7qd` yang memuat dokumen ini. Migration terakhir `20261012090000_t25_operational_health.sql`, total **36**.
