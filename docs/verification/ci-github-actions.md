@@ -11,7 +11,7 @@ Ini CI saja. Belum ada CD: deploy web/worker dan `supabase db push` ke staging d
 | `checks` | `pnpm lint`, `pnpm typecheck`, `pnpm test` (unit, plus project Storybook di Chromium bila ada), `pnpm worker:check`, `pnpm build` | Tidak |
 | `database` | `supabase start` lokal, `supabase db lint --level error`, `supabase test db` (pgTAP), cek tipe hasil generate sama dengan `src/server/supabase/database.types.ts`, integration yang cukup dengan Supabase, smoke E2E (`playwright.config.ts`) | Ya (bawaan runner) |
 
-Integration yang dijalankan: `activity`, `projects`, `achievements`, `dashboard`, `m2`, `cv`, `cv-builder`, `cv-freshness`, `ai-review`, `account-deletion`, `product-events`, `release`.
+Integration yang dijalankan, dengan `account-deletion` paling awal: worker di suite itu hanya mengambil satu job cleanup per ronde, jadi job Storage sisa suite lain membuat receipt tidak selesai dalam batas 12 ronde (gagal di run pertama CI). Sisanya: `activity`, `projects`, `achievements`, `dashboard`, `m2`, `cv`, `cv-builder`, `cv-freshness`, `ai-review`, `account-deletion`, `product-events`, `release`.
 
 ## Keputusan teknis
 
