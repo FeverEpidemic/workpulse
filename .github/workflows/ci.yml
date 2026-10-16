@@ -133,6 +133,15 @@ jobs:
           pnpm test:integration:product-events
           pnpm test:integration:release
 
+      # Counts and error codes only: no ids, keys or user content.
+      - name: Queue state after integration failure
+        if: failure()
+        run: |
+          docker exec supabase_db_WorkPulse psql -U postgres -d postgres -X -c \
+            "select status, count(*) from internal.account_deletions group by 1 order by 1;" -c \
+            "select split_part(object_key, '/', 2) as area, status, error_code, count(*), min(next_attempt_at) > now() as deferred from internal.storage_jobs group by 1, 2, 3, 5 order by 1, 2;" -c \
+            "select count(*) as objects_left from storage.objects where bucket_id = 'workpulse-private';"
+
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
