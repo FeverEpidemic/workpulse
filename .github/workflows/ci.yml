@@ -102,6 +102,8 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
             echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
             echo "DATABASE_URL=$DB_URL"
+            # Same value as .env.example; routes and tests derive the trusted Origin from it.
+            echo "WORKPULSE_SITE_URL=http://127.0.0.1:3000"
           } >> "$GITHUB_ENV"
           rm "$RUNNER_TEMP/supabase.env"
 
