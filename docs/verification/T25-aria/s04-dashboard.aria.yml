@@ -1,0 +1,86 @@
+- link "Skip to content":
+  - /url: "#main-content"
+- complementary "Primary navigation":
+  - link "WorkPulse Ani Contoh":
+    - /url: /dashboard
+    - strong: WorkPulse
+    - text: Ani Contoh
+  - navigation "Primary navigation":
+    - link "Dashboard":
+      - /url: /dashboard
+    - link "Activity":
+      - /url: /activity
+    - link "Achievements":
+      - /url: /achievements
+    - link "Projects":
+      - /url: /projects
+    - link "Timeline":
+      - /url: /timeline
+    - link "CV":
+      - /url: /cv
+  - link "Profile and settings":
+    - /url: /settings/profile
+  - button "Switch to dark theme": Light
+  - button "Sign out"
+- banner:
+  - paragraph: Private workspaceAni Contoh
+  - link "Quick log":
+    - /url: /activity/new
+  - tooltip "Write a work note"
+- main:
+  - region "Your workspace is ready":
+    - paragraph: Ani Contoh
+    - heading "Your workspace is ready" [level=1]
+    - paragraph: A factual view of your activities, confirmed achievements, projects, and demonstrated skills.
+    - region "Your workspace is ready":
+      - link "Confirmed achievements 1":
+        - /url: /achievements?status=confirmed
+        - text: Confirmed achievements
+        - strong: "1"
+      - link "Current projects 0":
+        - /url: /projects?status=active
+        - text: Current projects
+        - strong: "0"
+      - text: Demonstrated skills
+      - strong: "1"
+    - region "Needs attention":
+      - heading "Needs attention" [level=2]
+      - list:
+        - listitem:
+          - link "1 confirmed achievement has no ready evidence.":
+            - /url: /achievements?status=confirmed&evidence=missing
+        - listitem:
+          - link "1 completed project has no outcome.":
+            - /url: /projects?status=completed&outcome=missing
+    - region "Recent activity":
+      - heading "Recent activity" [level=2]
+      - link "View all activity":
+        - /url: /activity
+      - list "Recent activity":
+        - listitem:
+          - link "<date> Menjelaskan hasil analisis kepada manajer produk.":
+            - /url: /activity/<id>
+            - time: <date>
+            - text: Menjelaskan hasil analisis kepada manajer produk.
+        - listitem:
+          - link "<date> Merapikan kueri laporan sehingga waktu muat turun.":
+            - /url: /activity/<id>
+            - time: <date>
+            - text: Merapikan kueri laporan sehingga waktu muat turun.
+        - listitem:
+          - link "<date> Menyusun laporan penjualan mingguan dan membagikannya ke tim.":
+            - /url: /activity/<id>
+            - time: <date>
+            - text: Menyusun laporan penjualan mingguan dan membagikannya ke tim.
+    - region "Current projects":
+      - heading "Current projects" [level=2]
+      - status: No current projects yet.
+    - region "Demonstrated skills":
+      - heading "Demonstrated skills" [level=2]
+      - list "Demonstrated skills":
+        - listitem:
+          - link "SQL, 1 confirmed achievements":
+            - /url: /achievements?status=confirmed&skill=<id>
+            - text: SQL · 1
+- region "Notifications"
+- alert

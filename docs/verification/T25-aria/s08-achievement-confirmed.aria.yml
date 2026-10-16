@@ -1,0 +1,84 @@
+- link "Skip to content":
+  - /url: "#main-content"
+- complementary "Primary navigation":
+  - link "WorkPulse Ani Contoh":
+    - /url: /dashboard
+    - strong: WorkPulse
+    - text: Ani Contoh
+  - navigation "Primary navigation":
+    - link "Dashboard":
+      - /url: /dashboard
+    - link "Activity":
+      - /url: /activity
+    - link "Achievements":
+      - /url: /achievements
+    - link "Projects":
+      - /url: /projects
+    - link "Timeline":
+      - /url: /timeline
+    - link "CV":
+      - /url: /cv
+  - link "Profile and settings":
+    - /url: /settings/profile
+  - button "Switch to dark theme": Light
+  - button "Sign out"
+- banner:
+  - paragraph: Private workspaceAni Contoh
+  - link "Quick log":
+    - /url: /activity/new
+  - tooltip "Write a work note"
+- main:
+  - link "Back to Achievements":
+    - /url: /achievements
+  - paragraph: Confirmed
+  - heading "Mempercepat laporan mingguan" [level=1]
+  - paragraph: Create from Activity
+  - link "Add to CV":
+    - /url: /cv?highlight=<id>
+  - button "Delete"
+  - paragraph: Opens your CV with this achievement ready to add. It is not added automatically.
+  - heading "Source Activity" [level=2]
+  - paragraph: This source is read-only. Editing an Achievement never rewrites the Activity.
+  - link "Open Activity":
+    - /url: /activity/<id>?returnTo=%2Fachievements%2F<id>%3FreturnTo%3D%252Fachievements
+  - paragraph: Current activity text
+  - paragraph: Menyusun laporan penjualan mingguan dan membagikannya ke tim.
+  - paragraph: Saved source excerpt
+  - paragraph: Menyusun laporan penjualan mingguan dan membagikannya ke tim.
+  - text: "Project: Dasbor Penjualan Experience: Perusahaan Contoh · Analis Data Achieved on: <date> Skills: SQL (1)"
+  - region "Evidence":
+    - heading "Evidence" [level=2]
+    - paragraph: Attach a supporting file to this record. Files stay private.
+    - button "Add file"
+    - button "Choose an evidence file"
+    - paragraph: PDF, PNG, JPEG, or DOCX · up to 10 MiB per file
+    - paragraph: No files attached yet.
+    - button "Refresh evidence"
+  - text: Title
+  - textbox "Title": Mempercepat laporan mingguan
+  - text: Achieved on
+  - textbox "Achieved on": <date>
+  - text: Contribution
+  - textbox "Contribution": Menulis ulang kueri dan menjadwalkan laporan.
+  - text: Scope
+  - textbox "Scope": Tim penjualan
+  - text: Outcome
+  - textbox "Outcome": Laporan siap dalam satu jam.
+  - text: CV wording
+  - textbox "CV wording": Mempercepat laporan penjualan mingguan hingga satu jam.
+  - paragraph: Optional while drafting. Confirm will use a factual contribution/outcome fallback when blank.
+  - heading "Skills" [level=2]
+  - paragraph: Add labels only. Demonstrated counts include confirmed Achievements and never imply proficiency.
+  - text: SQL
+  - button "Remove SQL": ×
+  - textbox "Add a skill label"
+  - button "Add skill"
+  - heading "Metrics (optional)" [level=2]
+  - paragraph: Add a label, number, and unit only when the source supports them. Qualitative outcomes are valid without metrics.
+  - button "Add metric"
+  - button "Save changes"
+  - link "Cancel":
+    - /url: /achievements
+  - paragraph: Confirmed achievements can be added to your CV from the CV page. It is not added automatically.
+- region "Notifications"
+- alert

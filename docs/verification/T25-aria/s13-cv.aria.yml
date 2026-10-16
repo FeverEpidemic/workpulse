@@ -1,0 +1,197 @@
+- link "Skip to content":
+  - /url: "#main-content"
+- complementary "Primary navigation":
+  - link "WorkPulse Ani Contoh":
+    - /url: /dashboard
+    - strong: WorkPulse
+    - text: Ani Contoh
+  - navigation "Primary navigation":
+    - link "Dashboard":
+      - /url: /dashboard
+    - link "Activity":
+      - /url: /activity
+    - link "Achievements":
+      - /url: /achievements
+    - link "Projects":
+      - /url: /projects
+    - link "Timeline":
+      - /url: /timeline
+    - link "CV":
+      - /url: /cv
+  - link "Profile and settings":
+    - /url: /settings/profile
+  - button "Switch to dark theme": Light
+  - button "Sign out"
+- banner:
+  - paragraph: Private workspaceAni Contoh
+  - link "Quick log":
+    - /url: /activity/new
+  - tooltip "Write a work note"
+- main:
+  - heading "CV" [level=1]
+  - paragraph: One master CV. Choose what goes on it, put it in order, and adjust the wording without changing your records.
+  - status: All changes saved
+  - button "Save changes" [disabled]
+  - paragraph: Text edits are saved together when you select Save changes. Adding, removing and moving items save immediately.
+  - status
+  - region "CV settings":
+    - heading "CV settings" [level=2]
+    - text: CV title
+    - textbox "CV title": Master CV
+    - text: CV language
+    - combobox "CV language":
+      - option "English" [selected]
+      - option "Bahasa Indonesia"
+    - paragraph: Changes section labels and dates on the CV. Your own text is not translated.
+    - heading "Section order" [level=3]
+    - list:
+      - listitem:
+        - text: Experience
+        - button "Move Experience section up" [disabled]
+        - button "Move Experience section down"
+      - listitem:
+        - text: Projects
+        - button "Move Projects section up"
+        - button "Move Projects section down"
+      - listitem:
+        - text: Achievements
+        - button "Move Achievements section up"
+        - button "Move Achievements section down"
+      - listitem:
+        - text: Education
+        - button "Move Education section up"
+        - button "Move Education section down"
+      - listitem:
+        - text: Skills
+        - button "Move Skills section up"
+        - button "Move Skills section down"
+      - listitem:
+        - text: Certifications
+        - button "Move Certifications section up"
+        - button "Move Certifications section down" [disabled]
+  - region "Profile on this CV":
+    - heading "Profile on this CV" [level=2]
+    - paragraph: Changes here apply to this CV only. Your profile stays the same. Leave a field empty to use your profile value.
+    - text: Name
+    - textbox "Name":
+      - /placeholder: Ani Contoh
+    - text: Headline
+    - textbox "Headline":
+      - /placeholder: ""
+    - text: Email
+    - textbox "Email":
+      - /placeholder: ""
+    - text: Phone
+    - textbox "Phone":
+      - /placeholder: ""
+    - text: Location
+    - textbox "Location":
+      - /placeholder: ""
+    - text: Website
+    - textbox "Website":
+      - /placeholder: ""
+    - text: Summary
+    - textbox "Summary":
+      - /placeholder: ""
+  - region "Experience":
+    - heading "Experience" [level=2]
+    - text: 0 selected
+    - paragraph: Nothing selected yet.
+    - group:
+      - text: Available to add (1)
+      - list:
+        - listitem:
+          - paragraph: Analis Data · Perusahaan Contoh
+          - button "Add Analis Data · Perusahaan Contoh to CV": Add
+  - region "Projects":
+    - heading "Projects" [level=2]
+    - text: 2 selected
+    - list:
+      - listitem:
+        - paragraph: Dasbor Penjualan
+        - paragraph: Analis · Jan 2025 – Jun 2025
+        - button "Edit wording for Dasbor Penjualan": Edit wording
+        - button "Move Dasbor Penjualan up" [disabled]
+        - button "Move Dasbor Penjualan down" [disabled]
+        - button "Remove Dasbor Penjualan from CV"
+        - list:
+          - listitem:
+            - paragraph: Mempercepat laporan mingguan
+            - paragraph: <date>
+            - button "Edit wording for Mempercepat laporan mingguan": Edit wording
+            - button "Move Mempercepat laporan mingguan up" [disabled]
+            - button "Move Mempercepat laporan mingguan down" [disabled]
+            - button "Remove Mempercepat laporan mingguan from CV"
+    - group: Available to add (1)
+  - region "Achievements":
+    - heading "Achievements" [level=2]
+    - text: 0 selected
+    - paragraph: Nothing selected yet.
+    - group:
+      - text: Available to add (0)
+      - list:
+        - listitem:
+          - paragraph: Mempercepat laporan mingguan
+          - paragraph: Mempercepat laporan penjualan mingguan hingga satu jam.
+          - paragraph: On the CV under Dasbor Penjualan
+          - button "Mempercepat laporan mingguan is already on the CV" [disabled]: Added
+  - region "Education":
+    - heading "Education" [level=2]
+    - text: 1 selected
+    - list:
+      - listitem:
+        - paragraph: S1, Informatika
+        - paragraph: Universitas Contoh · Aug 2019 – Jul 2023
+        - button "Edit wording for S1, Informatika": Edit wording
+        - button "Move S1, Informatika up" [disabled]
+        - button "Move S1, Informatika down" [disabled]
+        - button "Remove S1, Informatika from CV"
+    - group: Available to add (0)
+  - region "Skills":
+    - heading "Skills" [level=2]
+    - text: 0 selected
+    - paragraph: Nothing selected yet.
+    - group:
+      - text: Available to add (1)
+      - list:
+        - listitem:
+          - paragraph: SQL
+          - button "Add SQL to CV": Add
+  - region "Certifications":
+    - heading "Certifications" [level=2]
+    - text: 0 selected
+    - paragraph: Nothing selected yet.
+    - group:
+      - text: Available to add (1)
+      - list:
+        - listitem:
+          - paragraph: Sertifikat Analisis Data · Lembaga Contoh
+          - button "Add Sertifikat Analisis Data · Lembaga Contoh to CV": Add
+  - region "Preview":
+    - complementary "Preview":
+      - heading "Preview" [level=2]
+      - paragraph: Shows the saved CV.
+      - link "Preview and export":
+        - /url: /cv/preview
+      - article:
+        - paragraph: Ani Contoh
+        - region "Projects":
+          - heading "Projects" [level=3]
+          - list:
+            - listitem:
+              - paragraph: Dasbor Penjualan
+              - paragraph: Analis · Jan 2025 – Jun 2025
+              - paragraph: Dasbor untuk tim penjualan.
+              - list:
+                - listitem:
+                  - paragraph: Mempercepat laporan mingguan
+                  - paragraph: <date>
+                  - paragraph: Mempercepat laporan penjualan mingguan hingga satu jam.
+        - region "Education":
+          - heading "Education" [level=3]
+          - list:
+            - listitem:
+              - paragraph: S1, Informatika
+              - paragraph: Universitas Contoh · Aug 2019 – Jul 2023
+- region "Notifications"
+- alert

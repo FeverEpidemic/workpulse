@@ -26,6 +26,21 @@ export async function expectNoWcagViolations(page: Page, testInfo: TestInfo, lab
   expect(results.violations, `${label} WCAG A/AA Axe violations`).toEqual([]);
 }
 
+export interface WcagFinding { rule: string; impact: string; help: string; nodes: number; target: string }
+
+/** Same rules as expectNoWcagViolations, returned instead of asserted, so a matrix reports every screen in one run. */
+export async function collectWcagViolations(page: Page): Promise<WcagFinding[]> {
+  await waitForFiniteAnimations(page);
+  const results = await new AxeBuilder({ page }).withTags(wcagAaTags).analyze();
+  return results.violations.map((violation) => ({
+    rule: violation.id,
+    impact: violation.impact ?? "unknown",
+    help: violation.help,
+    nodes: violation.nodes.length,
+    target: String(violation.nodes[0]?.target?.[0] ?? ""),
+  }));
+}
+
 export async function expectEveryFieldErrorAssociated(page: Page): Promise<void> {
   const errors = await page.locator(".field-error").evaluateAll((elements) => elements.map((element) => {
     const id = element.id;

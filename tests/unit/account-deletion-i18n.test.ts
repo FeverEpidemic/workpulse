@@ -46,6 +46,23 @@ describe("T23 account deletion copy", () => {
     }
   });
 
+  it("tells, in both languages, that actions are recorded without their content (T24 decision, T25)", () => {
+    const key = "account.privacy.events" as const satisfies MessageKey;
+    const en = t("en", key);
+    const id = t("id", key);
+    expect(en).toBe(
+      "WorkPulse records which actions happen, such as saving an activity or exporting a CV, without their content, to measure how reliably the product works.",
+    );
+    expect(id).toBe(
+      "WorkPulse mencatat jenis aksi yang terjadi, seperti menyimpan aktivitas atau mengekspor CV, tanpa isinya, untuk mengukur keandalan produk.",
+    );
+    for (const text of [en, id]) {
+      expect(text).not.toMatch(/—/);
+      expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
+      expect(placeholders(text)).toEqual([]);
+    }
+  });
+
   it("states the 24 hour and 30 day windows in the privacy detail", () => {
     for (const locale of ["en", "id"] as const) {
       const text = t(locale, "account.delete.privacy");

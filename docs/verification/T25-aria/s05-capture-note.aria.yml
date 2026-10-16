@@ -1,0 +1,65 @@
+- link "Skip to content":
+  - /url: "#main-content"
+- complementary "Primary navigation":
+  - link "WorkPulse Ani Contoh":
+    - /url: /dashboard
+    - strong: WorkPulse
+    - text: Ani Contoh
+  - navigation "Primary navigation":
+    - link "Dashboard":
+      - /url: /dashboard
+    - link "Activity":
+      - /url: /activity
+    - link "Achievements":
+      - /url: /achievements
+    - link "Projects":
+      - /url: /projects
+    - link "Timeline":
+      - /url: /timeline
+    - link "CV":
+      - /url: /cv
+  - link "Profile and settings":
+    - /url: /settings/profile
+  - button "Switch to dark theme": Light
+  - button "Sign out"
+- banner:
+  - paragraph: Private workspaceAni Contoh
+  - link "Quick log":
+    - /url: /activity/new
+  - tooltip "Write a work note"
+- main:
+  - link "Back to activity":
+    - /url: /activity
+  - heading "Capture work" [level=1]
+  - paragraph: Save a note, structured entry, or first Chat message. Manual capture works without AI.
+  - form "Capture work":
+    - group "Capture mode":
+      - text: Capture mode
+      - radio "Note" [checked]
+      - text: Note
+      - radio "Form"
+      - text: Form
+      - radio "Chat"
+      - text: Chat
+    - text: Work note
+    - textbox "Work note":
+      - /placeholder: What did you work on?
+    - paragraph: Up to 10,000 characters. 0/10,000
+    - text: Activity date
+    - textbox "Activity date": <date>
+    - group "Context (optional)":
+      - text: Context (optional) Project
+      - combobox "Project":
+        - option "No project" [selected]
+        - option "Dasbor Penjualan"
+        - option "Riset Pelanggan"
+      - text: Experience
+      - combobox "Experience Choose an experience when this activity has no project.":
+        - option "No experience" [selected]
+        - option "Analis Data · Perusahaan Contoh"
+      - text: Choose an experience when this activity has no project.
+    - link "Cancel":
+      - /url: /activity
+    - button "Save activity"
+- region "Notifications"
+- alert

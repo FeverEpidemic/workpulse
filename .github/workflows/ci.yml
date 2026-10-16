@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: "true"
+  # Playwright is always run through @playwright/test's own CLI: a top-level `playwright`
+  # package at another version breaks every spec (see docs/verification/ci-github-actions.md).
+  PW_CLI: node node_modules/@playwright/test/cli.js
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        run: |
+          $PW_CLI install --with-deps chromium
+          # Vitest browser mode (Storybook project) resolves its own playwright package.
+          if [ -f node_modules/playwright/cli.js ]; then
+            node node_modules/playwright/cli.js install chromium
+          fi
+
+      - run: pnpm test
+
+      - run: pnpm worker:check
+
+      - run: pnpm build
+
+  database:
+    name: Supabase, integration, smoke E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The npm `supabase` package has no allow-listed build script, so its binary is never
+      # downloaded. Use the official CLI action pinned to the devDependency version and call
+      # `supabase` directly instead of the pnpm db:* scripts.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Start local Supabase
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+
+      - name: Export local Supabase env
+        run: |
+          supabase status -o env | grep -E '^[A-Z_]+=' > "$RUNNER_TEMP/supabase.env"
+          set -a
+          . "$RUNNER_TEMP/supabase.env"
+          set +a
+          for name in $(cut -d= -f1 "$RUNNER_TEMP/supabase.env" | grep -E 'KEY|SECRET'); do
+            echo "::add-mask::${!name}"
+          done
+          test -n "$API_URL" && test -n "$PUBLISHABLE_KEY" && test -n "$SECRET_KEY" && test -n "$DB_URL"
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
+            echo "DATABASE_URL=$DB_URL"
+            # Same value as .env.example; routes and tests derive the trusted Origin from it.
+            echo "WORKPULSE_SITE_URL=http://127.0.0.1:3000"
+          } >> "$GITHUB_ENV"
+          rm "$RUNNER_TEMP/supabase.env"
+
+      - name: Schema lint
+        run: supabase db lint --level error
+
+      - name: pgTAP
+        run: supabase test db
+
+      - name: Generated types match the schema
+        run: |
+          supabase gen types typescript --local --schema public > "$RUNNER_TEMP/database.types.ts"
+          diff -u --strip-trailing-cr src/server/supabase/database.types.ts "$RUNNER_TEMP/database.types.ts"
+
+      # Only suites that need nothing beyond Supabase. Evidence, import, CV export, AI jobs
+      # and the M3/M4 journeys also need ClamAV or Gotenberg and are not run here.
+      # account-deletion goes first: its workers claim one cleanup job per pass, so storage
+      # jobs left by earlier suites keep the receipt from completing within its round cap.
+      - name: Integration (Supabase only)
+        run: |
+          pnpm test:integration:account-deletion
+          pnpm test:integration:activity
+          pnpm test:integration:projects
+          pnpm test:integration:achievements
+          pnpm test:integration:dashboard
+          pnpm test:integration:m2
+          pnpm test:integration:cv
+          pnpm test:integration:cv-builder
+          pnpm test:integration:cv-freshness
+          pnpm test:integration:ai-review
+          pnpm test:integration:product-events
+          pnpm test:integration:release
+
+      # Counts and error codes only: no ids, keys or user content.
+      - name: Queue state after integration failure
+        if: failure()
+        run: |
+          docker exec supabase_db_WorkPulse psql -U postgres -d postgres -X -c \
+            "select status, count(*) from internal.account_deletions group by 1 order by 1;" -c \
+            "select split_part(object_key, '/', 2) as area, status, error_code, count(*), bool_or(next_attempt_at > now()) as deferred from internal.storage_jobs group by 1, 2, 3 order by 1, 2;" -c \
+            "select count(*) as objects_left from storage.objects where bucket_id = 'workpulse-private';"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium
+        run: $PW_CLI install --with-deps chromium
+
+      - name: Smoke E2E
+        run: $PW_CLI test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup

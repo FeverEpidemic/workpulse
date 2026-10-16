@@ -72,7 +72,7 @@ export function AchievementDetail({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="field-help">{t(locale, `achievement.${achievement.status}`)}</p>
-            <h1 className="text-3xl font-semibold tracking-tight">{achievement.title ?? t(locale, "achievement.untitledDraft")}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere">{achievement.title ?? t(locale, "achievement.untitledDraft")}</h1>
             <p className="mt-2 text-[var(--color-text-secondary)]">{achievement.origin === "activity" ? t(locale, "achievement.createFromActivity") : achievement.origin === "import" ? t(locale, "achievement.importedFromCv") : achievement.project_id ? t(locale, "achievement.createFromProject") : t(locale, "achievement.standalone")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

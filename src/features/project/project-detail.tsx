@@ -356,7 +356,7 @@ export function ProjectDetail({
         <div className="project-detail-heading-row">
           <div>
             <p className="field-help">{t(locale, "project.detailTitle")}</p>
-            <h1 className="text-3xl font-semibold tracking-tight">{project.title}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere">{project.title}</h1>
             <div className="project-list-meta mt-3">
               <span className="ui-badge">{t(locale, `project.${project.status}`)}</span>
               <span>{formatProjectDateRange(project, locale, t(locale, "project.dateNotSet"), t(locale, "project.present"))}</span>

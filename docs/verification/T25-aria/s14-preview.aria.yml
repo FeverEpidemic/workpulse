@@ -1,0 +1,86 @@
+- link "Skip to content":
+  - /url: "#main-content"
+- complementary "Primary navigation":
+  - link "WorkPulse Ani Contoh":
+    - /url: /dashboard
+    - strong: WorkPulse
+    - text: Ani Contoh
+  - navigation "Primary navigation":
+    - link "Dashboard":
+      - /url: /dashboard
+    - link "Activity":
+      - /url: /activity
+    - link "Achievements":
+      - /url: /achievements
+    - link "Projects":
+      - /url: /projects
+    - link "Timeline":
+      - /url: /timeline
+    - link "CV":
+      - /url: /cv
+  - link "Profile and settings":
+    - /url: /settings/profile
+  - button "Switch to dark theme": Light
+  - button "Sign out"
+- banner:
+  - paragraph: Private workspaceAni Contoh
+  - link "Quick log":
+    - /url: /activity/new
+  - tooltip "Write a work note"
+- main:
+  - heading "Preview and export" [level=1]
+  - paragraph: Export the saved revision of your master CV as an A4 PDF. Evidence is never included.
+  - region "Saved revision 4":
+    - heading "Saved revision 4" [level=2]
+    - text: "CV language: English"
+    - link "Back to CV builder":
+      - /url: /cv
+    - paragraph: Master CV
+    - status:
+      - paragraph: Export status
+      - paragraph: PDF ready Revision 4
+      - paragraph: "Pages: 1"
+      - paragraph: Available until <date>, <time>
+    - button "Download PDF"
+  - region "Recent exports":
+    - heading "Recent exports" [level=2]
+    - list:
+      - listitem:
+        - paragraph: Revision 4 PDF ready
+        - paragraph:
+          - time: <date>, <time>
+          - text: "· Pages: 1"
+        - button "Download PDF, Revision 4": Download PDF
+  - region "Preview":
+    - region "PDF pages":
+      - heading "PDF pages" [level=2]
+      - paragraph: Pages of the PDF for revision 4
+      - img "Page 1 of 1 of the exported PDF"
+      - button "Previous page" [disabled]
+      - status: Page 1 of 1
+      - button "Next page" [disabled]
+    - complementary "Preview":
+      - heading "Preview" [level=2]
+      - paragraph: Shows the saved CV.
+      - article:
+        - paragraph: Ani Contoh
+        - region "Projects":
+          - heading "Projects" [level=3]
+          - list:
+            - listitem:
+              - paragraph: Dasbor Penjualan
+              - paragraph: Analis · Jan 2025 – Jun 2025
+              - paragraph: Dasbor untuk tim penjualan.
+              - list:
+                - listitem:
+                  - paragraph: Mempercepat laporan mingguan
+                  - paragraph: <date>
+                  - paragraph: Mempercepat laporan penjualan mingguan hingga satu jam.
+        - region "Education":
+          - heading "Education" [level=3]
+          - list:
+            - listitem:
+              - paragraph: S1, Informatika
+              - paragraph: Universitas Contoh · Aug 2019 – Jul 2023
+- region "Notifications"
+- alert
