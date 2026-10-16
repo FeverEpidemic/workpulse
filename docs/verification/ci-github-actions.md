@@ -1,8 +1,8 @@
-# CI GitHub Actions
+# CI/CD GitHub Actions
 
-Workflow: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Jalan pada setiap pull request, push ke `main`, dan manual (`workflow_dispatch`). Run lama pada ref yang sama dibatalkan saat ada push baru. Token workflow hanya `contents: read`.
+Workflow: [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Jalan pada setiap pull request, push ke `main`, tag `v*`, dan manual (`workflow_dispatch`). Run PR lama dibatalkan saat ada push baru; run `main` dan tag tidak pernah dibatalkan agar publish image tidak terputus. Token workflow `contents: read`; hanya job `images` yang mendapat `packages: write`.
 
-Ini CI saja. Belum ada CD: deploy web/worker dan `supabase db push` ke staging ditunda sampai hosting staging dipilih (lihat T25 Fase 7).
+CD sejauh ini berarti build, uji, dan publish image Docker ke GHCR. Deploy image ke host dan `supabase db push` ke staging belum ada, menunggu hosting staging dipilih (lihat T25 Fase 7).
 
 ## Job
 
@@ -10,8 +10,36 @@ Ini CI saja. Belum ada CD: deploy web/worker dan `supabase db push` ke staging d
 | --- | --- | --- |
 | `checks` | `pnpm lint`, `pnpm typecheck`, `pnpm test` (unit, plus project Storybook di Chromium bila ada), `pnpm worker:check`, `pnpm build` | Tidak |
 | `database` | `supabase start` lokal, `supabase db lint --level error`, `supabase test db` (pgTAP), cek tipe hasil generate sama dengan `src/server/supabase/database.types.ts`, integration yang cukup dengan Supabase, smoke E2E (`playwright.config.ts`) | Ya (bawaan runner) |
+| `images` (matrix `web`, `worker`) | Setelah `checks` dan `database` lulus: build target dari [`Dockerfile`](../../Dockerfile), cek tidak ada file `.env*`, uji container, lalu publish ke GHCR bila push ke `main` atau tag `v*` | Ya |
 
-Integration yang dijalankan, dengan `account-deletion` paling awal: worker di suite itu hanya mengambil satu job cleanup per ronde, jadi job Storage sisa suite lain membuat receipt tidak selesai dalam batas 12 ronde (gagal di run pertama CI). Sisanya: `activity`, `projects`, `achievements`, `dashboard`, `m2`, `cv`, `cv-builder`, `cv-freshness`, `ai-review`, `account-deletion`, `product-events`, `release`.
+Integration yang dijalankan, dengan `account-deletion` paling awal: worker di suite itu hanya mengambil satu job cleanup per ronde, jadi job Storage sisa suite lain membuat receipt tidak selesai dalam batas 12 ronde (gagal di run pertama CI). Sisanya: `activity`, `projects`, `achievements`, `dashboard`, `m2`, `cv`, `cv-builder`, `cv-freshness`, `ai-review`, `product-events`, `release`.
+
+## Image Docker (CD)
+
+| Image | Isi | Uji di CI |
+| --- | --- | --- |
+| `ghcr.io/feverepidemic/workpulse-web` | Next.js standalone (`node server.js`), port 3000, user `node` | `GET /api/health` → `{"status":"ok","service":"workpulse-web"}`, tanpa header `x-powered-by` |
+| `ghcr.io/feverepidemic/workpulse-worker` | `node workers/run.ts` dengan dependensi production, `workers/` dan `src/` | `worker:check` di container; `run.ts --once` tanpa config keluar 1 dengan tepat `WORKER_UNAVAILABLE` (semua modul termuat, fail-closed) |
+
+Tag: SHA commit penuh selalu; `main` untuk push ke `main`; versi semver untuk tag `v1.2.3`. Deploy sebaiknya merujuk SHA, bukan `main`.
+
+- **Satu image untuk semua environment.** Tidak ada secret atau `NEXT_PUBLIC_*` saat build. `NEXT_PUBLIC_SUPABASE_*` hanya dibaca di kode server (`src/server/supabase/config.ts`), jadi nilainya dibaca saat runtime dari env container. Jangan menambahkan `NEXT_PUBLIC_*` ke build Docker: Next.js akan menanamnya ke bundle.
+- **Env saat container jalan.** Web: `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `WORKPULSE_SITE_URL`. Worker: variabel bagian worker, AI, renderer, dan scanner dari [`.env.example`](../../.env.example) dan runbook T25. ClamAV dan Gotenberg tidak di-build; pakai image resmi dengan digest dari runbook T10/T15/T21 di jaringan privat.
+- **`output: "standalone"` hanya untuk build Docker** (`WORKPULSE_STANDALONE=1` di `next.config.ts`). `pnpm build` lokal dan job `checks` tetap build biasa, karena standalone di Windows menyalin node_modules pnpm yang penuh symlink.
+- **Build context allow-list** ([`.dockerignore`](../../.dockerignore)): hanya manifest pnpm, config Next/TS/PostCSS, `src/`, `public/`, `workers/`. File `.env*`, state Supabase lokal, tests dan docs tidak pernah masuk.
+- Migration tidak ikut image. `supabase db push` ke staging tetap langkah manual dengan persetujuan, sesuai runbook T25 §3.
+
+Menjalankan lokal (butuh Docker):
+
+```bash
+docker build --target web -t workpulse-web .
+```
+
+```bash
+docker run --rm -p 3000:3000 --env-file .env.local workpulse-web
+```
+
+Di dalam container `127.0.0.1` adalah container itu sendiri, jadi untuk Supabase lokal ganti host di `SUPABASE_URL` dengan `host.docker.internal`.
 
 ## Keputusan teknis
 
@@ -34,4 +62,5 @@ Integration yang dijalankan, dengan `account-deletion` paling awal: worker di su
 
 ## Bukti
 
-Belum ada run. Isi setelah run pertama: URL run, commit, durasi per job, hasil.
+- CI: PR #17 hijau setelah tiga perbaikan (urutan `account-deletion`, query diagnostik, `WORKPULSE_SITE_URL`), lalu di-merge ke `main` (`b75a9b4`).
+- CD: belum ada run. Isi setelah run pertama: URL run, commit, ukuran image, tag yang terbit di GHCR.

@@ -51,9 +51,9 @@ Fase 7a (migrasi hosted ke staging Workpulse oleh ChatGPT, [brief](verification/
 
 Berikutnya (dikerjakan ChatGPT, direview Claude): SMTP MXroute oleh pengguna lalu dua template email; deploy worker dan web ke staging dan smoke Fase 7; keputusan pemilik produk tentang paket production dengan backup dan rate limit. Lalu Gate M5 (tidak dapat PASSED sebelum staging dan retensi backup terverifikasi).
 
-## CI GitHub Actions, tooling, 16 Oktober 2026
+## CI/CD GitHub Actions, tooling, 16 Oktober 2026
 
-Status: **PARTIAL**. Workflow `.github/workflows/ci.yml` ditulis (job `checks` dan `database`), belum pernah jalan di GitHub. Tidak mengubah status T01-T25 atau gate release. Tidak ada CD atau deploy. Detail: [ci-github-actions](verification/ci-github-actions.md).
+Status: **PARTIAL**. CI (`checks`, `database`) hijau di PR #17 dan sudah di `main`. CD: job `images` membangun dan menguji image `workpulse-web` dan `workpulse-worker`, lalu mempublikasikannya ke GHCR saat push ke `main` atau tag `v*`; belum ada deploy ke host. Tidak mengubah status T01-T25 atau gate release. Detail: [ci-github-actions](verification/ci-github-actions.md).
 
 ## T24 — Instrumentation dan performance, acceptance lokal — 10 Oktober 2026
 
