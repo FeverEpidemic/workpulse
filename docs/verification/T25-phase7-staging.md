@@ -1,7 +1,7 @@
 # T25 Fase 7 · Verifikasi staging
 
 - Tanggal pemeriksaan hosted: 11 Oktober 2026.
-- Status: **SEBAGIAN · migrasi hosted selesai, SMTP dan template terpasang**. Repair riwayat, parity 36/36, bucket, katalog, privilege health, dan ops terbukti. URL Auth tersimpan; konfirmasi email aktif. SMTP MXroute diatur pengguna pada 16 Oktober 2026; dua template terpasang dan kiriman nyata diterima di Gmail setelah DNS email diperbaiki (lihat [Lanjutan 16 Oktober](#lanjutan-16-oktober-2026-smtp-template-dan-kiriman-nyata)). Retensi backup belum dapat dipastikan.
+- Status: **SEBAGIAN · migrasi hosted selesai, SMTP dan template terpasang**. Repair riwayat, parity 36/36, bucket, katalog, privilege health, dan ops terbukti. URL Auth tersimpan; konfirmasi email aktif. SMTP MXroute diatur pengguna pada 16 Oktober 2026; dua template terpasang dan kiriman nyata diterima di Gmail setelah DNS email diperbaiki (lihat [Lanjutan 16 Oktober](#lanjutan-16-oktober-2026-smtp-template-dan-kiriman-nyata)). Pada 17 Oktober 2026 web dan worker berjalan di server pribadi dan smoke §8 lulus kecuali recovery dari klien email, yang diperbaiki di PR #19 dan belum diuji ulang di staging (lihat [Lanjutan 17 Oktober](#lanjutan-17-oktober-2026-deploy-server-pribadi-dan-smoke)). Retensi backup belum dapat dipastikan.
 - Eksekutor pemeriksaan ini: ChatGPT, mengikuti `T25-phase7-hosted-migration-handoff.md`. Receipt awal ditulis Claude Sonnet 5.5.
 - Commit acuan handoff: `cccdc43a3a0ead21e1e440ae02cd390bae72358b`; commit awal sesi lanjutan: `19a0d194dea1433df74495b81dd8ce7f0964683c`.
 - Target: Supabase Workpulse, region `ap-northeast-2`, PostgreSQL 17.11, paket Free (dashboard Database Backups).
@@ -180,15 +180,54 @@ Parity hosted, bucket privat, katalog hosted, pengecualian tipe, privilege healt
 
 Sisa untuk SMTP: DKIM MXroute belum dipublikasikan di Cloudflare. SPF yang selaras dengan DMARC cukup untuk diterima Gmail dalam uji ini, tetapi DKIM tetap dipasang sebelum production agar tidak bergantung pada SPF saja. Link belum diklik sampai selesai karena web staging belum di-deploy; verifikasi `/auth/confirm` end-to-end termasuk smoke Fase 7 setelah deploy. Akun uji (belum terkonfirmasi, satu baris `profiles`, tanpa objek Storage) **dipertahankan** atas permintaan pengguna: "Simpan dulu aja buat smoke test". Akun ini dihapus lewat jalur penghapusan akun di akhir smoke.
 
+## Lanjutan 17 Oktober 2026: deploy server pribadi dan smoke
+
+- Pelaksana deploy dan smoke di browser: pengguna. Claude (Opus 5.5) memeriksa dari luar (`curl`), membaca Supabase staging lewat query read-only, dan mencatat receipt ini. Hasil yang hanya dilaporkan pengguna ditandai "dilaporkan".
+- Akun uji: alamat Gmail pribadi pengguna, atas pilihan pengguna ("akun pribadi gue sendiri, ga masalah kan?"). Alamat tidak ditulis di receipt. Akun dihapus lewat aplikasi dua kali (lihat langkah 6).
+
+### Deploy
+
+| Item | Hasil |
+| --- | --- |
+| Topologi | Compose staging di server pribadi pengguna (`/home/ilham827/workpulse`, bukan `/opt/workpulse/staging` seperti contoh panduan). Domain lewat Cloudflare (`Server: cloudflare`). Proxy Pangolin di depan domain awalnya meminta login (`302` ke halaman auth Pangolin); pengguna mematikan auth itu sebelum pemeriksaan di bawah. |
+| Image web | `ghcr.io/feverepidemic/workpulse-web:main`, image ID `3ffff0805ff0`, 395 MB, dibuat sekitar 2 jam sebelum pemeriksaan. |
+| Image worker | `ghcr.io/feverepidemic/workpulse-worker:main`, image ID `d30301d7ef50`, 910 MB. |
+| ClamAV | `clamav/clamav`, image ID `0e31ce089574`; engine `1.5.4`, database signature `28156` per Sat Oct 17 06:25:46 2026. |
+| Gotenberg DOCX dan PDF | `gotenberg/gotenberg`, image ID `f29984bd1e22`, dua container terpisah. |
+| `/api/health` dari luar | `curl -sS -D - https://myworkpulse.my.id/api/health`: `200`, `Content-Type: application/json`, `Cache-Control: no-store`, body `{"status":"ok","service":"workpulse-web","version":"0.1.0"}`, tanpa `X-Powered-By`. Memenuhi baris `/api/health` di tabel §4 panduan Fase 7b. |
+| Route lain dari luar | `/` → `307` ke `https://myworkpulse.my.id/sign-in`; `/auth/confirm` tanpa token → `303` ke `/sign-in?notice=verificationFailed`. Redirect memakai domain publik, jadi `WORKPULSE_SITE_URL` benar. |
+| Cron `ops:check` | Setiap 5 menit, log ke `/home/ilham827/workpulse/ops.log`. Percobaan pertama memakai path contoh panduan, sehingga `cd` gagal dan log tetap kosong; diperbaiki setelah path diganti. Baris terakhir log: `status: ok`, semua metrik di bawah ambang, `jobs_failed_24h` = 2 (ambang 20). |
+
+Status worker di tabel §4 (`worker:check`, `run.ts --once`) tidak dicatat terpisah. Pemrosesan evidence, impor, export, dan penghapusan akun di bawah membuktikan worker berjalan dengan adapter nyata.
+
+### Smoke §8
+
+| Langkah | Hasil |
+| --- | --- |
+| 1. Konfirmasi email, recovery, sign-out | Konfirmasi signup lulus (dilaporkan). Recovery: `/verify` di log Auth `200` pada 12:20:12 UTC, session baru dengan metode `otp`, tetapi klik link dari Gmail berakhir di dashboard. Link yang sama ditempel ke address bar sampai ke `/update-password` (dilaporkan). Penyebab: cookie `wp-recovery-flow` `SameSite=Strict` tidak dikirim pada navigasi lintas situs. Perbaikan `SameSite=Lax` beserta E2E yang membuka link lewat klik lintas origin ada di commit `59c2d69`, [PR #19](https://github.com/FeverEpidemic/workpulse/pull/19). Image staging saat smoke belum memuat perbaikan ini. Tiga `/verify` berikutnya `403 otp_expired` karena link dipakai ulang. |
+| 2. Aktivitas, achievement, evidence PDF sampai `ready` | Lulus (dilaporkan), dengan ClamAV di atas. |
+| 3. Impor CV DOCX sampai jumlah halaman terbaca | Lulus (dilaporkan), dengan Gotenberg DOCX. Sebelum akun kedua dihapus, `storage.objects` = 2 (berkas impor dan PDF export). |
+| 4. Export CV ke PDF dan unduh | Lulus (dilaporkan); render kurang dari 15 detik menurut pengguna, tidak diukur dengan alat. Pencocokan teks hasil ekstraksi tidak dicatat terpisah. |
+| 5. AI | Dilewati; staging tetap `unavailable`. |
+| 6. Hapus akun sampai `completed` | Dua kali, setelah langkah 1-2 dan setelah langkah 3-4. Query read-only setelah tiap penghapusan: `auth.users` 0, `profiles` 0, `storage.objects` 0. `ops:check` `status: ok`. |
+
+Dua job gagal di `jobs_failed_24h`, menurut pengguna: impor CV berformat PDF saat AI belum aktif, dan satu export saat data profil belum lengkap. Keduanya ditolak dengan pesan di aplikasi, lalu langkahnya diulang dan lulus. Baris job terhapus bersama akun, jadi kode errornya tidak dapat diperiksa lagi; `get_operational_health()` sekarang mengembalikan 0.
+
+### Temuan
+
+- **S1, P2, diperbaiki di PR #19:** recovery dari klien email tidak sampai ke `/update-password`. E2E lama memakai `page.goto` tanpa initiator, sehingga cookie `Strict` tetap terkirim dan bug tidak tertangkap. Spec baru gagal di `/dashboard` dengan `Strict` dan lulus dengan `Lax`.
+- **S2, P3:** compose memakai tag `main` yang dapat berubah. CI juga menerbitkan tag `sha-<commit>`; pakai tag itu untuk `WORKPULSE_TAG` agar rollback di panduan §7 menunjuk image yang pasti.
+- **S3, P3:** contoh path panduan Fase 7b (`/opt/workpulse/staging`) dan placeholder alert di baris cron menyebabkan cron gagal tanpa jejak bila disalin apa adanya.
+
 ## Yang dibutuhkan agar Fase 7 dapat dijalankan
 
 | Kebutuhan | Rincian |
 | --- | --- |
 | Proyek Supabase hosted | Workpulse di Supabase, region `ap-northeast-2`, paket Free; scheduled backups/PITR tidak tersedia. Auth berisi 0 pengguna pada pemeriksaan sebelum migration. |
-| Host web | domain staging `myworkpulse.my.id` telah ditetapkan; penyedia host dan deployment `pnpm start` belum diverifikasi. |
-| Host worker | menjalankan `pnpm worker:run` dan cron `pnpm ops:check`; jaringan privat ke ClamAV dan dua Gotenberg |
-| ClamAV, Gotenberg DOCX, Gotenberg PDF | kontainer sesuai runbook T10, T15, T21 di jaringan privat host worker |
-| SMTP untuk Auth | MXroute terpasang, dua template tersimpan, dan email konfirmasi serta recovery diterima di Gmail (16 Oktober 2026). Tersisa DKIM di Cloudflare dan klik link setelah web di-deploy. |
+| Host web | Terpenuhi 17 Oktober 2026: image `workpulse-web` di server pribadi, `/api/health` 200 dari luar. |
+| Host worker | Terpenuhi 17 Oktober 2026: image `workpulse-worker` dan cron `ops:check` tiap 5 menit. |
+| ClamAV, Gotenberg DOCX, Gotenberg PDF | Terpenuhi 17 Oktober 2026: tiga container di compose staging, dipakai smoke §8. |
+| SMTP untuk Auth | MXroute terpasang, dua template tersimpan, dan email konfirmasi serta recovery diterima di Gmail (16 Oktober 2026); link diklik sampai selesai pada 17 Oktober. Tersisa DKIM di Cloudflare. |
 | Penyediaan secret | key diberikan ke host lewat env proses atau secret manager; **tidak** ditempel di chat atau repo |
 | Otorisasi tertulis | migrate dan konfigurasi staging telah diizinkan dalam konteks Workpulse; scope saat ini mengikuti handoff Fase 7a, tanpa membuat akun uji. |
 | Keputusan AI | apakah pemakaian key AI di staging diizinkan; bila tidak, mode `unavailable` dan jalur manual saja |
@@ -213,9 +252,14 @@ Sisa untuk SMTP: DKIM MXroute belum dipublikasikan di Cloudflare. SPF yang selar
 | Acceptance (§1) | Status |
 | --- | --- |
 | §1.17 backup dan restore jujur | klaim retensi ≤ 30 hari **tetap belum terverifikasi**; checklist menahan production (BLOCKER) |
-| §1.18 staging | **belum terpenuhi**. Fase 7a (migrasi, bucket, URL Auth) serta SMTP dan template selesai; deploy web/worker dan smoke belum |
-| Rencana T25, kalimat selesai | "integrasi nyata diverifikasi di staging" belum terpenuhi |
+| §1.18 staging | **hampir terpenuhi**. Migrasi, SMTP, template, deploy web/worker, dan smoke §8 langkah 2-6 lulus; recovery dari klien email menunggu deploy PR #19. p95 hosted tidak diukur. |
+| Rencana T25, kalimat selesai | "integrasi nyata diverifikasi di staging" terpenuhi untuk scanner, renderer, export, dan penghapusan; recovery menunggu uji ulang |
 
 ## Langkah berikutnya
 
-SMTP dan dua template sudah terpasang, dan kiriman nyata diterima di Gmail (16 Oktober 2026). Tersisa DKIM MXroute di Cloudflare dan penghapusan akun uji. Reviewer memeriksa receipt, termasuk pengecualian tipe yang disetujui dan klaim backup yang tetap terbuka. Hanya receipt ini yang diubah untuk pencatatan; status authoritative T25 dan checklist release tidak diubah. Sisa deploy web/worker dan smoke hosted mengikuti [panduan Fase 7b](T25-phase7b-staging-deploy.md): server pribadi Debian (4 vCPU, 12 GB, Docker) di belakang reverse proxy VPS.
+Deploy dan smoke selesai 17 Oktober 2026; akun uji lama dan baru sudah dihapus. Tersisa:
+
+1. Merge PR #19, set `WORKPULSE_TAG` ke tag `sha-<commit>` hasil CI (S2), deploy worker lalu web, dan ulangi recovery dengan klik link dari Gmail.
+2. DKIM MXroute di Cloudflare.
+3. Keputusan pemilik produk: retensi backup (paket Free tanpa backup proyek, BLOCKER release) dan rate limit production.
+4. Reviewer memeriksa receipt ini, termasuk pengecualian tipe dan klaim backup yang tetap terbuka. Status authoritative T25 dan checklist release tidak diubah oleh receipt ini.
