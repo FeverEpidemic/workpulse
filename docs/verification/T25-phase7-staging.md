@@ -216,8 +216,8 @@ Dua job gagal di `jobs_failed_24h`, menurut pengguna: impor CV berformat PDF saa
 ### Temuan
 
 - **S1, P2, diperbaiki di PR #19:** recovery dari klien email tidak sampai ke `/update-password`. E2E lama memakai `page.goto` tanpa initiator, sehingga cookie `Strict` tetap terkirim dan bug tidak tertangkap. Spec baru gagal di `/dashboard` dengan `Strict` dan lulus dengan `Lax`.
-- **S2, P3:** compose memakai tag `main` yang dapat berubah. CI juga menerbitkan tag `sha-<commit>`; pakai tag itu untuk `WORKPULSE_TAG` agar rollback di panduan §7 menunjuk image yang pasti.
-- **S3, P3:** contoh path panduan Fase 7b (`/opt/workpulse/staging`) dan placeholder alert di baris cron menyebabkan cron gagal tanpa jejak bila disalin apa adanya.
+- **S2, P3:** compose memakai tag `main` yang dapat berubah. CI juga menerbitkan tag `sha-<commit>`; pakai tag itu untuk `WORKPULSE_TAG` agar rollback di panduan §7 menunjuk image yang pasti. Panduan §2 sudah diperbarui; penggantian tag di server tetap langkah operator (lihat "Tersisa").
+- **S3, P3:** contoh path panduan Fase 7b (`/opt/workpulse/staging`) dan placeholder alert di baris cron menyebabkan cron gagal tanpa jejak bila disalin apa adanya. Panduan diperbarui: §3 menyebut path server ini, baris cron §6 memakai `WORKPULSE_DIR`, mencatat kegagalan `cd` dan kode exit ke `$HOME/workpulse-ops.log`, dan placeholder alert dibuang. Cron yang sudah terpasang di server tidak diubah.
 
 ## Yang dibutuhkan agar Fase 7 dapat dijalankan
 

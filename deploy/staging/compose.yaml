@@ -20,7 +20,8 @@ services:
       NODE_ENV: production
     ports:
       # Bind to the address the VPS reverse proxy reaches (tunnel IP), never 0.0.0.0 on a public interface.
-      - "${WEB_BIND:-127.0.0.1}:3000:3000"
+      # WEB_PORT changes only the host side; the container always listens on 3000.
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-3000}:3000"
     restart: unless-stopped
     mem_limit: 1g
     networks: [egress]
