@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { LocaleSwitcher } from "@/components/forms/locale-switcher";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { UnsavedChangesProvider } from "@/components/ui/unsaved-changes";
 import { sanitizeReturnTo } from "@/domain/routes/safe-return";
 import { ImportServiceError } from "@/features/import/import-errors";
@@ -43,7 +44,7 @@ export default async function ImportReviewPage({ params }: PageProps) {
     <UnsavedChangesProvider locale={locale}>
       <main className="mx-auto w-full max-w-6xl space-y-6 px-5 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href={onboarded ? "/dashboard" : "/"} className="text-lg font-bold">WorkPulse</Link>
+          <Link href={onboarded ? "/dashboard" : "/"} className="brand-logo"><BrandLogo /></Link>
           <div className="flex flex-wrap items-center gap-3">
             {onboarded ? <Link className="text-sm underline underline-offset-4" href="/dashboard">{t(locale, "import.review.backToDashboard")}</Link> : null}
             <LocaleSwitcher locale={locale} />

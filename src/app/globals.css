@@ -184,6 +184,40 @@ a {
   padding: var(--space-6) var(--space-4) var(--space-4);
 }
 
+/* Proportions follow public/brand/workpulse-logo.svg: symbol 0.7em tall, 0.36em gap. */
+.brand-symbol {
+  display: block;
+  height: 0.7em;
+  width: auto;
+  flex: 0 0 auto;
+  fill: var(--color-primary-600);
+}
+
+.brand-symbol .brand-symbol-absent {
+  fill: var(--color-primary-300);
+}
+
+[data-theme="dark"] .brand-symbol {
+  fill: var(--color-primary-400);
+}
+
+[data-theme="dark"] .brand-symbol .brand-symbol-absent {
+  fill: var(--color-primary-800);
+}
+
+.brand-logo {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.36em;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
 .workspace-brand {
   display: flex;
   min-height: 56px;
@@ -201,14 +235,20 @@ a {
   place-items: center;
   border-radius: var(--radius-md);
   background: var(--color-primary-100);
-  color: var(--color-primary-800);
-  font-size: var(--font-size-xl);
-  font-weight: 700;
+}
+
+.workspace-brand-mark .brand-symbol {
+  width: 28px;
+  height: auto;
+  fill: var(--color-primary-700);
 }
 
 [data-theme="dark"] .workspace-brand-mark {
   background: var(--color-bg-elevated);
-  color: var(--color-primary-300);
+}
+
+[data-theme="dark"] .workspace-brand-mark .brand-symbol {
+  fill: var(--color-primary-400);
 }
 
 .workspace-brand strong,
@@ -995,11 +1035,7 @@ a {
   .workspace-mobile-brand {
     min-width: 0;
     flex: 1 1 auto;
-    overflow: hidden;
     font-size: var(--font-size-md);
-    font-weight: 700;
-    text-decoration: none;
-    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
