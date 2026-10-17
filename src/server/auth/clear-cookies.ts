@@ -8,7 +8,7 @@ export function clearAuthCookies(cookieStore: Awaited<ReturnType<typeof cookies>
   }
   cookieStore.set("wp-recovery-flow", "", {
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,

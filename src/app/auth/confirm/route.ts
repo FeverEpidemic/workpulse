@@ -60,9 +60,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (isRecoverySession) {
       const response = redirectTo("/update-password");
+      // Lax, not Strict: the link is opened from a mail client, and browsers withhold
+      // Strict cookies for the whole cross-site navigation, including this redirect.
       response.cookies.set("wp-recovery-flow", "1", {
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
         maxAge: 15 * 60,
