@@ -1,7 +1,7 @@
 # T25 Backup database staging (opsi B)
 
 - Tanggal: 17 Oktober 2026
-- Status: **siap dipasang, belum berjalan di server**. Klaim retensi ≤ 30 hari baru dianggap terverifikasi setelah §4 dan §5 dicatat di [receipt Fase 7](T25-phase7-staging.md).
+- Status: **terpasang di server staging 17 Oktober 2026** (run manual pertama lulus, cron harian dipasang). Latihan restore §5 lulus pada hari yang sama untuk backup `20261017T162948Z`; hasilnya ada di receipt Fase 7. Klaim retensi ≤ 30 hari baru dianggap terverifikasi setelah §4 dan §5 dicatat di [receipt Fase 7](T25-phase7-staging.md).
 - Keputusan pemilik produk (17 Oktober 2026): paket Supabase Free tetap dipakai, dan backup dibuat sendiri dengan `pg_dump` terjadwal di server pribadi, retensi di bawah 30 hari ("Retensi Backup kayaknya better di B deh").
 - Script: [`deploy/staging/backup.sh`](../../deploy/staging/backup.sh).
 
@@ -75,7 +75,7 @@ Catat di receipt Fase 7:
 
 Restore tidak boleh diarahkan ke staging maupun ke stack lokal pengembangan bersama, karena keduanya akan tertimpa. Pakai stack Supabase sekali pakai:
 
-1. Di mesin yang punya Supabase CLI dan Docker, buat direktori kosong, jalankan `supabase init`, lalu ubah `project_id` dan semua port di `supabase/config.toml` agar tidak bentrok dengan stack lain. Kemudian jalankan `supabase start`.
+1. Di mesin yang punya Supabase CLI dan Docker, buat direktori kosong, jalankan `supabase init`, lalu ubah `project_id` dan semua port di `supabase/config.toml` agar tidak bentrok dengan stack lain. **Samakan versi layanan dengan hosted** sebelum `supabase start`: tulis tag image ke `supabase/.temp/gotrue-version`, `storage-version`, dan `postgres-version`. Versi Auth dianggap sama bila `select max(version), count(*) from auth.schema_migrations` sama di kedua sisi. Dump data memuat semua tabel Auth hosted, sehingga Auth yang lebih tua gagal karena tabel atau kolom yang belum ada.
 2. Salin satu direktori backup ke mesin itu, periksa dengan `sha256sum -c SHA256SUMS`, lalu `gunzip` ketiga file.
 3. Restore sesuai dokumentasi Supabase:
 
@@ -86,6 +86,13 @@ Restore tidak boleh diarahkan ke staging maupun ke stack lokal pengembangan bers
      --file data.sql \
      --dbname 'postgresql://postgres:postgres@127.0.0.1:<port db>/postgres'
    ```
+
+   Perintah di atas untuk proyek Supabase hosted baru. Pada stack lokal, tiga hal berbeda (ditemukan pada latihan 17 Oktober 2026):
+   - Realtime yang dimatikan menghilangkan role `supabase_realtime_admin` yang dirujuk `roles.sql`. Buat role itu (`noinherit nologin`) atau biarkan Realtime aktif.
+   - Role `postgres` lokal tidak boleh `GRANT SET ON PARAMETER`, jadi jalankan `roles.sql` sebagai `supabase_admin`.
+   - Role `postgres` lokal tidak punya hak tulis ke tabel internal Storage (misalnya `storage.buckets_vectors`). Jalankan restore sebagai `supabase_admin` dalam satu transaksi: `SET ROLE postgres`, `schema.sql`, `RESET ROLE`, `SET session_replication_role = replica`, lalu `data.sql`. Dengan cara ini kepemilikan objek tetap `postgres` seperti di hosted.
+
+   Riwayat `supabase_migrations` tidak ikut di dump. Setelah restore ke proyek yang akan dipakai lagi, perbaiki riwayat dengan `supabase migration repair` sebelum `db push` berikutnya.
 
 4. Periksa: tabel migration WorkPulse di `public` dan `internal` ada, hitungan `auth.users` dan `public.profiles` sama dengan staging saat backup dibuat, dan `select * from public.get_operational_health()` berjalan.
 5. Hentikan dan hapus stack sekali pakai (`supabase stop --no-backup`), lalu hapus file SQL hasil `gunzip`.
