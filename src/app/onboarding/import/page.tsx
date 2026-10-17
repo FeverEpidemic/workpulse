@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LocaleSwitcher } from "@/components/forms/locale-switcher";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { AI_CONSENT_VERSION } from "@/domain/ai/contracts";
 import { toImportView, type ImportView } from "@/domain/import/import-view";
 import { createImportService } from "@/features/import/import-service";
@@ -35,7 +36,7 @@ export default async function OnboardingImportPage() {
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-5xl content-center gap-6 px-5 py-10 lg:grid-cols-[1fr_480px]">
       <section className="space-y-4">
-        <Link href="/" className="text-lg font-bold">WorkPulse</Link>
+        <Link href="/" className="brand-logo"><BrandLogo /></Link>
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">
           {t(locale, onboarded ? "import.titleReturning" : "onboarding.importTitle")}
         </h1>

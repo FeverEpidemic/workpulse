@@ -18,6 +18,7 @@ import { useState } from "react";
 import { SignOutForm } from "@/features/auth/sign-out-form";
 import { QuickLogLink } from "@/components/layout/quick-log-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { BrandLogo, BrandSymbol } from "@/components/ui/brand-logo";
 import { IconButton } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -113,7 +114,7 @@ export function WorkspaceNavigation({
     <>
       <aside className="workspace-sidebar" aria-label={navigationLabel}>
         <Link className="workspace-brand" href="/dashboard">
-          <span className="workspace-brand-mark" aria-hidden="true">W</span>
+          <span className="workspace-brand-mark" aria-hidden="true"><BrandSymbol /></span>
           <span>
             <strong>WorkPulse</strong>
             <small>{displayName}</small>
@@ -167,7 +168,7 @@ function MobileNavigation({
             <Menu size={20} aria-hidden="true" />
           </IconButton>
         </Tooltip>
-        <Link className="workspace-mobile-brand" href="/dashboard">WorkPulse</Link>
+        <Link className="brand-logo workspace-mobile-brand" href="/dashboard"><BrandLogo /></Link>
         <QuickLogLink locale={locale} compact />
       </header>
 
@@ -180,7 +181,7 @@ function MobileNavigation({
       >
         <div id="workspace-mobile-drawer" className="workspace-drawer">
           <div className="workspace-drawer-header">
-            <span className="font-semibold">WorkPulse</span>
+            <span className="brand-logo"><BrandLogo /></span>
             <IconButton aria-label={t(locale, "workspace.closeMenu")} onClick={() => setDrawerOpen(false)}>
               <X size={20} aria-hidden="true" />
             </IconButton>

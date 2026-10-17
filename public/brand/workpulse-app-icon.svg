@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="512" height="512" role="img" aria-label="WorkPulse">
+  <rect width="32" height="32" rx="8" fill="#567657"/>
+  <g transform="translate(4 12.11) scale(0.6486)">
+    <circle cx="3.5" cy="6" r="2.5" fill="#F4F7F3"/>
+    <circle cx="10.5" cy="6" r="2.5" fill="#F4F7F3"/>
+    <circle cx="17.5" cy="6" r="2.5" fill="#8FAF87"/>
+    <circle cx="24.5" cy="6" r="2.5" fill="#F4F7F3"/>
+    <circle cx="32.5" cy="6" r="3.5" fill="#F4F7F3"/>
+  </g>
+</svg>
