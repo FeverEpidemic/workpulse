@@ -257,9 +257,21 @@ Dua job gagal di `jobs_failed_24h`, menurut pengguna: impor CV berformat PDF saa
 
 ## Langkah berikutnya
 
-Deploy dan smoke selesai 17 Oktober 2026; akun uji lama dan baru sudah dihapus. Tersisa:
+Deploy dan smoke selesai 17 Oktober 2026; akun uji lama dan baru sudah dihapus.
 
-1. Merge PR #19, set `WORKPULSE_TAG` ke tag `sha-<commit>` hasil CI (S2), deploy worker lalu web, dan ulangi recovery dengan klik link dari Gmail.
-2. DKIM MXroute di Cloudflare.
-3. Keputusan pemilik produk: retensi backup (paket Free tanpa backup proyek, BLOCKER release) dan rate limit production.
+### Uji ulang dan keputusan, 17 Oktober 2026 malam
+
+| Item | Hasil |
+| --- | --- |
+| Recovery dari Gmail (S1) | Pengguna mendaftar ulang dan menerima email konfirmasi, lalu klik link reset password dari Gmail dan sampai ke `/update-password` (dilaporkan). PR #19 sudah di `main` (merge `1de7318`). Tag image yang terpasang saat uji ini tidak diperiksa; hasilnya hanya mungkin dengan image yang memuat perbaikan. Empat `/recover` sebelumnya (16:02-16:07 UTC) tidak mengirim email karena akun sudah dihapus; Auth tetap menjawab 200 untuk alamat yang tidak terdaftar. |
+| Akun uji ketiga | Dihapus lewat aplikasi; query read-only: `auth.users`, `profiles`, `storage.objects` semuanya 0. |
+| DKIM | `x._domainkey.myworkpulse.my.id` TXT `v=DKIM1; k=rsa; p=…` di 8.8.8.8 dan 1.1.1.1. SPF dan DMARC tetap seperti di atas. |
+| Retensi backup | Pemilik produk memilih opsi B: tetap paket Free, `pg_dump` terjadwal di server pribadi dengan retensi di bawah 30 hari. Script dan prosedur: [runbook backup](T25-backup-runbook.md). Belum dipasang di server. |
+| Rate limit | Semua request Auth datang dari IP server, karena login, signup, dan refresh berjalan di server Next.js. Batas "per IP" berlaku untuk semua pengguna sekaligus. Pemilik produk menyetujui nilai pilot: sign-in/sign-up 100 per 5 menit, token refresh 500 per 5 menit, verifikasi token tetap 30, email per jam tetap default. Diubah pengguna di dashboard Authentication → Rate Limits; nilai tersimpan belum diperiksa. Sebelum production, IP asli pengguna perlu diteruskan ke Auth agar batas per IP bermakna. |
+
+Tersisa:
+
+1. Pasang backup sesuai runbook §2, catat bukti §4, lalu latihan restore §5. Setelah itu BLOCKER retensi backup di checklist dapat dinilai ulang.
+2. Pasang nilai rate limit pilot di dashboard dan catat nilai tersimpan.
+3. Ganti `WORKPULSE_TAG` di server ke `sha-1de73187792325e948fbd08215733540968a15c4` bila belum (S2).
 4. Reviewer memeriksa receipt ini, termasuk pengecualian tipe dan klaim backup yang tetap terbuka. Status authoritative T25 dan checklist release tidak diubah oleh receipt ini.
