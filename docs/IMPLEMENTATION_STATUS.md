@@ -2,7 +2,7 @@
 
 ## T25 Regression, aksesibilitas dan release handoff: PARTIAL, 11 Oktober 2026
 
-Status T25: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **sebagian**: migrasi hosted (Fase 7a) selesai dan lulus review, sedangkan template email, deploy web/worker, dan smoke belum. Retensi backup ≤ 30 hari belum terverifikasi. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi.
+Status T25: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **sebagian**: migrasi hosted (Fase 7a), SMTP dan template, deploy web/worker di server pribadi, dan smoke §8 lulus; recovery dari klien email menunggu deploy PR #19. Retensi backup ≤ 30 hari belum terverifikasi. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi penuh.
 
 - Pelaksana: Claude Sonnet 5.5 (Fase 0-8). Gate review Claude (Opus) pada `4574d9a`: satu P2 (RV1), enam P3 (N1-N6), tanpa P0/P1. P2 susulan N7 (runbook §3 tidak mencakup template email dan konfigurasi Auth hosted) ditemukan reviewer saat menyiapkan migrasi hosted dan ditutup sebagai perbaikan dokumen. Klaim N7 bahwa bucket tidak dibuat migration keliru (migration T05 membuatnya) dan sudah dikoreksi.
 - RV1 (snapshot aria gagal pada checkout CRLF) diperbaiki reviewer atas permintaan pengguna di `617cae3`; review ulang lulus. Fase 9 (decision, laporan handoff, README) juga ditulis reviewer, jadi remediasi dan dokumen itu tidak direview pihak independen.
@@ -38,7 +38,7 @@ Checks (hasil aktual):
 
 Belum dijalankan:
 
-- Fase 7 staging: auth email nyata, scanner dan renderer di host, export dan penghapusan di hosted, p95 hosted.
+- Fase 7 staging: recovery dari klien email setelah deploy PR #19, dan p95 hosted. Sisanya lulus 17 Oktober 2026 (lihat di bawah).
 - Verifikasi retensi backup ≤ 30 hari pada paket hosted; restore hosted (termasuk objek Storage yang tidak ikut restore).
 - Pemeriksaan screen reader NVDA oleh manusia.
 - Reviewer tidak mengulang clean rebuild Fase 5, `test:perf`, dan suite §7 lain; hasil pelaksana berlaku.
@@ -49,7 +49,9 @@ Bukti lokal saja; bukan bukti production. Release checklist: **tidak siap untuk 
 
 Fase 7a (migrasi hosted ke staging Workpulse oleh ChatGPT, [brief](verification/T25-phase7-hosted-migration-handoff.md), [receipt](verification/T25-phase7-staging.md)) **direview 13 Oktober 2026 tanpa P0–P2** ([review](verification/T25-phase7a-review.md)). Parity 36/36, bucket privat, katalog, privilege `get_operational_health`, `ops:check`, Site URL, dan redirect terbukti di hosted; reviewer memeriksa ulang riwayat migration, bucket, tabel, dan akses `anon` lewat query baca. Dua template email belum terpasang (paket Free butuh SMTP kustom), sehingga verifikasi email dan recovery di staging belum berfungsi. Paket Free tidak menyediakan backup proyek.
 
-Berikutnya (dikerjakan ChatGPT, direview Claude): SMTP MXroute oleh pengguna lalu dua template email; deploy worker dan web ke staging dan smoke Fase 7; keputusan pemilik produk tentang paket production dengan backup dan rate limit. Lalu Gate M5 (tidak dapat PASSED sebelum staging dan retensi backup terverifikasi).
+Fase 7b (17 Oktober 2026, [receipt](verification/T25-phase7-staging.md#lanjutan-17-oktober-2026-deploy-server-pribadi-dan-smoke)): pengguna men-deploy web, worker, ClamAV, dan dua Gotenberg di server pribadi dengan domain lewat Cloudflare. `/api/health` 200 dari luar dan cron `ops:check` `status: ok`. Smoke §8: evidence sampai `ready`, impor DOCX, export PDF (di bawah 15 detik), dan penghapusan akun dua kali sampai `auth.users`, `profiles`, dan `storage.objects` nol; hasil browser dilaporkan pengguna, hitungan nol diperiksa Claude lewat query read-only. AI dilewati. Temuan S1 (P2): recovery yang diklik dari Gmail berakhir di dashboard karena cookie `wp-recovery-flow` `SameSite=Strict`; diperbaiki ke `Lax` dengan E2E klik lintas origin di `59c2d69`, [PR #19](https://github.com/FeverEpidemic/workpulse/pull/19). S2/S3 (P3): tag image `main` yang dapat berubah, dan path contoh panduan cron.
+
+Berikutnya: merge dan deploy PR #19 dengan tag `sha-<commit>`, lalu uji ulang recovery dari Gmail; DKIM MXroute; keputusan pemilik produk tentang retensi backup dan rate limit production; review receipt Fase 7b. Lalu Gate M5 (tidak dapat PASSED sebelum retensi backup terverifikasi).
 
 ## CI/CD GitHub Actions, tooling, 16 Oktober 2026
 
