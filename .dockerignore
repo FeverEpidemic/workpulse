@@ -1,0 +1,15 @@
+# Allow-list: the build context holds only what the images need. Anything else,
+# above all .env* files and local Supabase state, never reaches the daemon.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!next.config.ts
+!tsconfig.json
+!postcss.config.mjs
+!src
+!public
+!workers
+**/*.stories.tsx
+**/.env*

@@ -4,11 +4,13 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a main or tag run halfway through publishing images.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -171,3 +173,99 @@ jobs:
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup
+
+  # CD: build and test both images on every run; publish to GHCR only for a push to main
+  # or a v* tag, after checks and database have passed. Deploying them is a later step.
+  images:
+    name: Image ${{ matrix.target }}
+    needs: [checks, database]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [web, worker]
+    env:
+      IMAGE: ghcr.io/feverepidemic/workpulse-${{ matrix.target }}
+      LOCAL_TAG: workpulse-${{ matrix.target }}:test
+      PUBLISH: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          load: true
+          tags: ${{ env.LOCAL_TAG }}
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+      - name: No env files in the image
+        run: |
+          found=$(docker run --rm --entrypoint sh "$LOCAL_TAG" -c "find /app -name '.env*' -not -path '*/node_modules/*'")
+          if [ -n "$found" ]; then echo "$found"; exit 1; fi
+
+      - name: Web serves /api/health
+        if: matrix.target == 'web'
+        run: |
+          docker run -d --name web -p 3000:3000 "$LOCAL_TAG"
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:3000/api/health -o "$RUNNER_TEMP/health.json" && break
+            sleep 1
+          done
+          node -e 'const b = require(process.argv[1]); if (b.status !== "ok" || b.service !== "workpulse-web") process.exit(1)' "$RUNNER_TEMP/health.json"
+          if curl -sSI http://127.0.0.1:3000/api/health | grep -qi '^x-powered-by'; then exit 1; fi
+
+      - name: Web container log
+        if: always() && matrix.target == 'web'
+        run: docker logs web 2>&1 | tail -n 50; docker rm -f web || true
+
+      - name: Worker loads every module and fails closed without config
+        if: matrix.target == 'worker'
+        run: |
+          docker run --rm "$LOCAL_TAG" node workers/check.ts
+          set +e
+          err=$(docker run --rm "$LOCAL_TAG" node workers/run.ts --once 2>&1 >/dev/null)
+          code=$?
+          set -e
+          echo "$err"
+          [ "$code" = 1 ]
+          echo "$err" | grep -qx 'WORKER_UNAVAILABLE'
+          if echo "$err" | grep -q 'ERR_'; then exit 1; fi
+
+      - name: Image tags
+        id: meta
+        if: env.PUBLISH == 'true'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{version}}
+
+      - name: Log in to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        if: env.PUBLISH == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.target }}

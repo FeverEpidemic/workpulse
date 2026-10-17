@@ -1,0 +1,92 @@
+# WorkPulse staging on one Docker host. Guide: docs/verification/T25-phase7b-staging-deploy.md
+#
+# Secrets live in web.env and worker.env next to this file (chmod 600, never committed).
+# ClamAV and both Gotenberg containers publish no port: only the worker reaches them,
+# over the internal `scan` network, which has no route to the internet.
+
+name: workpulse-staging
+
+x-gotenberg: &gotenberg
+  image: gotenberg/gotenberg@sha256:f29984bd1e226bf1b93ba90af06000afa8b315853e99d27b9aaa41b93f15c769
+  restart: unless-stopped
+  mem_limit: 2g
+  networks: [scan]
+
+services:
+  web:
+    image: ${WORKPULSE_IMAGE_PREFIX:-workpulse}-web:${WORKPULSE_TAG:?set WORKPULSE_TAG}
+    env_file: web.env
+    environment:
+      NODE_ENV: production
+    ports:
+      # Bind to the address the VPS reverse proxy reaches (tunnel IP), never 0.0.0.0 on a public interface.
+      - "${WEB_BIND:-127.0.0.1}:3000:3000"
+    restart: unless-stopped
+    mem_limit: 1g
+    networks: [egress]
+
+  worker:
+    image: ${WORKPULSE_IMAGE_PREFIX:-workpulse}-worker:${WORKPULSE_TAG:?set WORKPULSE_TAG}
+    env_file: worker.env
+    environment:
+      NODE_ENV: production
+      WORKPULSE_SCANNER_MODE: clamav
+      WORKPULSE_CLAMD_HOST: clamav
+      WORKPULSE_CLAMD_PORT: "3310"
+      WORKPULSE_DOCX_RENDERER_MODE: gotenberg
+      WORKPULSE_GOTENBERG_URL: http://gotenberg-docx:3000
+      WORKPULSE_PDF_RENDERER_MODE: gotenberg
+      WORKPULSE_PDF_GOTENBERG_URL: http://gotenberg-pdf:3000
+    depends_on:
+      clamav:
+        condition: service_healthy
+      gotenberg-docx:
+        condition: service_started
+      gotenberg-pdf:
+        condition: service_started
+    restart: unless-stopped
+    # Claim leases last 120 s; give a running pass time to finish after SIGTERM.
+    stop_grace_period: 150s
+    mem_limit: 1g
+    networks: [egress, scan]
+
+  clamav:
+    image: clamav/clamav@sha256:0e31ce089574268aefa0b543767d66b70240ab51ed49eec53e07f18d5629d817
+    restart: unless-stopped
+    mem_limit: 4g
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 600s
+    # egress is for FreshClam signature updates only.
+    networks: [egress, scan]
+
+  gotenberg-docx:
+    <<: *gotenberg
+    command:
+      - gotenberg
+      - --api-timeout=60s
+      - --chromium-disable-javascript=true
+      - --chromium-deny-list=.*
+      - --webhook-deny-list=.*
+
+  gotenberg-pdf:
+    <<: *gotenberg
+    command:
+      - gotenberg
+      - --api-timeout=60s
+      - --chromium-disable-javascript=true
+      - --chromium-allow-list=^file:///tmp/.*
+      - --webhook-deny-list=.*
+
+networks:
+  egress: {}
+  scan:
+    internal: true
+
+volumes:
+  clamav-db: {}

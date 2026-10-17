@@ -33,6 +33,19 @@ function required<T>(value: T | null | undefined, error: unknown, label: string)
   return value;
 }
 
+/**
+ * Creates fixtures a few at a time, in index order. Every service call first asks Auth for
+ * the user, and a burst of 100+ parallel calls made the local Auth fail on a 2-core CI runner.
+ */
+async function inBatches<T>(count: number, make: (index: number) => Promise<T>, size = 10): Promise<T[]> {
+  const results: T[] = [];
+  for (let start = 0; start < count; start += size) {
+    const batch = Array.from({ length: Math.min(size, count - start) }, (_, offset) => make(start + offset));
+    results.push(...await Promise.all(batch));
+  }
+  return results;
+}
+
 function projectInput(title: string, experienceId: string | null = null, status: "planned" | "active" | "completed" = "active") {
   return {
     operationKey: randomUUID(),
@@ -155,7 +168,7 @@ describe("local Project and context propagation integration", () => {
 
   it("lists 31 owned Projects with a stable cursor and no foreign rows", async () => {
     if (!ownerProjects || !otherProjects) throw new Error("Project service unavailable");
-    const created = await Promise.all(Array.from({ length: 31 }, (_, index) => ownerProjects!.createProject(projectInput(`Pagination project ${index}`))));
+    const created = await inBatches(31, (index) => ownerProjects!.createProject(projectInput(`Pagination project ${index}`)));
     const first = await ownerProjects.listProjects();
     expect(first.items).toHaveLength(30);
     expect(first.nextCursor).toBeTruthy();
@@ -271,22 +284,22 @@ describe("local Project and context propagation integration", () => {
   it("filters the target Project before limiting and paginates all eligible candidates", async () => {
     if (!ownerProjects || !ownerActivities) throw new Error("Project service unavailable");
     const target = await ownerProjects.createProject(projectInput("Candidate target", experienceOneId));
-    await Promise.all(Array.from({ length: 101 }, (_, index) => ownerActivities!.createActivity({
+    await inBatches(101, (index) => ownerActivities!.createActivity({
       operationKey: randomUUID(),
       captureMode: "note",
       rawText: `Target-linked candidate ${index}`,
       occurredOn: "2026-09-20",
       experienceId: experienceOneId,
       projectId: target.projectId,
-    })));
-    const eligible = await Promise.all(Array.from({ length: 31 }, (_, index) => ownerActivities!.createActivity({
+    }));
+    const eligible = await inBatches(31, (index) => ownerActivities!.createActivity({
       operationKey: randomUUID(),
       captureMode: "note",
       rawText: `Eligible candidate ${index}`,
       occurredOn: "2026-09-19",
       experienceId: experienceOneId,
       projectId: null,
-    })));
+    }));
 
     const first = await ownerProjects.listRelinkCandidates(target.projectId);
     expect(first.items).toHaveLength(30);

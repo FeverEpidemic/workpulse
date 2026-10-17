@@ -1,7 +1,7 @@
 # T25 Fase 7 · Verifikasi staging
 
 - Tanggal pemeriksaan hosted: 11 Oktober 2026.
-- Status: **SEBAGIAN · migrasi hosted selesai**. Repair riwayat, parity 36/36, bucket, katalog, privilege health, dan ops terbukti. URL Auth tersimpan; konfirmasi email aktif. SMTP MXroute akan diatur pengguna; dua template belum terpasang. Retensi backup belum dapat dipastikan.
+- Status: **SEBAGIAN · migrasi hosted selesai, SMTP dan template terpasang**. Repair riwayat, parity 36/36, bucket, katalog, privilege health, dan ops terbukti. URL Auth tersimpan; konfirmasi email aktif. SMTP MXroute diatur pengguna pada 16 Oktober 2026; dua template terpasang dan kiriman nyata diterima di Gmail setelah DNS email diperbaiki (lihat [Lanjutan 16 Oktober](#lanjutan-16-oktober-2026-smtp-template-dan-kiriman-nyata)). Retensi backup belum dapat dipastikan.
 - Eksekutor pemeriksaan ini: ChatGPT, mengikuti `T25-phase7-hosted-migration-handoff.md`. Receipt awal ditulis Claude Sonnet 5.5.
 - Commit acuan handoff: `cccdc43a3a0ead21e1e440ae02cd390bae72358b`; commit awal sesi lanjutan: `19a0d194dea1433df74495b81dd8ce7f0964683c`.
 - Target: Supabase Workpulse, region `ap-northeast-2`, PostgreSQL 17.11, paket Free (dashboard Database Backups).
@@ -142,7 +142,7 @@ Setiap baris remote menyimpan satu elemen `statements` berisi SQL yang panjang d
 - [x] `config diff` diperiksa dan hanya nama path dicatat; tanpa config push.
 - [x] Site URL dan satu redirect staging disimpan; konfirmasi email terverifikasi aktif.
 - [ ] Rate limit production dipilih pengguna; nilai hosted saat ini dipertahankan.
-- [ ] SMTP MXroute diatur pengguna dan dua template Auth dipasang melalui dashboard.
+- [x] SMTP MXroute diatur pengguna dan dua template Auth dipasang melalui dashboard (16 Oktober 2026, bagian lanjutan di bawah).
 - [x] `release_catalog.test.sql` lulus, 26 assertion.
 - [x] Perbandingan tipe ditinjau; pengecualian metadata generator dan baris kosong akhir disetujui pengguna. Diff mentah tetap tidak kosong.
 - [x] Privilege health dan `ops:check` lulus.
@@ -152,6 +152,34 @@ Tidak ada reset, drop, `db push --include-seed`, `db push --include-all`, `confi
 
 Parity hosted, bucket privat, katalog hosted, pengecualian tipe, privilege health, ops, dan konfigurasi URL Auth siap direview. SMTP, dua template, pilihan rate limit production, retensi backup, dan sisa smoke Fase 7 belum selesai. BLOCKER release tidak dicentang oleh pelaksana.
 
+## Lanjutan 16 Oktober 2026: SMTP, template, dan kiriman nyata
+
+- Pelaksana: Claude (Opus 5.5). Pengguna memasang SMTP MXroute sendiri lalu menulis "Nah di Supabase udah gue setting SMTP nya nih", kemudian "lanjut pasang template" setelah login dashboard di browser pane.
+- Alamat uji dipilih pengguna: "kirim aja ke inbox <alamat Gmail pengguna>". Alamat tidak ditulis di receipt. Pengguna mengizinkan akun uji dibuat di staging lalu dihapus.
+
+| Item | Hasil |
+| --- | --- |
+| SMTP | Tab SMTP Settings menampilkan custom SMTP dengan password tersimpan. Pelaksana tidak membaca, mengubah, atau mencatat host, username, maupun password. |
+| Confirm sign up | Subjek `Confirm your WorkPulse account`; isi diketik dari `supabase/templates/confirmation.html`. Isi editor dibaca balik sebelum simpan dan identik dengan file. Dashboard: "Successfully updated email template". Setelah reload, subjek dan isi tetap sama. |
+| Reset password | Subjek `Reset your WorkPulse password`; isi dari `supabase/templates/recovery.html`, dibaca balik identik, tersimpan, dan tetap sama setelah reload. |
+| Signup lewat Auth API hosted | `POST /auth/v1/signup?redirect_to=https://myworkpulse.my.id/auth/confirm` dengan publishable key: HTTP 200, tanpa session (konfirmasi email aktif). Password akun uji dibuat acak di proses dan tidak dicetak. |
+| Recovery lewat Auth API hosted | Lebih dari 60 detik setelah signup (batas frekuensi email per pengguna), `POST /auth/v1/recover` dengan redirect yang sama: HTTP 200. |
+| Bukti di `auth.users` | Satu baris akun uji: `confirmation_sent_at` 09:54:45 UTC, `recovery_sent_at` 09:56:09 UTC, `email_confirmed_at` null. |
+| Log Auth | `user_confirmation_requested` (`/signup`) dan `user_recovery_requested` (`/recover`), keduanya status 200 dengan durasi sekitar 3,8 detik. Tidak ada entri error mail pada jendela waktu tersebut. |
+| Penerimaan di kotak masuk | **Gagal.** Pengguna melaporkan: "Ga nyampe nih emailnya". Auth tidak mencatat error, jadi server SMTP MXroute menerima kedua pesan; kegagalan terjadi setelahnya. |
+| DNS domain pengirim | Pengirim `noreply@myworkpulse.my.id` lewat host MXroute port 465. Query ke 8.8.8.8: NS Cloudflare dan A ada, tetapi MX, TXT (SPF), `_dmarc`, dan `x._domainkey` (DKIM MXroute) tidak ada. Tanpa SPF dan DKIM, Gmail menolak atau membuang pesan dari domain ini. |
+
+### Kirim ulang setelah DNS diperbaiki
+
+| Item | Hasil |
+| --- | --- |
+| DNS authoritative Cloudflare (kedua NS) dan 8.8.8.8 | MX `10 blizzard.mxrouting.net`, `20 blizzard-relay.mxrouting.net`; SPF `v=spf1 include:mxroute.com -all`; DMARC `v=DMARC1; p=none;`. Sempat muncul tidak konsisten selama pengguna menyimpan record, lalu stabil. DKIM `x._domainkey` masih NXDOMAIN, begitu pula selector umum lain. |
+| Kirim ulang konfirmasi | `POST /auth/v1/resend` `type=signup` dengan redirect yang sama: HTTP 200; `confirmation_sent_at` 11:19:07 UTC. |
+| Kirim ulang recovery | `POST /auth/v1/recover` lebih dari 60 detik kemudian: HTTP 200; `recovery_sent_at` 11:20:32 UTC. |
+| Penerimaan | Pengguna: "Sudah sampe kok". Bentuk link di email tidak dilaporkan terpisah oleh pengguna; isi template hosted identik dengan file repo (lihat atas), sehingga link mengikuti pola `{{ .RedirectTo }}?token_hash=…&type=…`. |
+
+Sisa untuk SMTP: DKIM MXroute belum dipublikasikan di Cloudflare. SPF yang selaras dengan DMARC cukup untuk diterima Gmail dalam uji ini, tetapi DKIM tetap dipasang sebelum production agar tidak bergantung pada SPF saja. Link belum diklik sampai selesai karena web staging belum di-deploy; verifikasi `/auth/confirm` end-to-end termasuk smoke Fase 7 setelah deploy. Akun uji (belum terkonfirmasi, satu baris `profiles`, tanpa objek Storage) **dipertahankan** atas permintaan pengguna: "Simpan dulu aja buat smoke test". Akun ini dihapus lewat jalur penghapusan akun di akhir smoke.
+
 ## Yang dibutuhkan agar Fase 7 dapat dijalankan
 
 | Kebutuhan | Rincian |
@@ -160,7 +188,7 @@ Parity hosted, bucket privat, katalog hosted, pengecualian tipe, privilege healt
 | Host web | domain staging `myworkpulse.my.id` telah ditetapkan; penyedia host dan deployment `pnpm start` belum diverifikasi. |
 | Host worker | menjalankan `pnpm worker:run` dan cron `pnpm ops:check`; jaringan privat ke ClamAV dan dua Gotenberg |
 | ClamAV, Gotenberg DOCX, Gotenberg PDF | kontainer sesuai runbook T10, T15, T21 di jaringan privat host worker |
-| SMTP untuk Auth | MXroute dipilih; pengguna akan memasang konfigurasi SMTP. Sesudahnya pasang dua template dan uji pengiriman nyata. |
+| SMTP untuk Auth | MXroute terpasang, dua template tersimpan, dan email konfirmasi serta recovery diterima di Gmail (16 Oktober 2026). Tersisa DKIM di Cloudflare dan klik link setelah web di-deploy. |
 | Penyediaan secret | key diberikan ke host lewat env proses atau secret manager; **tidak** ditempel di chat atau repo |
 | Otorisasi tertulis | migrate dan konfigurasi staging telah diizinkan dalam konteks Workpulse; scope saat ini mengikuti handoff Fase 7a, tanpa membuat akun uji. |
 | Keputusan AI | apakah pemakaian key AI di staging diizinkan; bila tidak, mode `unavailable` dan jalur manual saja |
@@ -168,7 +196,7 @@ Parity hosted, bucket privat, katalog hosted, pengecualian tipe, privilege healt
 ## Yang akan dijalankan begitu semuanya ada
 
 1. Catat penyedia, region, paket, dan versi build (tanpa key dan tanpa URL internal sensitif).
-2. `supabase db push` ke staging; `migration list` harus 36/36, terakhir `20261012090000`.
+2. ~~`supabase db push` ke staging~~ selesai di Fase 7a: parity 36/36, terakhir `20261012090000`.
 3. Deploy worker lalu web sesuai [runbook](T25-release-runbook.md); `/api/health` 200; `pnpm worker:check` dengan adapter nyata.
 4. Smoke dengan akun uji yang dibuat untuk T25 (bukan akun pribadi):
    - signup dan verifikasi email nyata, recovery, sign-out;
@@ -185,9 +213,9 @@ Parity hosted, bucket privat, katalog hosted, pengecualian tipe, privilege healt
 | Acceptance (§1) | Status |
 | --- | --- |
 | §1.17 backup dan restore jujur | klaim retensi ≤ 30 hari **tetap belum terverifikasi**; checklist menahan production (BLOCKER) |
-| §1.18 staging | **tidak terpenuhi** (BLOCKED) |
+| §1.18 staging | **belum terpenuhi**. Fase 7a (migrasi, bucket, URL Auth) serta SMTP dan template selesai; deploy web/worker dan smoke belum |
 | Rencana T25, kalimat selesai | "integrasi nyata diverifikasi di staging" belum terpenuhi |
 
 ## Langkah berikutnya
 
-Pengguna memasang SMTP MXroute pada dashboard; kemudian pelaksana memasang dua template repo setelah edit tersedia dan menyelesaikan Fase 7a. Reviewer memeriksa receipt, termasuk pengecualian tipe yang disetujui dan klaim backup yang tetap terbuka. Hanya receipt ini yang diubah untuk pencatatan; status authoritative T25 dan checklist release tidak diubah. Sisa deploy web/worker dan smoke hosted mengikuti Fase 7 berikutnya.
+SMTP dan dua template sudah terpasang, dan kiriman nyata diterima di Gmail (16 Oktober 2026). Tersisa DKIM MXroute di Cloudflare dan penghapusan akun uji. Reviewer memeriksa receipt, termasuk pengecualian tipe yang disetujui dan klaim backup yang tetap terbuka. Hanya receipt ini yang diubah untuk pencatatan; status authoritative T25 dan checklist release tidak diubah. Sisa deploy web/worker dan smoke hosted mengikuti [panduan Fase 7b](T25-phase7b-staging-deploy.md): server pribadi Debian (4 vCPU, 12 GB, Docker) di belakang reverse proxy VPS.
