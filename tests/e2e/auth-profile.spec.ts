@@ -75,7 +75,11 @@ async function emailActionLink(request: APIRequestContext, message: MailSummary)
 
 async function confirmEmail(request: APIRequestContext, page: Page, email: string, subject: RegExp): Promise<void> {
   const message = await waitForMail(request, email, subject);
-  await page.goto(await emailActionLink(request, message));
+  const link = await emailActionLink(request, message);
+  // Click from an opaque-origin page, as a mail client would. A plain goto has no
+  // initiator, so it sends SameSite=Strict cookies that a real email click does not.
+  await page.goto(`data:text/html,<a href="${encodeURIComponent(link)}">open</a>`);
+  await page.getByRole("link", { name: "open" }).click();
 }
 
 async function signIn(page: Page, email: string, password: string, returnTo: string): Promise<void> {
