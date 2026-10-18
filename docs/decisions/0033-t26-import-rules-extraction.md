@@ -1,4 +1,4 @@
-# Decision 0032: T26 import CV tanpa AI (parser aturan)
+# Decision 0033: T26 import CV tanpa AI (parser aturan)
 
 Date: 18 Oktober 2026
 
@@ -26,7 +26,8 @@ Bagian lokal pipeline (malware scan, parsing PDF/DOCX di thread terisolasi, hitu
 5. **Staging tanpa `ai_jobs`.** Untuk batch `rules`, `complete_import_parse` menyimpan teks, men-stage item, dan membuka `review` dalam satu transaksi. Logika validasi struktur dan insert item dipindah dari `complete_import_ai_job` ke `internal.stage_import_items` tanpa mengubah perilaku AI. Batch `rules` berpindah `parsing → done` tanpa stage `extracting`.
 6. **Cakupan v1.** Profil (kontak, nama, headline, summary), experience, education, dan skills. Database menolak tipe lain untuk batch `rules`. Achievement dari bullet, sertifikasi, proyek, dan lokasi ditunda karena aturannya paling mudah salah dan hasilnya menambah beban review.
 7. **Kode error baru `IMPORT_RULES_FAILED` (permanen).** Dipakai bila extractor melempar exception atau outputnya gagal validasi. Keduanya bug di kode WorkPulse, bukan masalah file pengguna, jadi Retry tidak ditawarkan. Timeout dan crash thread tetap `PARSER_TIMEOUT` dan `CORRUPT_FILE`.
-8. **Copy jujur tentang kualitas.** S02 menjelaskan kedua jalur bagi pengguna tanpa consent. Hasil batch `rules` membawa catatan agar pengguna mengecek perusahaan, jabatan, dan tanggal. Hasil kosong menyebut bahwa CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI.
+8. **Batch `rules` tidak memakai kuota AI.** T26 dibangun di atas batas pemakaian AI (decision 0032). Unit `import` hanya di-charge untuk batch `ai`, baik saat batch baru maupun saat retry.
+9. **Copy jujur tentang kualitas.** S02 menjelaskan kedua jalur bagi pengguna tanpa consent. Hasil batch `rules` membawa catatan agar pengguna mengecek perusahaan, jabatan, dan tanggal. Hasil kosong menyebut bahwa CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI.
 
 ## Error codes
 
