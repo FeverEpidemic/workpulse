@@ -42,6 +42,7 @@
     "test:integration:m3": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/m3-assisted-entry.test.ts",
     "test:integration:m4": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/m4-cv-output.test.ts",
     "test:integration:ai": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/ai-jobs.test.ts",
+    "test:integration:ai-usage": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/ai-usage-limits.test.ts",
     "test:integration:ai-review": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/ai-review.test.ts",
     "test:ai:live": "vitest run --config vitest.live.config.ts --configLoader native tests/live/openai-smoke.test.ts",
     "test:integration:storage": "vitest run --config vitest.integration.config.ts --configLoader native tests/integration/private-storage.test.ts",

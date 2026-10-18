@@ -95,6 +95,11 @@ insert into auth.users (
    'authenticated', 'authenticated', 'import-b@workpulse.local', '', now(),
    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now());
 
+-- These fixtures exercise staging, not the AI usage limit (decision 0032).
+insert into internal.ai_plan_assignments (user_id, plan) values
+  ('e1515151-1515-4151-8151-151515151511', 'unlimited'),
+  ('f1515151-1515-4151-8151-151515151512', 'unlimited');
+
 create or replace function pg_temp.set_jwt_subject(p_user_id uuid, p_role text default 'authenticated')
 returns void
 language plpgsql

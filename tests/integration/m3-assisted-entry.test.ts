@@ -32,6 +32,7 @@ import { runImportWorkerOnce } from "../../workers/import-worker.ts";
 import { createSupabaseAiWorkerGateway } from "../../workers/supabase-ai-gateway.ts";
 import { createSupabaseImportWorkerGateway } from "../../workers/supabase-import-gateway.ts";
 import { CV_LINES, cvDocx, cvPdf, DOCX_MIME, PDF_MIME } from "../import-fixtures";
+import { assignAiPlan } from "./ai-usage-support";
 
 /**
  * Gate M3 (Assisted entry): F01 import and F02 assisted capture together, per
@@ -77,6 +78,7 @@ async function createAccount(label: string, options: { onboarded: boolean; conse
   if (created.error || !created.data.user) throw new Error("m3 fixture creation failed");
   const id = created.data.user.id;
   users.push(id);
+  assignAiPlan(id, "unlimited");
   const client = createClient<Database>(adminConfig.url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });

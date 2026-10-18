@@ -19,6 +19,7 @@ import type { Database } from "@/server/supabase/database.types";
 
 import { runAiWorkerOnce, type AiWorkerSummary } from "../../workers/ai-worker.ts";
 import { createSupabaseAiWorkerGateway } from "../../workers/supabase-ai-gateway.ts";
+import { assignAiPlan } from "./ai-usage-support";
 
 const SENTINEL = "WP-PRIVATE-SENTINEL-review";
 const FAKE_ANSWER = "Weekly prep dropped from 5 to 2 hours";
@@ -58,6 +59,7 @@ async function createAccount(label: string): Promise<Account> {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("review fixture creation failed");
   users.push(created.data.user.id);
+  assignAiPlan(created.data.user.id, "unlimited");
   const pub = { url: adminConfig.url, publishableKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY! };
   const client = createClient<Database>(pub.url, pub.publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },

@@ -8,6 +8,7 @@ import type { Database } from "../../src/server/supabase/database.types";
 import { CV_LINES, cvPdf, DOCX_MIME, emptyDocx, pdfFixture } from "../import-fixtures";
 import { expectNoWcagViolations } from "./helpers/accessibility";
 import { drainImportWorker } from "./helpers/import-worker";
+import { assignAiPlan } from "../integration/ai-usage-support";
 
 type Client = SupabaseClient<Database>;
 type User = { id: string; email: string; password: string };
@@ -33,6 +34,7 @@ async function createUser(options: { locale?: "en" | "id"; consent?: boolean } =
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   const id = created.data.user?.id;
   if (created.error || !id) throw new Error("T15 browser fixture setup failed");
+  assignAiPlan(id, "unlimited");
   const profile = await admin.from("profiles").update({
     locale: options.locale ?? "en",
     ...(options.consent ? { ai_consent_at: new Date().toISOString(), ai_consent_version: CONSENT_VERSION } : {}),

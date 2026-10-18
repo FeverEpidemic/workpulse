@@ -5,6 +5,7 @@ import { LocaleSwitcher } from "@/components/forms/locale-switcher";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { AI_CONSENT_VERSION } from "@/domain/ai/contracts";
 import { toImportView, type ImportView } from "@/domain/import/import-view";
+import { createAiUsageService } from "@/features/ai/ai-usage-service";
 import { createImportService } from "@/features/import/import-service";
 import { ImportStart } from "@/features/import/import-start";
 import { t } from "@/i18n/messages";
@@ -32,6 +33,7 @@ export default async function OnboardingImportPage() {
   } catch {
     // The chooser still works; the upload itself reports an unavailable service.
   }
+  const usage = await createAiUsageService(context.client!).getUsage().then((value) => value.import, () => null);
 
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-5xl content-center gap-6 px-5 py-10 lg:grid-cols-[1fr_480px]">
@@ -50,6 +52,8 @@ export default async function OnboardingImportPage() {
           initialView={initialView}
           consent={{ granted, profileRevision: context.profile.revision }}
           onboarded={onboarded}
+          usage={usage}
+          timeZone={context.profile.timezone}
         />
       </section>
     </main>

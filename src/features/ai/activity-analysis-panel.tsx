@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/field-control";
 import { InlineError } from "@/components/ui/inline-error";
 import { RevisionConflict } from "@/components/ui/revision-conflict";
+import { AiLimitNotice, isAiLimited } from "@/features/ai/ai-limit-notice";
 import type { AnalysisViewPayload } from "@/features/ai/ai-review-service";
 import type { ApplyBlockReason } from "@/domain/ai/analysis-view";
 import type { DetectResult } from "@/domain/ai/detect-result";
@@ -40,6 +41,8 @@ export type ActivityAnalysisPanelProps = {
   consent: AnalysisPanelConsent;
   returnTo: string;
   initialPayload?: AnalysisViewPayload | null;
+  /** Profile IANA timezone for the AI limit reset time. */
+  timeZone?: string;
 };
 
 const FAILURE_KEYS: Record<string, MessageKey> = {
@@ -107,6 +110,7 @@ function ActionForm({
   locale,
   returnTo,
   onSuccess,
+  onLimited,
   onReload,
   className,
   children,
@@ -116,6 +120,8 @@ function ActionForm({
   locale: Locale;
   returnTo: string;
   onSuccess?: (state: Extract<ActionState, { status: "success" }>) => void;
+  /** The AI usage limit refused the request; the caller reloads usage to show the limit state. */
+  onLimited?: () => void;
   onReload: () => void;
   className?: string;
   children: ReactNode;
@@ -124,10 +130,14 @@ function ActionForm({
   const handled = useRef<string | null>(null);
 
   useEffect(() => {
-    if (state.status !== "success" || handled.current === state.correlationId) return;
-    handled.current = state.correlationId;
-    onSuccess?.(state);
-  }, [state, onSuccess]);
+    if (state.status === "success" && handled.current !== state.correlationId) {
+      handled.current = state.correlationId;
+      onSuccess?.(state);
+    } else if (state.status === "error" && state.error.code === "RATE_LIMITED" && handled.current !== state.error.correlationId) {
+      handled.current = state.error.correlationId;
+      onLimited?.();
+    }
+  }, [state, onSuccess, onLimited]);
 
   return (
     <form action={formAction} className={className}>
@@ -193,6 +203,7 @@ export function ActivityAnalysisPanel({
   consent,
   returnTo,
   initialPayload = null,
+  timeZone,
 }: ActivityAnalysisPanelProps) {
   const router = useRouter();
   const [payload, setPayload] = useState<AnalysisViewPayload | null>(initialPayload);
@@ -264,10 +275,15 @@ export function ActivityAnalysisPanel({
   }, [polling, load, payload]);
 
   useEffect(() => {
-    if (requestState.status !== "success" || handledRequest.current === requestState.correlationId) return;
-    handledRequest.current = requestState.correlationId;
-    pollIndex.current = 0;
-    void load();
+    if (requestState.status === "success" && handledRequest.current !== requestState.correlationId) {
+      handledRequest.current = requestState.correlationId;
+      pollIndex.current = 0;
+      void load();
+    } else if (requestState.status === "error" && requestState.error.code === "RATE_LIMITED"
+      && handledRequest.current !== requestState.error.correlationId) {
+      handledRequest.current = requestState.error.correlationId;
+      void load();
+    }
   }, [requestState, load]);
 
   useEffect(() => {
@@ -292,8 +308,16 @@ export function ActivityAnalysisPanel({
   const suggestion = detect?.suggestion ?? null;
   const manualHref = `/achievements/new?${new URLSearchParams({ activity: activityId, returnTo }).toString()}`;
   const achievementHref = achievement ? `/achievements/${achievement.id}?${new URLSearchParams({ returnTo }).toString()}` : null;
+  const usage = payload?.usage ?? null;
+  const limited = isAiLimited(usage) ? usage : null;
 
-  const analyzeControl = granted ? (
+  const analyzeControl = limited ? (
+    <AiLimitNotice locale={locale} bucket="analysis" usage={limited} timeZone={timeZone}>
+      <div className="ai-analysis-actions">
+        <Link className="button-secondary" href={manualHref}>{t(locale, "ai.analysis.createManually")}</Link>
+      </div>
+    </AiLimitNotice>
+  ) : granted ? (
     <form action={requestAction} className="ai-analysis-actions">
       <input type="hidden" name="activity_id" value={activityId} readOnly />
       <input type="hidden" name="expected_revision" value={activityRevision} readOnly />
@@ -353,14 +377,16 @@ export function ActivityAnalysisPanel({
               <p>{t(locale, errorKey ?? "ai.analysis.failed.generic")}</p>
               {reasonKey ? <p className="field-help">{t(locale, reasonKey)}</p> : null}
             </div>
+            {limited && view.canRetry ? <AiLimitNotice locale={locale} bucket="analysis" usage={limited} timeZone={timeZone} /> : null}
             <div className="ai-analysis-actions">
-              {job ? (
+              {job && !(limited && view.canRetry) ? (
                 <ActionForm
                   action={retryAnalysisAction}
                   fields={{ activity_id: activityId, job_id: job.id }}
                   locale={locale}
                   returnTo={returnTo}
                   onSuccess={() => { pollIndex.current = 0; void load(); }}
+                  onLimited={() => { void load(); }}
                   onReload={reload}
                 >
                   <SubmitButton variant="secondary" disabled={!view.canRetry} loadingLabel={t(locale, "ai.analysis.queued")}>

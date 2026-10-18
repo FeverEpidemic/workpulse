@@ -26,6 +26,7 @@ import { runImportWorkerOnce, type ImportWorkerOptions } from "../../workers/imp
 import { createSupabaseAiWorkerGateway } from "../../workers/supabase-ai-gateway.ts";
 import { createSupabaseImportWorkerGateway } from "../../workers/supabase-import-gateway.ts";
 import { CV_LINES, cvPdf, PDF_MIME } from "../import-fixtures";
+import { assignAiPlan } from "./ai-usage-support";
 
 const CONTENT_SENTINEL = "WP-PRIVATE-IMPORT-SENTINEL";
 const FILENAME_SENTINEL = `cv-WP-FILENAME-SENTINEL-${randomUUID()}.pdf`;
@@ -81,6 +82,7 @@ async function createAccount(label: string, options: { onboarded: boolean }): Pr
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("import-commit fixture creation failed");
   users.push(created.data.user.id);
+  assignAiPlan(created.data.user.id, "unlimited");
   const account = await accountFor(created.data.user.id, email, password);
   const { data } = await account.client.from("profiles").select("revision").eq("id", account.id).single();
   const consent = await createAiConsentService(account.client).setConsent({ expectedRevision: data!.revision, consented: true });
