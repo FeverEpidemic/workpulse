@@ -655,6 +655,43 @@ Illustration usage is minimal and reserved primarily for:
 
 ---
 
+## 16.2 Logo
+
+The symbol is five dots in a row: four working days, one day left blank on purpose,
+and a larger last dot for today. It says that a working rhythm counts even when it is not
+perfect, which matches the no-guilt nudges in section 34. It is not a heartbeat line.
+
+Files live in `public/brand/`; the in-app version is `BrandLogo` / `BrandSymbol` in
+`src/components/ui/brand-logo.tsx`.
+
+| Use | Asset |
+| --- | --- |
+| Lockup on light / dark | `workpulse-logo.svg` / `workpulse-logo-dark.svg` |
+| Symbol alone | `workpulse-symbol.svg` / `workpulse-symbol-dark.svg` |
+| App icon, 48px and up | `workpulse-app-icon.svg`, `src/app/apple-icon.tsx` |
+| Favicon, 16–32px | `src/app/icon.svg` (three dots: day, blank day, today) |
+| Link previews | `src/app/opengraph-image.tsx` |
+
+Colors:
+
+| Part | Light | Dark |
+| --- | --- | --- |
+| Dots | `--color-primary-600` | `--color-primary-400` |
+| Blank day | `--color-primary-300` | `--color-primary-800` |
+| Wordmark | `--color-text-primary` | `--color-text-primary` |
+| App icon | `--color-primary-600` tile, `--color-primary-50` dots, `--color-primary-400` blank day | same |
+
+Rules:
+
+- Wordmark: Plus Jakarta Sans 600, tracking -0.01em. Static files use the outlined path.
+- Symbol height is 0.7× the wordmark font size; the gap to the wordmark is 0.36×.
+- Clear space on every side is at least the diameter of the today dot.
+- Below 32px use the three-dot favicon, not the five-dot symbol.
+- Do not recolor the dots outside the sage ramp, add gradients or shadows, animate the
+  dots on a loop, or fill in the blank day.
+
+---
+
 # 17. Color System
 
 ## 17.1 Sage Primary

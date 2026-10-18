@@ -13,7 +13,17 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
 });
 
+// Absolute Open Graph image URLs need the public origin; without it Next falls back to localhost.
+function publicSiteUrl(): URL | undefined {
+  try {
+    return process.env.WORKPULSE_SITE_URL ? new URL(process.env.WORKPULSE_SITE_URL) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: publicSiteUrl(),
   title: "WorkPulse",
   description: "Private career workspace for capturing activity and building one master CV.",
 };

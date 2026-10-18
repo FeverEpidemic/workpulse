@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { UpdatePasswordForm } from "@/features/auth/update-password-form";
 import { getRequestContext, getRequestLocale } from "@/server/auth/context";
 import { hasRecentRecoveryProof } from "@/server/auth/recovery-session";
@@ -21,7 +22,7 @@ export default async function UpdatePasswordPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center px-5 py-10">
       <section className="app-card space-y-5">
-        <Link href="/sign-in" className="text-lg font-bold">WorkPulse</Link>
+        <Link href="/sign-in" className="brand-logo"><BrandLogo /></Link>
         <div>
           <h1 className="text-2xl font-semibold">{t(locale, "auth.passwordResetTitle")}</h1>
           <p className="mt-2 text-sm text-[var(--wp-muted)]">{t(locale, "auth.passwordResetDescription")}</p>
