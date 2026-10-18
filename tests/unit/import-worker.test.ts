@@ -2,20 +2,22 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { validateImportResult } from "@/domain/import/extract-result";
+import { extractImportByRules } from "@/domain/import/rules-extract";
 import { ExplicitTestFakeDocxRenderer, UnavailableDocxRenderer } from "@/server/documents/docx-renderer";
 import type { ParseResult } from "@/server/documents/parse-in-thread";
 
 import { runImportWorkerOnce, type ImportJob, type ImportWorkerDatabase, type ImportWorkerOptions } from "../../workers/import-worker.ts";
-import { CV_LINES, cvDocx, cvPdf } from "../import-fixtures";
+import { CV_LINES, cvDocx, cvPdf, RULES_CV_EN } from "../import-fixtures";
 
 const USER = "1f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f";
 const BATCH = "3f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f";
 
-function jobFor(bytes: Uint8Array, mime = "application/pdf", attempt = 1): ImportJob {
+function jobFor(bytes: Uint8Array, mime = "application/pdf", attempt = 1, mode: ImportJob["extraction_mode"] = "ai"): ImportJob {
   return {
     id: "0f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f", user_id: USER, batch_id: BATCH, object_key: `${USER}/import/${BATCH}`,
     expected_bytes: bytes.byteLength, mime_type: mime, sha256: createHash("sha256").update(bytes).digest("hex"),
-    attempt_count: attempt, attempt_token: "2f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f",
+    attempt_count: attempt, attempt_token: "2f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f", extraction_mode: mode,
   };
 }
 
@@ -138,6 +140,16 @@ describe("T15 import worker", () => {
     expect(outage.failImportJob).toHaveBeenCalledWith(expect.objectContaining({ errorCode: "STORAGE_UNAVAILABLE", final: false }));
   });
 
+  it("T26: an ai job parses without extraction and completes with four arguments", async () => {
+    const bytes = cvPdf();
+    const db = database(jobFor(bytes));
+    const opts = options(bytes, db);
+    const summary = await runImportWorkerOnce(opts);
+    expect(opts.parse).toHaveBeenCalledWith("pdf", bytes);
+    expect(vi.mocked(db.completeImportParse).mock.calls[0]).toHaveLength(4);
+    expect(summary.importRulesStaged).toBe(0);
+  });
+
   it("deletes import objects and verifies absence before completing cleanup", async () => {
     const bytes = cvPdf();
     const cleanup = { id: "4f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f", user_id: USER, object_key: `${USER}/import/${BATCH}`, attempt_count: 1, attempt_token: "5f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f" };
@@ -155,5 +167,73 @@ describe("T15 import worker", () => {
     const sticky = { ...storage, getObjectMetadata: vi.fn(async () => ({ size: 1 })), removeObject: vi.fn(async () => undefined) };
     expect((await runImportWorkerOnce(options(bytes, stuck, { storage: sticky }))).importCleanupRetried).toBe(1);
     expect(stuck.completeImportCleanupJob).not.toHaveBeenCalled();
+  });
+});
+
+describe("T26 import worker: rules extraction", () => {
+  const text = RULES_CV_EN;
+  const rulesParse = (extraction: unknown, extractionFailed = false) =>
+    vi.fn(async (): Promise<ParseResult> => ({ status: "ok", text, pageCount: 1, extraction, extractionFailed }));
+
+  it("asks the thread to extract, validates, and stages the items with the text without an AI step", async () => {
+    const bytes = cvPdf();
+    const db = database(jobFor(bytes, "application/pdf", 1, "rules"));
+    const opts = options(bytes, db, { parse: rulesParse(extractImportByRules(text)) });
+    const summary = await runImportWorkerOnce(opts);
+    expect(opts.parse).toHaveBeenCalledWith("pdf", bytes, { extract: true });
+    expect(summary).toMatchObject({ importParsed: 1, importRulesStaged: 1, importFailed: {} });
+    const call = vi.mocked(db.completeImportParse).mock.calls[0]!;
+    expect(call.slice(0, 4)).toEqual([expect.any(String), expect.any(String), text, 1]);
+    const items = call[4] as Array<{ entity_type: string; source_excerpt: string }>;
+    const expected = validateImportResult(extractImportByRules(text), text);
+    expect(expected.ok && items).toEqual(expected.ok ? expected.items : null);
+    expect(new Set(items.map((item) => item.entity_type))).toEqual(new Set(["profile", "experience", "education", "skill"]));
+    expect(JSON.stringify(summary)).not.toContain("Rina");
+  });
+
+  it("fails the batch for good with IMPORT_RULES_FAILED when the extractor threw", async () => {
+    const bytes = cvPdf();
+    const db = database(jobFor(bytes, "application/pdf", 1, "rules"));
+    const summary = await runImportWorkerOnce(options(bytes, db, { parse: rulesParse(null, true) }));
+    expect(db.failImportJob).toHaveBeenCalledWith(expect.objectContaining({ errorCode: "IMPORT_RULES_FAILED", final: true }));
+    expect(db.completeImportParse).not.toHaveBeenCalled();
+    expect(summary.importFailed).toEqual({ IMPORT_RULES_FAILED: 1 });
+    expect(summary.importRulesStaged).toBe(0);
+  });
+
+  it("fails the same way when the extractor output does not validate or is missing", async () => {
+    const bytes = cvPdf();
+    for (const extraction of [{ schema_version: "import.v1", profile: "x" }, undefined]) {
+      const db = database(jobFor(bytes, "application/pdf", 1, "rules"));
+      await runImportWorkerOnce(options(bytes, db, { parse: rulesParse(extraction) }));
+      expect(db.failImportJob).toHaveBeenCalledWith(expect.objectContaining({ errorCode: "IMPORT_RULES_FAILED", final: true }));
+      expect(db.completeImportParse).not.toHaveBeenCalled();
+    }
+  });
+
+  it("still checks pages and text length before staging", async () => {
+    const docx = cvDocx(CV_LINES, { pages: 21, appPages: 1 });
+    const db = database(jobFor(docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 1, "rules"));
+    const summary = await runImportWorkerOnce(options(docx, db, { parse: rulesParse(extractImportByRules(text)) }));
+    expect(summary.importFailed).toEqual({ TOO_MANY_PAGES: 1 });
+    expect(db.completeImportParse).not.toHaveBeenCalled();
+  });
+
+  it("counts a database refusal of rules items as a failure", async () => {
+    const bytes = cvPdf();
+    const db = database(jobFor(bytes, "application/pdf", 1, "rules"), {
+      completeImportParse: vi.fn(async () => "failed:IMPORT_RULES_FAILED"),
+    });
+    const summary = await runImportWorkerOnce(options(bytes, db, { parse: rulesParse(extractImportByRules(text)) }));
+    expect(summary).toMatchObject({ importParsed: 0, importRulesStaged: 0, importFailed: { IMPORT_RULES_FAILED: 1 } });
+  });
+
+  it("rejects a claim with an unknown mode as an invalid job", async () => {
+    const bytes = cvPdf();
+    const db = database({ ...jobFor(bytes), extraction_mode: "ocr" as never });
+    const opts = options(bytes, db);
+    await runImportWorkerOnce(opts);
+    expect(db.failImportJob).toHaveBeenCalledWith(expect.objectContaining({ errorCode: "INVALID_IMPORT_JOB", final: true }));
+    expect(opts.parse).not.toHaveBeenCalled();
   });
 });

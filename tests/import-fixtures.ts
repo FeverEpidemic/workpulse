@@ -176,6 +176,34 @@ export const RULES_CV_ID = [
   "Indonesia, Inggris",
 ].join("\n");
 
+/**
+ * ASCII lines for PDF fixtures (the minimal PDF writer encodes Latin-1 only), with a private sentinel that must never
+ * reach logs, responses or the browser console.
+ */
+export const RULES_CV_PDF_LINES = [
+  "Rina Fiktif",
+  "Data Analyst",
+  "rina.fiktif@contoh.test | +62 812 3456 7890",
+  "Summary",
+  "Data analyst with 6 years of experience in reporting for retail teams.",
+  "Work Experience",
+  "Senior Data Analyst at PT Contoh Rekaan",
+  "Jan 2021 - Present",
+  "- Built a weekly sales dashboard used by 40 store managers",
+  "Education",
+  "Bachelor of Science in Statistics",
+  "Universitas Rekaan, 2013 - 2017",
+  "Skills",
+  "Languages: SQL, Python",
+  // Under a closing heading, so it stays in the stored text but never becomes a candidate.
+  "References",
+  "WP-RULES-PRIVATE-SENTINEL available on request",
+];
+
+export function rulesCvPdf(lines = RULES_CV_PDF_LINES): Buffer {
+  return pdfFixture([lines]);
+}
+
 /** One entry per date and separator variant; the anchor line is the only date in each entry. */
 export const RULES_CV_DATE_VARIANTS = [
   "Experience",

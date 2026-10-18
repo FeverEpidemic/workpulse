@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     filename: request.headers.get("x-file-name"),
     contentType: request.headers.get("content-type"),
     contentLength: request.headers.get("content-length"),
+    extractionMode: request.headers.get("x-extraction-mode"),
     body: request.body,
   }));
 }
