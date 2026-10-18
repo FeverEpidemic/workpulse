@@ -266,12 +266,44 @@ Deploy dan smoke selesai 17 Oktober 2026; akun uji lama dan baru sudah dihapus.
 | Recovery dari Gmail (S1) | Pengguna mendaftar ulang dan menerima email konfirmasi, lalu klik link reset password dari Gmail dan sampai ke `/update-password` (dilaporkan). PR #19 sudah di `main` (merge `1de7318`). Tag image yang terpasang saat uji ini tidak diperiksa; hasilnya hanya mungkin dengan image yang memuat perbaikan. Empat `/recover` sebelumnya (16:02-16:07 UTC) tidak mengirim email karena akun sudah dihapus; Auth tetap menjawab 200 untuk alamat yang tidak terdaftar. |
 | Akun uji ketiga | Dihapus lewat aplikasi; query read-only: `auth.users`, `profiles`, `storage.objects` semuanya 0. |
 | DKIM | `x._domainkey.myworkpulse.my.id` TXT `v=DKIM1; k=rsa; p=…` di 8.8.8.8 dan 1.1.1.1. SPF dan DMARC tetap seperti di atas. |
-| Retensi backup | Pemilik produk memilih opsi B: tetap paket Free, `pg_dump` terjadwal di server pribadi dengan retensi di bawah 30 hari. Script dan prosedur: [runbook backup](T25-backup-runbook.md). Belum dipasang di server. |
-| Rate limit | Semua request Auth datang dari IP server, karena login, signup, dan refresh berjalan di server Next.js. Batas "per IP" berlaku untuk semua pengguna sekaligus. Pemilik produk menyetujui nilai pilot: sign-in/sign-up 100 per 5 menit, token refresh 500 per 5 menit, verifikasi token tetap 30, email per jam tetap default. Diubah pengguna di dashboard Authentication → Rate Limits; nilai tersimpan belum diperiksa. Sebelum production, IP asli pengguna perlu diteruskan ke Auth agar batas per IP bermakna. |
+| Retensi backup | Pemilik produk memilih opsi B: tetap paket Free, `pg_dump` terjadwal di server pribadi dengan retensi di bawah 30 hari. Script dan prosedur: [runbook backup](T25-backup-runbook.md). Terpasang di server (bukti di bawah). |
+| Rate limit | Semua request Auth datang dari IP server, karena login, signup, dan refresh berjalan di server Next.js. Batas "per IP" berlaku untuk semua pengguna sekaligus. Pemilik produk menyetujui nilai pilot: sign-in/sign-up 100 per 5 menit, token refresh 500 per 5 menit, verifikasi token tetap 30, email per jam tetap default. Pengguna melaporkan nilai sudah diubah di dashboard Authentication → Rate Limits; angka tersimpan tidak dibaca ulang oleh Claude. Sebelum production, IP asli pengguna perlu diteruskan ke Auth agar batas per IP bermakna. |
+
+### Bukti backup (runbook §4)
+
+| Item | Hasil |
+| --- | --- |
+| Supabase CLI di server | `2.121.0` |
+| Run manual pertama | `2026-10-17T16:31:13Z backup: ok 20261017T162948Z size=112K copies=1`, exit 0 |
+| Mode file | direktori `drwx------`; `roles.sql.gz` (233 B), `schema.sql.gz` (90739 B), `data.sql.gz` (5603 B), `SHA256SUMS` semuanya `-rw-------`, pemilik user compose |
+| `SHA256SUMS` | `data.sql.gz` `f73f40d09c61a74c26e44cb3c71ade8d8e773e01c6466a636c85a03b2a87a5b2`; `roles.sql.gz` `c5af79e30d334e17590489d17adc22b8bed2a19241475e0f9d5196b5246693e1`; `schema.sql.gz` `35ba92f5ede889687547b2e85bed753358e71b873095fd7e40d08a8990496426` |
+| Cron harian | Dipasang pengguna (19:30 UTC sesuai runbook, dilaporkan). Baris cron tidak tampil di output yang dikirim; run terjadwal pertama belum terjadi. |
+
+Staging tidak berisi akun saat backup ini dibuat, jadi salinan ini hanya memuat schema dan data sistem.
+
+### Latihan restore (runbook §5), 17 Oktober 2026
+
+- Pelaksana: Claude (Opus 5.5), di laptop pengguna. Salinan `20261017T162948Z` disalin pengguna dari server; ketiga SHA-256 cocok dengan tabel di atas.
+- Target: stack Supabase sekali pakai `drill-stack` di port 553xx, terpisah dari stack lokal `WorkPulse`, yang tidak tersentuh. Versi disamakan dengan hosted: gotrue `v2.197.0` (`auth.schema_migrations` 82, terakhir `20260831180000`, sama dengan hosted), storage-api `v1.80.2`, postgres `17.11.0.003`.
+- Percobaan pertama dengan Auth `v2.196.0` (77 migrasi) gagal pada tabel dan kolom Auth yang belum ada. Satu transaksi dibatalkan, jadi tidak ada sisa. Syarat versi kini ada di runbook §5 langkah 1.
+- Restore akhir memakai file backup tanpa diubah. `roles.sql` dijalankan sebagai `supabase_admin`. Schema (sebagai `postgres` lewat `SET ROLE`) dan data (`session_replication_role = replica`) dijalankan dalam satu transaksi, `psql` exit 0 tanpa error. Penyesuaian khusus stack lokal tercatat di runbook §5.
+
+| Pemeriksaan | Hosted | Hasil restore |
+| --- | --- | --- |
+| Tabel `public` / `internal` | 18 / 9 | 18 / 9 |
+| Tabel `public` tanpa RLS | 0 | 0 |
+| Fungsi `public` | 116 | 116 |
+| `auth.users` / `profiles` | 0 / 0 | 0 / 0 |
+| `internal.account_deletions` (semua `completed`) | 3 / 3 | 3 / 3 |
+| `internal.storage_jobs` / `product_event_epoch` | 3 / 1 | 3 / 1 |
+| Bucket | `workpulse-private:false` | `workpulse-private:false` |
+| `storage.objects` | 0 | 0 |
+| `get_operational_health()` sebagai `service_role` | n/a | berjalan, delapan metrik 0 |
+
+Batas: backup tidak memuat baris pengguna, jadi restore data pengguna dengan relasi dan trigger belum diuji pada salinan nyata. Receipt penghapusan (`account_deletions`) dan job cleanup ikut dipulihkan sesuai isinya. `drill-stack` dan volumenya dihapus setelah pemeriksaan. Salinan backup di laptop (`D:\Project\backups\20261017T162948Z`, di luar repo) masih ada.
 
 Tersisa:
 
-1. Pasang backup sesuai runbook §2, catat bukti §4, lalu latihan restore §5. Setelah itu BLOCKER retensi backup di checklist dapat dinilai ulang.
-2. Pasang nilai rate limit pilot di dashboard dan catat nilai tersimpan.
-3. Ganti `WORKPULSE_TAG` di server ke `sha-1de73187792325e948fbd08215733540968a15c4` bila belum (S2).
-4. Reviewer memeriksa receipt ini, termasuk pengecualian tipe dan klaim backup yang tetap terbuka. Status authoritative T25 dan checklist release tidak diubah oleh receipt ini.
+1. Dua baris `backup: ok` dari cron (runbook §4 langkah 4). Setelah itu BLOCKER retensi backup di checklist dapat dinilai ulang.
+2. Ganti `WORKPULSE_TAG` di server ke `sha-1de73187792325e948fbd08215733540968a15c4` bila belum (S2).
+3. Reviewer memeriksa receipt ini, termasuk pengecualian tipe dan klaim backup yang tetap terbuka. Status authoritative T25 dan checklist release tidak diubah oleh receipt ini.
