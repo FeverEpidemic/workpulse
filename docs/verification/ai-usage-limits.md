@@ -22,8 +22,21 @@ Tanggal: 18 Oktober 2026. Pelaksana: Claude (Opus 5.5), branch `claude/eloquent-
 
 Skenario `test:integration:ai-usage`: unit ke-21 per hari ditolak tanpa job dan replay gratis, lalu jalur manual tetap confirm; 6 request paralel pada 18/20 menghasilkan tepat 2 job; jendela bulanan dan waktu reset tanggal 1; retry dibebankan dan ditolak tanpa mengubah job; jawaban tersimpan saat refine ditolak; import ke-4 per hari ditolak tanpa batch dan replay tidak dibebankan; retry import ditolak tanpa melanjutkan batch; kapasitas bersama menolak akun `free`, sementara akun `unlimited` tidak berhenti dan tidak dihitung; counter tidak terbaca dari API dan hilang bersama user Auth.
 
+Suite yang bergantung pada Storage awalnya gagal pada upload pertama karena drift lingkungan lokal: indeks unik `storage.objects` tidak memakai `COLLATE "C"` yang diharapkan storage-api v1.80.2 (`42P10`), juga untuk `test:integration:storage` yang tidak menyentuh AI. Setelah indeks dibangun ulang (tanpa reset), suite berikut lulus pada `c8a7901` tanpa `AI_QUOTA_EXCEEDED`/`AI_CAPACITY_EXCEEDED` di log:
+
+| Check | Hasil |
+| --- | --- |
+| `test:integration:storage` | 1/1 |
+| `test:integration:import` | 21/21 |
+| `test:integration:import-commit` | 11/11 |
+| `test:integration:import-review` | 6/6 |
+| `test:integration:m3` | 7/7 |
+| `test:integration:account-deletion` | 14/14 |
+| `test:integration:release` | 12/12 |
+| `test:e2e:import` | 7/7 |
+| `test:e2e:m3` | 2/2 |
+
 ## Belum terverifikasi
 
-- `test:integration:import`, `import-commit`, `import-review`, `m3`, `account-deletion`, `release`: gagal pada **upload Storage pertama** di stack lokal ini, juga untuk `test:integration:storage` yang tidak menyentuh AI. Log container storage: `42P10 there is no unique or exclusion constraint matching the ON CONFLICT specification` pada upsert `storage.objects`, karena skema `storage.objects` sudah berbentuk versioned (`idx_objects_current_version`, `is_versioned`) sedangkan container storage v1.80.2. Ini masalah lingkungan lokal, bukan migration ini; ulangi suite tersebut setelah stack diperbaiki.
-- E2E (`test:e2e:*`) belum dijalankan. Fixture E2E masih memakai paket `free`; spec yang mengimpor lebih dari tiga CV per akun per hari akan tersandung batas import.
+- E2E lain (`test:e2e:*` selain import dan m3) belum dijalankan.
 - Staging hosted: migration belum diterapkan.
