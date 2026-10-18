@@ -49,10 +49,10 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.begin_import_batch(uuid,text,bigint,text,text)', 'EXECUTE')
+  has_function_privilege('authenticated', 'public.begin_import_batch(uuid,text,bigint,text,text,text)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.cancel_import_batch(uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.retry_import_batch(uuid)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.begin_import_batch(uuid,text,bigint,text,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.begin_import_batch(uuid,text,bigint,text,text,text)', 'EXECUTE')
   and not has_function_privilege('service_role', 'public.cancel_import_batch(uuid)', 'EXECUTE'),
   'import user RPCs are executable by authenticated only'
 );
@@ -60,7 +60,7 @@ select ok(
 select ok(
   has_function_privilege('service_role', 'public.finalize_import_upload(uuid,uuid)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.claim_import_jobs(integer)', 'EXECUTE')
-  and has_function_privilege('service_role', 'public.complete_import_parse(uuid,uuid,text,integer)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.complete_import_parse(uuid,uuid,text,integer,jsonb)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.complete_import_ai_job(uuid,uuid,jsonb,jsonb)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.purge_expired_import_batches(integer)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.finalize_import_upload(uuid,uuid)', 'EXECUTE')
