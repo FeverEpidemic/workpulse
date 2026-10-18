@@ -20,7 +20,7 @@ Bagian lokal pipeline (malware scan, parsing PDF/DOCX di thread terisolasi, hitu
 ## Decisions
 
 1. **Mengubah 0021 #1: consent hanya untuk mode `ai`.** Setiap batch punya `extraction_mode` (`ai` atau `rules`) yang ditetapkan saat upload dan immutable. `begin_import_batch`, `complete_import_parse`, dan `retry_import_batch` memeriksa consent hanya untuk batch `ai`. Batch `ai` tetap mengikuti seluruh aturan consent 0021 (cek saat enqueue, saat input dibaca, dan saat completion).
-2. **Mode mengikuti pilihan di dialog consent.** Pengguna yang sudah consent selalu memakai `ai`. Pengguna tanpa consent melihat dialog dengan **Lanjut tanpa AI** (fokus awal) dan **Izinkan AI**; Lanjut tanpa AI meng-upload batch `rules`. Esc dan tombol tutup hanya membatalkan. Consent yang berubah setelah upload tidak mengubah mode batch.
+2. **Pilihan netral 50:50, tanpa default.** Pengguna yang sudah consent selalu memakai `ai`. Pengguna tanpa consent melihat dialog pilihan dengan dua kartu setara, **Dengan AI** (tombol *Pakai AI*) dan **Tanpa AI** (tombol *Baca tanpa AI*): urutan tetap, varian tombol sama, tanpa badge rekomendasi. Fokus awal ada di judul dialog, bukan di tombol, sehingga Enter yang tidak disengaja tidak memilih apa pun. Isi kartu simetris (ke mana teks dikirim, apa yang ditemukan, kekurangannya), dan kartu AI menyebut bahwa consent `ai-processing-v1` juga berlaku untuk analisis aktivitas. Esc dan tombol tutup hanya membatalkan. Consent yang berubah setelah upload tidak mengubah mode batch. Revisi ini menggantikan rancangan awal yang memakai `AiConsentDialog` dengan tombol tanpa AI sebagai fokus awal; alasannya, fokus default mendorong pengguna ke satu jalur, sedangkan pengguna meminta keputusan yang seimbang.
 3. **Ekstraksi aturan di parser thread yang ada.** Extractor murni (`src/domain/import/rules-extract.ts`) berjalan di thread yang sama dengan parsing, sehingga mewarisi batas 0021 #9 (heap 256 MB, env kosong, timeout 30 detik). Ini penting karena regex berjalan atas teks yang tidak dipercaya.
 4. **Grounding yang sama dengan AI.** Output extractor berbentuk `import.v1` dan divalidasi oleh `validateImportResult` seperti output AI (0021 #11). Excerpt selalu potongan baris asli; field yang tidak yakin diisi `null`.
 5. **Staging tanpa `ai_jobs`.** Untuk batch `rules`, `complete_import_parse` menyimpan teks, men-stage item, dan membuka `review` dalam satu transaksi. Logika validasi struktur dan insert item dipindah dari `complete_import_ai_job` ke `internal.stage_import_items` tanpa mengubah perilaku AI. Batch `rules` berpindah `parsing → done` tanpa stage `extracting`.
@@ -46,7 +46,13 @@ Tidak berubah dari 0021: profile (`for share`) → import batch (`for update`) �
 - **Fallback otomatis ke aturan saat AI gagal atau consent ditarik:** mengubah perilaku batch `ai` yang sudah diuji dan membuat asal kandidat tidak jelas bagi pengguna.
 - **Library parsing CV pihak ketiga:** menambah dependency untuk masalah yang bisa diselesaikan dengan aturan sederhana pada cakupan v1.
 
+- **Fokus awal di tombol "tanpa AI"** (rancangan awal): paling menjaga privasi, tetapi Enter yang tidak disengaja selalu memilih jalur aturan, sehingga porsi pengguna AI turun tanpa keputusan sadar.
+- **Fokus awal di tombol AI:** consent dapat terberi lewat Enter yang tidak disengaja.
+- **Mengacak urutan kartu:** mengurangi bias posisi, tetapi susunan yang berubah-ubah menyulitkan pengguna keyboard dan screen reader.
+
 ## Open
+
+- Pembagian pilihan AI dan tanpa AI belum diukur. Properti `extraction_mode` pada event produk T24 dapat ditambahkan sebagai follow-up.
 
 - Kualitas ekstraksi pada CV nyata belum diukur. Rencana menyarankan uji manual dengan 5 sampai 10 CV milik pemilik produk (en/id, satu dan dua kolom), dicatat tanpa menyimpan isi CV.
 - Apakah achievement dari bullet experience ditambahkan setelah uji CV nyata.
