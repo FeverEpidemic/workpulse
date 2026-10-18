@@ -40,7 +40,7 @@ Semua langkah dijalankan di server sebagai user yang menjalankan compose (`ilham
    WORKPULSE_BACKUP_DB_URL='postgresql://postgres.<ref>:<password>@<host pooler>:5432/postgres'
    ```
 
-   Jangan tempel URL atau password ini di chat, repo, maupun receipt.
+   Jangan tempel URL atau password ini di chat, repo, maupun receipt. Selama dump berjalan, URL beserta password terlihat di daftar proses (`ps`). Itu dapat diterima di server yang hanya dipakai satu user; jangan pindahkan script ini ke host bersama tanpa mengganti cara memberi kredensial.
 
 4. Jalankan sekali secara manual:
 
@@ -58,8 +58,10 @@ Semua langkah dijalankan di server sebagai user yang menjalankan compose (`ilham
 
 ## 3. Retensi
 
-- Script menghapus salinan yang berumur 29 hari atau lebih, setiap kali berjalan. Dengan cron harian, tidak ada salinan yang mencapai 30 hari.
-- Penghapusan hanya terjadi saat script berjalan. Bila cron mati, salinan lama tidak terhapus. Periksa `backup.log` minimal mingguan; baris terakhir harus `backup: ok` dari hari itu.
+- Setiap kali berjalan, script lebih dulu menghapus salinan yang berumur 29 hari atau lebih, baru kemudian membuat dump. Dengan cron harian, tidak ada salinan yang mencapai 30 hari.
+- Penghapusan tetap berjalan walau dump hari itu gagal. Jadi bila dump gagal terus (misalnya password database diganti), salinan lama tetap dihapus tepat waktu, tetapi tidak ada salinan baru. Lama-kelamaan `backups/` bisa kosong.
+- Script juga menghapus direktori `.partial-<stamp>` yang berumur lebih dari satu hari. Direktori ini tertinggal bila run sebelumnya mati di tengah dump, dan isinya bisa berupa data.
+- Penghapusan hanya terjadi saat script berjalan. Bila cron mati, salinan lama tidak terhapus. Periksa `backup.log` minimal mingguan. Baris terakhir harus `backup: ok` dari hari itu; baris `dump failed` berarti hari itu tidak ada salinan baru.
 - Paket Free tidak menyediakan backup proyek maupun PITR (dashboard Database → Backups, receipt Fase 7a). Jadi salinan di server ini satu-satunya backup, dan retensinya ditentukan script ini.
 
 ## 4. Bukti yang dicatat setelah pemasangan
