@@ -8,7 +8,7 @@
 - Asal task: penambahan scope oleh pengguna pada 18 Oktober 2026. T26 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Desain disetujui per bagian di chat (arsitektur, aturan ekstraksi, UI/copy/error, pengujian).
 - Eksekutor: satu agent **Claude**. Semua fase dikerjakan berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 5; Fase 6 (draft dokumen) dikerjakan setelah gate.
-- Keputusan yang sudah disetujui pengguna: pendekatan A (parser aturan di worker import yang ada), mode otomatis untuk pengguna tanpa consent, dialog consent tetap muncul dengan dua tombol, cakupan v1 profil/experience/education/skills, achievement dari bullet ditunda.
+- Keputusan yang sudah disetujui pengguna: pendekatan A (parser aturan di worker import yang ada), mode otomatis untuk pengguna tanpa consent, dialog pilihan netral 50:50 tanpa default (revisi 18 Oktober 2026, menggantikan dialog consent dengan tombol default), cakupan v1 profil/experience/education/skills, achievement dari bullet ditunda.
 - Acuan:
   - PRD R02, §3 (*Imported achievement claims are candidates until the user selects Confirm during review*), *Shared validation*.
   - User Flow F01 dan *Import exceptions*; Wireframe S02, S03.
@@ -16,7 +16,7 @@
   - `AGENTS.md` *Konteks proyek* (jalur manual harus tetap berfungsi tanpa AI) dan *Files, import, dan cleanup*.
   - `docs/decisions/0021-t15-import-staging.md` (poin 1, 3, 5, 6, 7, 9, 11, 13), `0022-t16-import-commit.md`, `0023-t17-import-review-ui.md`, draft `0032-t26-import-rules-extraction.md`.
 
-**Goal:** Pengguna yang belum memberi consent AI tetap bisa mengimpor CV PDF/DOCX. Saat upload, dialog consent menawarkan **Izinkan AI** atau **Lanjut tanpa AI**. Pilihan kedua meng-upload batch dengan mode `rules`: worker membaca teks seperti biasa, lalu parser berbasis aturan (heading en/id, pola tanggal, daftar) mengusulkan kandidat profil, experience, education, dan skills. Kandidat melewati validator grounding yang sama dengan output AI dan masuk review S03. Tidak ada teks yang dikirim ke penyedia AI, dan tidak ada yang tersimpan sebelum pengguna mengonfirmasi.
+**Goal:** Pengguna yang belum memberi consent AI tetap bisa mengimpor CV PDF/DOCX. Saat upload, dialog pilihan netral menampilkan dua kartu setara, **Pakai AI** dan **Baca tanpa AI**, tanpa jawaban default. Pilihan kedua meng-upload batch dengan mode `rules`: worker membaca teks seperti biasa, lalu parser berbasis aturan (heading en/id, pola tanggal, daftar) mengusulkan kandidat profil, experience, education, dan skills. Kandidat melewati validator grounding yang sama dengan output AI dan masuk review S03. Tidak ada teks yang dikirim ke penyedia AI, dan tidak ada yang tersimpan sebelum pengguna mengonfirmasi.
 
 **Architecture:** Satu migration forward-only menambah `extraction_mode` (`ai`/`rules`) pada `import_batches` dan `internal.import_jobs`, ditetapkan saat upload dan immutable. `begin_import_batch` hanya memeriksa consent untuk mode `ai`. Ekstraksi aturan berjalan di parser thread yang sudah terisolasi (`src/server/documents/parser-thread.ts`), tepat setelah teks keluar. Worker memvalidasi hasilnya dengan `validateImportResult`, lalu `complete_import_parse` men-stage item dan membuka `review` dalam satu transaksi tanpa baris `ai_jobs`. Logika staging dipindah dari `complete_import_ai_job` ke fungsi internal bersama tanpa mengubah perilaku AI. Review, commit T16, purge, dan penghapusan akun tidak berubah karena bekerja di `import_items`.
 
@@ -52,11 +52,11 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 7. **Aman terhadap input jahat.** Baris panjang dengan pola berulang selesai di bawah batas waktu; extractor berjalan di parser thread dengan batas heap dan timeout yang ada. Dibuktikan unit (waktu) dan unit worker (thread).
 8. **Kegagalan extractor jelas.** Exception di extractor atau output yang gagal validasi menghasilkan batch `failed` dengan `IMPORT_RULES_FAILED` (permanen, tanpa Retry); log worker hanya berisi kode. Dibuktikan unit worker dan pgTAP (`is_permanent_import_error`).
 9. **Retry tanpa consent untuk batch `rules`.** `retry_import_batch` pada batch `rules` yang gagal transien tidak memeriksa consent dan melanjutkan job parse; batch `ai` tetap memeriksa consent. Dibuktikan pgTAP.
-10. **Dialog consent dua jalur.** Pengguna tanpa consent yang menekan Upload melihat dialog dengan **Lanjut tanpa AI** (fokus awal) dan **Izinkan AI**. Lanjut tanpa AI meng-upload dengan header `x-extraction-mode: rules`; Esc dan tombol tutup tidak meng-upload. Dialog analisis aktivitas tidak berubah. Dibuktikan unit UI dan E2E.
+10. **Dialog pilihan netral.** Pengguna tanpa consent yang menekan Upload melihat dialog dengan dua kartu setara (§2.2.10). Fokus awal ada di judul dialog, sehingga Enter tanpa memilih tidak meng-upload dan tidak memberi consent. **Baca tanpa AI** meng-upload dengan header `x-extraction-mode: rules` tanpa mengubah consent. **Pakai AI** menyimpan consent lalu meng-upload dengan mode `ai`. Esc dan tombol tutup tidak meng-upload. Kedua tombol memakai varian yang sama. Dialog consent analisis aktivitas tidak berubah. Dibuktikan unit UI dan E2E.
 11. **Copy jujur.** Disclosure S02 bercabang sesuai consent; catatan "dibaca tanpa AI" tampil di hasil siap S02 dan di atas S03 hanya untuk batch `rules`; hasil kosong `rules` memakai copy khusus. Semua key baru ada di en dan id dan tidak mengandung em dash. Dibuktikan unit.
 12. **Alur penuh.** Integration: upload `rules` → scan → parse + ekstraksi → review → commit → purge membersihkan teks dan objek; penghapusan akun menghapus batch `rules`. E2E: pengguna baru menolak AI, upload PDF fixture, review, konfirmasi, dashboard menampilkan record. Dibuktikan integration dan E2E.
 13. **Privasi dan isolasi.** Akun B tidak melihat batch `rules` akun A; log, response, dan console tidak memuat teks CV, excerpt, atau nama file (sentinel = 0). Dibuktikan integration dan E2E.
-14. **Aksesibilitas.** Axe tanpa pelanggaran WCAG 2.2 AA pada dialog consent import dan S02/S03 untuk batch `rules`; 360 px dan 1440 px, light dan dark; urutan tab dialog: Lanjut tanpa AI, lalu Izinkan AI. Dibuktikan E2E.
+14. **Aksesibilitas.** Axe tanpa pelanggaran WCAG 2.2 AA pada dialog pilihan import dan S02/S03 untuk batch `rules`; 360 px dan 1440 px, light dan dark; kartu berdampingan di 1440 px dan bertumpuk di 360 px tanpa overflow horizontal; urutan tab dari judul: Pakai AI, lalu Baca tanpa AI; tiap kartu adalah region berlabel sehingga screen reader membacakan isi kartu bersama tombolnya. Dibuktikan E2E.
 
 ## 2. Scope dan keputusan yang dibekukan
 
@@ -65,7 +65,7 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - Migration `supabase/migrations/20261019090000_t26_import_rules_extraction.sql`, pgTAP `supabase/tests/database/import_rules.test.sql`, regenerasi `src/server/supabase/database.types.ts`.
 - Domain murni `src/domain/import/rules-extract.ts` (+ `rules-patterns.ts` bila file melebihi ~400 baris).
 - Parser thread, worker import, gateway Supabase worker, service dan route upload, view model S02/S03.
-- UI S02 (`import-start.tsx`), dialog consent (`ai-consent-dialog.tsx`), catatan S03 (`import-review.tsx`), copy en/id, test unit/integration/E2E, receipt, draft decision 0032 final.
+- UI S02 (`import-start.tsx`), dialog pilihan baru (`import-mode-dialog.tsx`), opsi fokus judul pada primitive `Dialog`, catatan S03 (`import-review.tsx`), copy en/id, test unit/integration/E2E, receipt, draft decision 0032 final.
 
 ### 2.2 Keputusan implementasi
 
@@ -85,11 +85,28 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 7. **Kode error baru.** `IMPORT_RULES_FAILED` (permanen) ditambahkan ke `internal.is_permanent_import_error` dan ke `FAILURE_KEYS` di `src/features/import/import-start.tsx:24`. Timeout thread tetap `PARSER_TIMEOUT`, crash thread tetap `CORRUPT_FILE` (perilaku 0021 #9).
 8. **Stage.** Batch `rules` berpindah `parsing → done` tanpa `extracting`. Copy progress tidak berubah.
 9. **Hasil kosong.** Nol kandidat valid → `review` tanpa item, tampil sebagai `review_empty` (perilaku T17), bukan error.
-10. **Dialog consent.** `AiConsentDialog` (`src/components/ui/ai-consent-dialog.tsx`) mendapat prop opsional `declineControl?: ReactNode`. Bila diberikan, ia menggantikan tombol *Continue manually* dan tetap menjadi kontrol pertama dengan `autoFocus`. Untuk `purpose="import"`, dialog menampilkan satu paragraf tambahan tentang mode tanpa AI. Esc dan tombol tutup hanya menutup. Pemakaian `purpose="analysis"` tidak berubah.
+10. **Dialog pilihan netral (50:50).** Import tidak lagi memakai `AiConsentDialog` untuk pengguna tanpa consent. Komponen baru `src/features/import/import-mode-dialog.tsx` dibangun di atas primitive `Dialog`:
+    - Dua kartu setara (`section` berlabel dengan heading sendiri), urutan tetap: **Dengan AI**, lalu **Tanpa AI**. Tidak diacak, agar susunannya dapat diprediksi bagi pengguna keyboard dan screen reader.
+    - Isi kartu simetris: ke mana teks dikirim, apa yang ditemukan, apa kekurangannya. Kartu AI juga menyebut bahwa izin berlaku untuk analisis aktivitas dan dapat dicabut di Pengaturan, karena consent `ai-processing-v1` memang mencakup keduanya.
+    - Kedua tombol memakai varian `secondary` yang sama. Tidak ada badge "Disarankan", tidak ada warna atau ukuran yang membedakan.
+    - **Fokus awal di judul dialog.** `showModal()` native memfokuskan elemen pertama yang dapat difokus bila tidak ada `autoFocus` (`src/components/ui/dialog.tsx:29`), sehingga tanpa perubahan fokus jatuh ke tombol kartu pertama. Primitive `Dialog` mendapat prop opsional `focusTitle?: boolean` yang memberi heading `tabIndex={-1}` dan `autoFocus`. Dialog lain tidak berubah karena default-nya `false`.
+    - Esc, klik backdrop, dan tombol tutup hanya membatalkan; file tetap terpilih.
+    - **Pakai AI** memanggil `setAiConsentAction` seperti alur sekarang (`import-start.tsx:171-189`), lalu upload mode `ai`. Gagal menyimpan consent → pesan error di dialog, tanpa upload. **Baca tanpa AI** langsung upload mode `rules`.
+    - Satu kalimat bersama di bawah kartu tentang data yang tidak pernah dikirim dan review sebelum simpan.
+    - Layout: kartu berdampingan mulai lebar yang cukup (mengikuti breakpoint `Design.md`), bertumpuk di mobile.
+    - `AiConsentDialog` dan pemakaiannya untuk analisis aktivitas tidak berubah.
 11. **View model.** `ImportView` (`src/domain/import/import-view.ts`) dan view review S03 (`src/domain/import/review-view.ts`) mendapat `extractionMode: "ai" | "rules"`. Batch lama tanpa nilai eksplisit dibaca sebagai `ai` (default kolom).
 12. **Copy.** Semua teks baru lewat `src/i18n/messages.ts` (en dan id), tanpa string literal di komponen dan tanpa em dash. Teks yang disetujui:
-    - `ai.consent.dialogDeclineImport`: en "Continue without AI" / id "Lanjut tanpa AI".
-    - `ai.consent.withoutAiImport`: en "Without AI, WorkPulse reads your CV on its own server using fixed rules. You usually get fewer results, and you should check job titles, employers and dates more closely." / id "Tanpa AI, WorkPulse membaca CV di server sendiri dengan aturan tetap. Hasilnya biasanya lebih sedikit, dan jabatan, perusahaan, serta tanggal perlu Anda cek lebih teliti."
+    - `import.mode.title`: en "How should we read your CV?" / id "Bagaimana CV Anda dibaca?"
+    - `import.mode.description`: en "Choose one. Both options open the same review before anything is saved." / id "Pilih salah satu. Kedua pilihan membuka review yang sama sebelum apa pun disimpan."
+    - `import.mode.aiTitle`: en "With AI" / id "Dengan AI".
+    - `import.mode.aiBody`: en "Your CV text is sent to an external AI provider. It finds experience, education, skills, certifications and achievements." / id "Teks CV dikirim ke penyedia AI eksternal. AI menemukan pengalaman, pendidikan, skill, sertifikasi, dan pencapaian."
+    - `import.mode.aiConsent`: en "This permission also covers activity analysis. You can withdraw it in Settings." / id "Izin ini juga berlaku untuk analisis aktivitas dan bisa dicabut di Pengaturan."
+    - `import.mode.aiAction`: en "Use AI" / id "Pakai AI".
+    - `import.mode.rulesTitle`: en "Without AI" / id "Tanpa AI".
+    - `import.mode.rulesBody`: en "Your CV text is read on the WorkPulse server using fixed rules. It finds experience, education and skills. You usually get fewer results." / id "Teks CV dibaca di server WorkPulse dengan aturan tetap. Hasilnya mencakup pengalaman, pendidikan, dan skill, dan biasanya lebih sedikit."
+    - `import.mode.rulesAction`: en "Read without AI" / id "Baca tanpa AI".
+    - `import.mode.shared`: en "Either way, the file, its name and your other records are not sent. You review every result before it is saved." / id "Apa pun pilihan Anda, file, nama file, dan data Anda yang lain tidak dikirim. Semua hasil tetap Anda tinjau sebelum disimpan."
     - `import.disclosureNoConsent`: en "If you allow AI, your CV text is sent to an external AI provider. If you don't, WorkPulse reads it itself using fixed rules. The file, its name and your other records are never sent." / id "Kalau Anda mengizinkan AI, teks CV dikirim ke penyedia AI eksternal. Kalau tidak, WorkPulse membacanya sendiri dengan aturan tetap. File, nama file, dan data Anda yang lain tidak pernah dikirim."
     - `import.rulesNote`: en "These records were read without AI. Check employers, job titles and dates before you confirm." / id "Data ini dibaca tanpa AI. Cek nama perusahaan, jabatan, dan tanggal sebelum mengonfirmasi."
     - `import.emptyBodyRules`: en "We couldn't find an Experience, Education or Skills section in this file. Two-column or table-based CVs often can't be read without AI. You can try another file or start manually." / id "Kami tidak menemukan bagian Pengalaman, Pendidikan, atau Skill di file ini. CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI. Anda bisa mencoba file lain atau mulai manual."
@@ -134,8 +151,9 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### 3.4 UI
 
-- `src/components/ui/ai-consent-dialog.tsx`: §2.2.10.
-- `src/features/import/import-start.tsx`: `upload` menerima mode; `declineControl` memanggil upload `rules`; disclosure bercabang (`granted`); catatan `import.rulesNote` di `review_ready` bila `extractionMode === 'rules'`; `import.emptyBodyRules` di `review_empty` untuk `rules`; `IMPORT_RULES_FAILED` di `FAILURE_KEYS`.
+- `src/components/ui/dialog.tsx`: prop opsional `focusTitle` (§2.2.10); dialog yang sudah ada tidak berubah.
+- `src/features/import/import-mode-dialog.tsx` (baru): §2.2.10.
+- `src/features/import/import-start.tsx`: `upload` menerima mode; pengguna tanpa consent membuka `ImportModeDialog` sebagai ganti `AiConsentDialog`; disclosure bercabang (`granted`); catatan `import.rulesNote` di `review_ready` bila `extractionMode === 'rules'`; `import.emptyBodyRules` di `review_empty` untuk `rules`; `IMPORT_RULES_FAILED` di `FAILURE_KEYS`.
 - `src/features/import/import-review.tsx`: catatan `import.rulesNote` di atas grup kandidat untuk batch `rules`, sebagai teks biasa (bukan hanya badge warna).
 
 ## 4. Struktur file
@@ -149,7 +167,8 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 | Modify | `src/server/documents/parser-thread.ts`, `src/server/documents/parse-in-thread.ts` |
 | Modify | `workers/import-worker.ts`, `workers/supabase-import-gateway.ts` |
 | Modify | `src/app/api/imports/route.ts`, `src/features/import/import-service.ts`, `src/features/import/import-review-view-service.ts` |
-| Modify | `src/components/ui/ai-consent-dialog.tsx`, `src/features/import/import-start.tsx`, `src/features/import/import-review.tsx`, `src/i18n/messages.ts` |
+| Create | `src/features/import/import-mode-dialog.tsx` |
+| Modify | `src/components/ui/dialog.tsx`, `src/features/import/import-start.tsx`, `src/features/import/import-review.tsx`, `src/i18n/messages.ts`, `src/app/globals.css` (layout kartu, token yang ada) |
 | Create | `tests/unit/import-rules-extract.test.ts` |
 | Modify | `tests/import-fixtures.ts`, `tests/unit/import-worker.test.ts`, `tests/unit/import-view.test.ts`, `tests/unit/import-start-ui.test.tsx`, `tests/unit/import-review-ui.test.tsx`, `tests/integration/import-staging.test.ts`, `tests/integration/import-commit.test.ts`, `tests/integration/account-deletion.test.ts`, `tests/e2e/import-onboarding.spec.ts` |
 | Create | `docs/verification/T26-phase{0..5}-*.md`, `docs/verification/T26-import-rules-extraction.md` |
@@ -190,7 +209,8 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 4: UI dan copy
 
-- [ ] `import-start-ui.test.tsx` dan `import-review-ui.test.tsx` (gagal): acceptance 10 dan 11, termasuk fokus awal, Esc tanpa upload, header `rules`, catatan dan copy kosong hanya untuk `rules`, dialog analisis tidak berubah.
+- [ ] `import-start-ui.test.tsx` dan `import-review-ui.test.tsx` (gagal): acceptance 10 dan 11, termasuk fokus awal di judul, Enter tanpa memilih tidak meng-upload, kedua tombol bervarian sama, Esc tanpa upload, Pakai AI menyimpan consent sebelum upload `ai`, Baca tanpa AI meng-upload `rules` tanpa consent, catatan dan copy kosong hanya untuk `rules`, dialog analisis tidak berubah.
+- [ ] Test primitive `Dialog`: `focusTitle` memfokuskan heading; tanpa prop, perilaku fokus dialog lama tetap.
 - [ ] Test otomatis: key baru ada di en dan id, tanpa karakter em dash.
 - [ ] Implementasi §3.4 dan copy §2.2.12.
 - [ ] Receipt `T26-phase4-ui.md`, commit.
@@ -261,8 +281,8 @@ Read-only setelah Fase 5. P0–P2 memblokir, P3 follow-up.
 - [ ] Migration: signature lama ter-drop, grant/revoke/comment lengkap, `stage_import_items` identik dengan logika lama, consent hanya untuk `ai` di ketiga titik.
 - [ ] Batch `rules` tidak pernah membuat `ai_jobs` dan tidak pernah gagal karena consent.
 - [ ] Extractor murni, regex linear, excerpt potongan asli, tidak ada field yang ditebak.
-- [ ] Dialog: fokus awal di Lanjut tanpa AI, Esc tanpa upload, dialog analisis tidak berubah.
-- [ ] Copy en/id sesuai §2.2.12, tanpa em dash, tanpa klaim akurasi.
+- [ ] Dialog netral: fokus awal di judul, kedua kartu setara (ukuran, varian, tanpa badge), Esc tanpa upload, kartu AI menyebut cakupan consent, dialog analisis tidak berubah.
+- [ ] Copy en/id sesuai §2.2.12, simetris antar kartu, tanpa em dash, tanpa klaim akurasi.
 - [ ] Log dan response tanpa teks CV atau nama file.
 
 ## 10. Review focus
@@ -271,5 +291,5 @@ Read-only setelah Fase 5. P0–P2 memblokir, P3 follow-up.
 2. **Refactor staging mengubah perilaku AI.** Pemindahan ke `internal.stage_import_items` diam-diam mengubah validasi atau resolusi `experience_ref`. Dijaga `import_staging.test.sql` lama dan integration T15/T16.
 3. **ReDoS di extractor.** Regex dengan quantifier bersarang membuat parser thread kena timeout pada CV biasa. Dijaga unit waktu acceptance 7 dan batas baris 500 karakter.
 4. **Excerpt tidak grounded.** Extractor menormalisasi teks sebelum memotong excerpt sehingga validator membuang kandidat. Dijaga kontrak acceptance 5 (`dropped_ungrounded === 0`).
-5. **Esc meng-upload.** `onOpenChange(false)` dipakai juga oleh tombol decline sehingga menutup dialog ikut meng-upload. Dijaga unit UI acceptance 10.
+5. **Dialog tidak benar-benar netral.** Fokus jatuh ke tombol kartu pertama karena perilaku `showModal()` native, atau `onOpenChange(false)` dipakai juga oleh tombol pilihan sehingga Esc ikut meng-upload. Dijaga unit UI acceptance 10 (fokus judul, Enter, Esc).
 6. **Idempotency mode.** Replay dengan key sama dan mode berbeda membuat batch kedua atau memakai mode lama. Dijaga pgTAP acceptance 2.
