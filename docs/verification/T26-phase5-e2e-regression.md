@@ -1,6 +1,6 @@
 # T26 Fase 5: E2E, aksesibilitas, regresi penuh
 
-Tanggal: 19 Oktober 2026. Pelaksana: Claude (Opus 5.5). Status receipt: **sementara**. Regresi §7 yang butuh database belum selesai karena blocker lingkungan (lihat *Blocker*).
+Tanggal: 19 Oktober 2026. Pelaksana: Claude (Opus 5.5). Status receipt: **lengkap**. Regresi §7 dijalankan setelah blocker port dibebaskan pengguna (lihat *Blocker*).
 
 ## Tujuan
 
@@ -36,16 +36,38 @@ Journey pengguna baru tanpa AI di browser nyata, axe pada dialog pilihan dan S02
 | `pnpm build` | exit 0 |
 | `git diff --check` | exit 0 |
 
-Hasil Fase 1-4 yang sudah tercatat: pgTAP 21/1725, `db:lint` exit 0, integration `account-deletion` 15, `import` 25, `import-commit` 12, `import-review` 6, `m3` 7, `release` 12, `ai-usage` 9.
+### Regresi §7 pada `b105426` (19 Oktober 2026, 20:25-20:41)
+
+Parity lokal 38/38 (`20261019090000` terakhir), image Storage v1.80.2, ClamAV/Gotenberg/PDF renderer nyata.
+
+| Command | Hasil |
+| --- | --- |
+| `pnpm db:test` | **21 file / 1725 test, `Result: PASS`** |
+| `pnpm db:lint` | exit 0, `results: []` |
+| `pnpm test:integration:account-deletion` | 15/15 (dijalankan pertama, sesuai urutan CI) |
+| `pnpm test:integration:import` | 25/25 |
+| `pnpm test:integration:import-commit` | 12/12 |
+| `pnpm test:integration:import-review` | 6/6 |
+| `pnpm test:integration:m3` | 7/7 |
+| `pnpm test:integration:release` | 12/12 |
+| `pnpm test:integration:ai-usage` | 9/9 |
+| `pnpm test:e2e:import` | 11/11 |
+| `pnpm test:e2e:import-review` | 10/10 |
+| `pnpm test:e2e:m3` | 2/2 |
+| `pnpm test:e2e:release` | 15/15 |
+
+Run pertama setelah Supabase menyala gagal di setup: database masih `57P03 the database system is starting up`, dan tiga container helper berhenti (`Exited (255)`) sehingga suite import tidak menemukan Gotenberg. Setelah DB siap dan container dinyalakan ulang, seluruh suite di atas lulus tanpa perubahan kode. Kegagalan itu lingkungan, bukan regresi.
+
+Tidak ada assertion lama yang dilemahkan. Perubahan assertion yang disengaja tercatat di receipt Fase 1, 3, 4, dan 5.
 
 ## Belum dijalankan
 
-Regresi §7 berikut belum dijalankan ulang setelah perubahan Fase 4-5: `db:test`, `db:lint` (tidak ada perubahan SQL sejak Fase 1), `test:integration:*` (kecuali yang tercatat), `test:e2e:import-review`, `test:e2e:m3`, `test:e2e:release`, serta suite §7 lain. Verifikasi screen reader manusia (NVDA) tidak dilakukan.
+Suite di luar §7 (`test:e2e:evidence`, `test:e2e:account-deletion`, `test:pdf`, `test:perf`, dan suite domain lain) tidak diulang; perubahan T26 tidak menyentuh domain itu. Verifikasi screen reader manusia (NVDA) tidak dilakukan. Uji kualitas ekstraksi pada CV nyata (decision 0033 *Open*) belum dilakukan.
 
-## Blocker
+## Blocker (selesai)
 
-Setelah Docker Desktop dimulai ulang pukul 12:07 (bukan oleh sesi ini), Windows mencadangkan rentang port TCP **54293-54392** (`netsh int ipv4 show excludedportrange protocol=tcp`), termasuk port Supabase lokal 54321/54322. `pnpm db:start` gagal: `bind: An attempt was made to access a socket in a way forbidden by its access permissions`. Perbaikan butuh shell admin (`net stop winnat` lalu `net start winnat`, kemudian `pnpm db:start`, tanpa reset) atau reboot. Sesi agen tidak berjalan sebagai admin.
+Setelah Docker Desktop dimulai ulang pukul 12:07 (bukan oleh sesi ini), Windows mencadangkan port TCP 54293-54392, termasuk port Supabase lokal, sehingga `pnpm db:start` gagal (`bind: ... forbidden by its access permissions`). Pengguna menjalankan `net stop winnat` dan `net start winnat` di shell admin; `pnpm db:start` lalu berhasil tanpa reset.
 
 ## Berikutnya
 
-Setelah port dibebaskan: jalankan regresi §7 lengkap, lengkapi receipt ini dengan angka aktual, commit, lalu berhenti untuk gate review Claude.
+Stop untuk gate review Claude (rencana §9). Fase 6 (decision 0033 final, `T26-import-rules-extraction.md`) hanya setelah gate lulus.
