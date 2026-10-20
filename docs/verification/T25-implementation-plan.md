@@ -9,7 +9,7 @@
 > - Jangan deploy ke environment apa pun tanpa otorisasi tertulis pengguna di chat untuk environment itu.
 
 - Tanggal: 10 Oktober 2026
-- Status saat plan ditulis: **TODO**.
+- Status saat plan ditulis: **TODO**. Status plan: **DONE** (20 Oktober 2026, [decision 0034](../decisions/0034-t25-staging-closeout.md)).
 - Dependensi:
   - T24 **DONE** (10 Oktober 2026): `internal.product_events`, `get_pilot_metrics`, `pnpm test:perf`, decision 0030. P3 terbuka G1, G2, G5, G7.
   - T23 **DONE**: `get_account_deletion_backlog`, runbook retensi dengan dua klaim *belum terverifikasi* (backup ≤ 30 hari, replay penghapusan setelah restore).

@@ -1,8 +1,8 @@
 # T25 Release handoff WorkPulse v0.1
 
 - Tanggal: 11 Oktober 2026.
-- Status yang direkomendasikan: **PARTIAL**. Semua bukti lokal lulus. Staging (Fase 7) BLOCKED dan retensi backup belum terverifikasi, jadi T25 belum memenuhi kalimat selesai rencana ("integrasi nyata diverifikasi di staging").
-- Ini laporan stack lokal. **Hasil lokal bukan bukti production**, dan tidak ada yang di-deploy.
+- Status: **DONE** (20 Oktober 2026). Semua bukti lokal lulus, staging terverifikasi pada 16-20 Oktober 2026, dan p95 hosted dikecualikan oleh pemilik produk ([decision 0034](../decisions/0034-t25-staging-closeout.md), [review penutupan](T25-closeout-review.md)). Status 11 Oktober adalah **PARTIAL**: staging BLOCKED dan retensi backup belum terverifikasi.
+- Bagian di bawah adalah laporan stack lokal 11 Oktober, kecuali baris 17 dan 18 yang diperbarui 20 Oktober. **Hasil lokal dan staging bukan bukti production.**
 - Pelaksana Fase 0–8: Claude Sonnet 5.5. Gate review, remediasi RV1, dan Fase 9: Claude (Opus).
 - HEAD terverifikasi: `617cae3` (perbaikan RV1) di atas regresi Fase 8 `4574d9a`.
 - Keputusan: [decision 0031](../decisions/0031-t25-release-handoff.md). Detail per baris: [matriks](T25-release-matrix.md). Operator: [runbook](T25-release-runbook.md), [checklist](T25-release-checklist.md).
@@ -27,8 +27,8 @@
 | 14 | Clean migration rebuild | **PASS** | Fase 5: 36 migration dari nol di stack sekali pakai, pgTAP 20/1638, tipe identik byte demi byte, stack aktif utuh |
 | 15 | Production build | **PASS** | `pnpm build`, `/api/health` 200 `no-store`, `worker:check` dua konfigurasi |
 | 16 | Runbook dan checklist | **PASS** | `release-docs.test.ts` (paritas env, ambang = kode, BLOCKER tidak bercentang); runbook §3 dilengkapi untuk konfigurasi Auth hosted dan pemeriksaan bucket (N7) |
-| 17 | Backup dan restore jujur | **WARNING** | prosedur restore terbukti lokal (`release-restore.test.ts`); retensi backup ≤ 30 hari **belum terverifikasi**, tercatat BLOCKER |
-| 18 | Staging | **TIDAK DIJALANKAN** (BLOCKED) | [Fase 7](T25-phase7-staging.md): tidak ada environment dan otorisasi |
+| 17 | Backup dan restore jujur | **PASS (staging)** | prosedur restore terbukti lokal (`release-restore.test.ts`) dan pada salinan staging (17 Oktober); backup `pg_dump` harian dengan dua run cron dan uji prune (20 Oktober). Retensi production tetap BLOCKER |
+| 18 | Staging | **PASS dengan pengecualian** | [Fase 7](T25-phase7-staging.md): migrasi, Auth email, scanner, renderer, export, penghapusan, `ops:check`; p95 hosted ditunda pemilik produk (BLOCKER) |
 | 19 | Tanpa regresi | **PASS** | [Fase 8](T25-phase8-regression.md): 52 command lulus; reviewer mengulang sampel di worktree bersih |
 | 20 | Privasi output | **PASS** | grep Fase 8 nihil; golden aria tanpa email, id, atau sentinel; email di-mask di screenshot; keluaran `ops:check` hanya nama metrik, angka, ambang |
 

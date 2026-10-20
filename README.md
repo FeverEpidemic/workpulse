@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) partial: local release evidence complete, staging not available yet. Pilot AI usage limits (decision 0032) and T26 CV import without AI (decision 0033) done locally.** Auth/profile,
+Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) done: local release evidence complete and staging verified, with hosted p95 deferred by the product owner as a production blocker; not production-ready. Pilot AI usage limits (decision 0032) and T26 CV import without AI (decision 0033) done locally.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -206,9 +206,9 @@ T25 is the release check for v0.1. It adds verification and operator tooling, no
 - **Release guards.** A pgTAP suite reads the catalog and fails on a `public` table without RLS or the account write guard, any `anon` privilege, an API grant on `internal`, a security definer function without `search_path`, or a public bucket. `test:integration:release` covers every owner table and every RPC that takes a record id, read from the same catalog.
 - **Accessibility.** `test:e2e:release` checks every screen at 360 and 1440 px in both themes, 200% text, a keyboard-only journey, and locked accessibility trees. Two dark-theme tokens were fixed for contrast, and S12 now says that WorkPulse records which actions happen, without their content.
 - **Operations.** `get_operational_health()` (service role only) counts overdue deletions, cleanup and purge backlogs, stuck uploads, failed jobs and expired leases. Run `pnpm ops:check` from the worker host every 5 minutes and alert on a non-zero exit. Thresholds come from the `WORKPULSE_ALERT_*` variables in `.env.example`.
-- **Not production yet.** Staging, the backup retention window and a real screen reader check are still open. The [release runbook](docs/verification/T25-release-runbook.md) covers deploy, worker, health, rollback as a forward fix, restore and privacy incidents; the [release checklist](docs/verification/T25-release-checklist.md) lists the nine production blockers. `supabase db push` alone is not a deploy: the Auth email templates and the Site URL live only in `supabase/config.toml` and are set separately (runbook §3).
+- **Staging verified, not production yet.** Staging passed on 16-20 October 2026, including a daily `pg_dump` backup that keeps copies under 30 days ([backup runbook](docs/verification/T25-backup-runbook.md)). Hosted p95, the production backup plan and a real screen reader check are still open. The [release runbook](docs/verification/T25-release-runbook.md) covers deploy, worker, health, rollback as a forward fix, restore and privacy incidents; the [release checklist](docs/verification/T25-release-checklist.md) lists the ten production blockers. `supabase db push` alone is not a deploy: the Auth email templates and the Site URL live only in `supabase/config.toml` and are set separately (runbook §3).
 
-See [decision 0031](docs/decisions/0031-t25-release-handoff.md) and the [release handoff](docs/verification/T25-release-handoff.md).
+See [decision 0031](docs/decisions/0031-t25-release-handoff.md), [decision 0034](docs/decisions/0034-t25-staging-closeout.md) and the [release handoff](docs/verification/T25-release-handoff.md).
 
 ## Local database (Supabase)
 

@@ -1,5 +1,20 @@
 # WorkPulse Implementation Status
 
+## T25 Regression, aksesibilitas dan release handoff: DONE (lokal dan staging), 20 Oktober 2026
+
+Status T25: **DONE**. Bukti lokal 11 Oktober tetap berlaku (entry T25 di bawah). Staging terverifikasi 16-20 Oktober 2026. Satu pengecualian dari pemilik produk: p95 hosted tidak diukur, ditunda dan wajib sebelum production ("p95 hosted saya tunda sebagai pengecualian pemilik produk, wajib diukur sebelum production"). Release checklist tetap **tidak siap untuk production**, dengan sepuluh BLOCKER terbuka.
+
+- Review penutupan Claude (Opus 5.5) pada `181103f`: **PASS**, tanpa P0-P2, empat P3 baru (C1-C4) ditambah B6 dari review 7b.
+- Dependensi T23, T24 **DONE**; Gate M4 **PASSED**.
+- §1.17 backup: paket Free tanpa backup proyek. `deploy/staging/backup.sh` berjalan harian dari cron (12:30 UTC) dan menghapus salinan ≥ 29 hari sebelum dump. Bukti: dua baris `backup: ok` (18 dan 19 Oktober, `copies` 2 → 3), uji aturan prune oleh reviewer di container (29/30/40 hari dihapus, 0-28 hari tetap), restore 17 Oktober.
+- §1.18 staging: migrasi 36/36, SMTP dan template, web/worker di server pribadi, smoke §8, recovery dari Gmail, `ops:check`. p95 hosted dikecualikan.
+- File: receipt [Fase 7](verification/T25-phase7-staging.md) (bagian Penutupan dan baris basi B5), [runbook backup](verification/T25-backup-runbook.md), [checklist](verification/T25-release-checklist.md) (BLOCKER p95, bukti staging per baris, CI dicentang), [laporan handoff](verification/T25-release-handoff.md), [review penutupan](verification/T25-closeout-review.md), [decision 0034](decisions/0034-t25-staging-closeout.md), status 0031 dan rencana. Tanpa perubahan kode atau migration.
+- Checks reviewer: aturan prune di container exit 0; `release-docs.test.ts` 7/7; `pnpm test` 1151/1151; `git diff --check` exit 0; AGENTS identik. Regresi lokal tidak diulang, karena tidak ada perubahan kode sejak Fase 8 selain usage limits dan T26 yang punya gate sendiri.
+- Belum dijalankan: p95 hosted; penghapusan salinan pertama di server (run 16 November 2026, C1); EICAR di host; pencocokan teks PDF di staging; NVDA nyata.
+- Risiko: versi `backup.sh` di server tidak terbukti dari bukti yang ditempel (C2); menurut catatan terakhir staging memakai image `sha-1de7318…`, yang belum memuat migration 37-38 (usage limits, T26).
+
+Berikutnya: **Gate M5** (review milestone Claude). Lalu deploy `main` ke staging (migration 37-38 bersama image worker baru) dan uji import tanpa AI dengan CV nyata. Sebelum production: sepuluh BLOCKER di checklist, termasuk p95 hosted (harness di branch lokal `claude/t25-perf-staging`).
+
 ## T26 Import CV tanpa AI (parser aturan): DONE lokal, 20 Oktober 2026
 
 Status T26: **DONE** (acceptance lokal). Pengguna tanpa consent AI kini dapat mengimpor CV PDF/DOCX: dialog pilihan netral (*Pakai AI* / *Baca tanpa AI*, fokus awal di judul) menentukan `extraction_mode` batch saat upload. Batch `rules` dibaca parser aturan di parser thread yang terisolasi, divalidasi dengan grounding yang sama dengan AI, lalu di-stage dan dibuka untuk review S03 dalam satu transaksi, tanpa `ai_jobs`, tanpa consent, dan tanpa unit AI.
@@ -27,9 +42,9 @@ Pendaftaran pilot terbuka, jadi setiap request yang mengantrekan attempt provide
 
 [Decision 0032](decisions/0032-ai-usage-limits.md), [receipt](verification/ai-usage-limits.md), [gate review](verification/ai-usage-limits-gate-review.md).
 
-## T25 Regression, aksesibilitas dan release handoff: PARTIAL, 11 Oktober 2026
+## T25 Regression, aksesibilitas dan release handoff: PARTIAL, 11 Oktober 2026 (historis)
 
-Status T25: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **sebagian**: migrasi hosted (Fase 7a), SMTP dan template, deploy web/worker di server pribadi, smoke §8, dan uji ulang recovery dari Gmail setelah PR #19 lulus. Backup harian `pg_dump` dan latihan restore lulus 17 Oktober 2026; retensi ≤ 30 hari belum terverifikasi sampai dua run cron tercatat. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi penuh.
+Ditutup DONE 20 Oktober 2026 (entry teratas). Status saat entry ini ditulis: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **sebagian**: migrasi hosted (Fase 7a), SMTP dan template, deploy web/worker di server pribadi, smoke §8, dan uji ulang recovery dari Gmail setelah PR #19 lulus. Backup harian `pg_dump` dan latihan restore lulus 17 Oktober 2026; retensi ≤ 30 hari belum terverifikasi sampai dua run cron tercatat. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi penuh.
 
 - Pelaksana: Claude Sonnet 5.5 (Fase 0-8). Gate review Claude (Opus) pada `4574d9a`: satu P2 (RV1), enam P3 (N1-N6), tanpa P0/P1. P2 susulan N7 (runbook §3 tidak mencakup template email dan konfigurasi Auth hosted) ditemukan reviewer saat menyiapkan migrasi hosted dan ditutup sebagai perbaikan dokumen. Klaim N7 bahwa bucket tidak dibuat migration keliru (migration T05 membuatnya) dan sudah dikoreksi.
 - RV1 (snapshot aria gagal pada checkout CRLF) diperbaiki reviewer atas permintaan pengguna di `617cae3`; review ulang lulus. Fase 9 (decision, laporan handoff, README) juga ditulis reviewer, jadi remediasi dan dokumen itu tidak direview pihak independen.
@@ -1170,7 +1185,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T22 | Preview dan PDF QA | DONE |
 | T23 | Account deletion dan retention | DONE |
 | T24 | Instrumentation dan performance | DONE |
-| T25 | Regression dan release handoff | PARTIAL |
+| T25 | Regression dan release handoff | DONE |
 | T26 | Import CV tanpa AI (parser aturan) | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
