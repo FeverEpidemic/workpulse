@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as z from "zod";
 
-import { IMPORT_ENTITY_TYPES, IMPORT_STATUSES } from "@/domain/import/contracts";
+import { IMPORT_ENTITY_TYPES, IMPORT_EXTRACTION_MODES, IMPORT_STATUSES } from "@/domain/import/contracts";
 import { IMPORT_ITEM_ACTIONS, storedCommitResultSchema } from "@/domain/import/commit-contracts";
 import {
   REVIEW_PROFILE_FIELDS,
@@ -21,7 +21,7 @@ type Client = SupabaseClient<Database>;
 /** Owned records offered by "Map to existing", per type. */
 export const REVIEW_TARGET_LIMIT = 200;
 
-const BATCH_COLUMNS = "id, filename, status, stage, error_code, revision, commit_result, updated_at";
+const BATCH_COLUMNS = "id, filename, status, stage, error_code, revision, commit_result, updated_at, extraction_mode";
 const ITEM_COLUMNS = "id, entity_type, ordinal, action, target_id, confirm_requested, payload, source_excerpt, revision, updated_at";
 const PROFILE_COLUMNS = `onboarding_completed_at, ${REVIEW_PROFILE_FIELDS.join(", ")}`;
 
@@ -34,6 +34,7 @@ const batchSchema = z.object({
   revision: z.number().int(),
   commit_result: z.unknown(),
   updated_at: z.string().nullable().default(null),
+  extraction_mode: z.enum(IMPORT_EXTRACTION_MODES).default("ai"),
 });
 
 const itemSchema = z.object({
@@ -166,7 +167,7 @@ export function createImportReviewViewService(deps: { client: Client; actorId: s
           batch: {
             id: batch.data.id, filename: batch.data.filename, status: batch.data.status, stage: batch.data.stage,
             error_code: batch.data.error_code, revision: batch.data.revision, commit_result: stored.success ? stored.data : null,
-            last_activity_at: activity,
+            last_activity_at: activity, extraction_mode: batch.data.extraction_mode,
           },
           items: items.data.map(({ updated_at: _updatedAt, ...item }) => item),
           targets,

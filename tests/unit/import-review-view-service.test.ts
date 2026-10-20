@@ -80,7 +80,7 @@ describe("T17 import review view service", () => {
     expect(snapshot.errors).toEqual([{ item_id: ITEM, field: "name", code: "DUPLICATE", existing_id: SKILL }]);
     expect(snapshot.profile.onboarded).toBe(true);
     // Only the columns the view needs are requested.
-    expect(selects.find((s) => s.table === "import_batches")!.columns).toBe("id, filename, status, stage, error_code, revision, commit_result, updated_at");
+    expect(selects.find((s) => s.table === "import_batches")!.columns).toBe("id, filename, status, stage, error_code, revision, commit_result, updated_at, extraction_mode");
     expect(selects.find((s) => s.table === "experiences")!.columns).toBe("id, organization, role_title, start_date, start_precision");
     expect(selects.find((s) => s.table === "skills")!.columns).toBe("id, name, normalized_name");
   });

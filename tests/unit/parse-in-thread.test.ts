@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { validateImportResult } from "@/domain/import/extract-result";
 import { parseInThread } from "@/server/documents/parse-in-thread";
 
-import { CV_LINES, cvDocx, cvPdf, emptyDocx, pdfFixture, zipBombDocx } from "../import-fixtures";
+import { CV_LINES, cvDocx, cvPdf, emptyDocx, pdfFixture, RULES_CV_PDF_LINES, rulesCvPdf, zipBombDocx } from "../import-fixtures";
 
 describe("T15 isolated parser thread", () => {
   it("extracts text and page count from a text PDF", async () => {
@@ -49,6 +50,27 @@ describe("T15 isolated parser thread", () => {
     });
     expect(result).toEqual({ status: "error", code: "PARSER_TIMEOUT" });
     expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
+  it("T26: runs the rules extractor on the final text inside the thread only when asked", async () => {
+    const pdf = rulesCvPdf();
+    const result = await parseInThread("pdf", pdf, { extract: true });
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.extractionFailed).toBe(false);
+    const extraction = result.extraction as { experiences: Array<{ role_title: string }>; skills: Array<{ name: string }> };
+    expect(extraction.experiences.map((item) => item.role_title)).toEqual(["Senior Data Analyst"]);
+    expect(extraction.skills.map((item) => item.name)).toEqual(["SQL", "Python"]);
+    expect(validateImportResult(result.extraction, result.text ?? "").ok).toBe(true);
+
+    const plain = await parseInThread("pdf", pdf);
+    expect(plain).toEqual({ status: "ok", text: result.text, pageCount: 1 });
+    const docx = await parseInThread("docx", cvDocx(RULES_CV_PDF_LINES), { extract: true });
+    expect(docx.status === "ok" && (docx.extraction as { skills: unknown[] }).skills.length).toBe(2);
+  });
+
+  it("T26: extraction shares the thread timeout", async () => {
+    expect(await parseInThread("pdf", rulesCvPdf(), { extract: true, timeoutMs: 1 })).toEqual({ status: "error", code: "PARSER_TIMEOUT" });
   });
 
   it("survives a thread that exhausts its heap limit", async () => {

@@ -88,7 +88,8 @@ export function normalizeForGrounding(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en").replace(/\s+/g, " ").trim();
 }
 
-const MONTHS: Array<string[]> = [
+/** Month names (en/id) that ground a month; the rules extractor (T26) reads dates with the same list. */
+export const MONTHS: Array<string[]> = [
   ["jan", "january", "januari"], ["feb", "february", "februari", "pebruari"], ["mar", "march", "maret"],
   ["apr", "april"], ["may", "mei"], ["jun", "june", "juni"], ["jul", "july", "juli"],
   ["aug", "august", "agu", "agt", "agustus"], ["sep", "sept", "september"],

@@ -119,6 +119,150 @@ export function legacyDocFile(): Buffer {
   return Buffer.concat([CFB, Buffer.alloc(504), Buffer.from("WordDocument", "utf16le"), Buffer.alloc(64)]);
 }
 
+// T26 rule-extraction fixtures: synthetic CV text for fictional people and employers, written the way the parser
+// thread returns it (one trimmed line per paragraph).
+
+export const RULES_CV_EN = [
+  "Rina Fiktif",
+  "Data Analyst",
+  "rina.fiktif@contoh.test | +62 812 3456 7890 | linkedin.com/in/rina-fiktif",
+  "Summary",
+  "Data analyst with 6 years of experience in reporting for retail teams.",
+  "Work Experience",
+  "Senior Data Analyst at PT Contoh Rekaan",
+  "Jan 2021 - Present",
+  "• Built a weekly sales dashboard used by 40 store managers",
+  "• Cut report preparation from 5 hours to 2 hours",
+  "Data Analyst | CV Maju Fiktif",
+  "03/2018 – 12/2020",
+  "- Maintained the inventory data mart",
+  "Data Intern",
+  "Toko Rekaan Jaya",
+  "2017 - 2017",
+  "Education",
+  "Bachelor of Science in Statistics",
+  "Universitas Rekaan, 2013 - 2017",
+  "Skills",
+  "Languages: SQL, Python, R",
+  "Tools: Power BI; Excel | CI/CD",
+  "Certifications",
+  "Google Data Analytics, 2021",
+].join("\n");
+
+export const RULES_CV_ID = [
+  "Budi Rekaan",
+  "Pengembang Perangkat Lunak",
+  "budi.rekaan@contoh.test",
+  "0812-3456-7890",
+  "Ringkasan",
+  "Pengembang dengan pengalaman 5 tahun membangun aplikasi web.",
+  "Pengalaman Kerja",
+  "Software Engineer",
+  "PT Fiktif Sejahtera",
+  "Februari 2020 s/d sekarang",
+  "• Memimpin migrasi layanan pembayaran",
+  "Relawan Pengajar, Yayasan Rekaan Cerdas, 2018 sampai 2019",
+  "Magang Backend – PT Contoh Digital",
+  "Juli 2017 - Agustus 2017",
+  "Pendidikan",
+  "S1, Teknik Informatika, Institut Teknologi Rekaan",
+  "2013 - 2017",
+  "SMA Negeri 99 Rekaan",
+  "2013",
+  "Keahlian",
+  "• Go • PostgreSQL • Docker",
+  "Kemampuan: Kubernetes, go",
+  "Bahasa",
+  "Indonesia, Inggris",
+].join("\n");
+
+/**
+ * ASCII lines for PDF fixtures (the minimal PDF writer encodes Latin-1 only), with a private sentinel that must never
+ * reach logs, responses or the browser console.
+ */
+export const RULES_CV_PDF_LINES = [
+  "Rina Fiktif",
+  "Data Analyst",
+  "rina.fiktif@contoh.test | +62 812 3456 7890",
+  "Summary",
+  "Data analyst with 6 years of experience in reporting for retail teams.",
+  "Work Experience",
+  "Senior Data Analyst at PT Contoh Rekaan",
+  "Jan 2021 - Present",
+  "- Built a weekly sales dashboard used by 40 store managers",
+  "Education",
+  "Bachelor of Science in Statistics",
+  "Universitas Rekaan, 2013 - 2017",
+  "Skills",
+  "Languages: SQL, Python",
+  // Under a closing heading, so it stays in the stored text but never becomes a candidate.
+  "References",
+  "WP-RULES-PRIVATE-SENTINEL available on request",
+];
+
+export function rulesCvPdf(lines = RULES_CV_PDF_LINES): Buffer {
+  return pdfFixture([lines]);
+}
+
+/** One entry per date and separator variant; the anchor line is the only date in each entry. */
+export const RULES_CV_DATE_VARIANTS = [
+  "Experience",
+  "Analyst A - Org A",
+  "Mar 2015 to Jun 2016",
+  "Analyst B - Org B",
+  "2016 – now",
+  "Analyst C - Org C",
+  "Sep. 2010 - current",
+  "Analis D - Org D",
+  "Mei 2012 sampai saat ini",
+  "Analis E - Org E",
+  "Agt 2011 s/d Des 2011",
+].join("\n");
+
+export const RULES_CV_NO_HEADINGS = [
+  "Saya bekerja sebagai analis selama beberapa tahun di berbagai perusahaan rekaan.",
+  "Saya suka belajar hal baru dan bekerja dengan tim lintas fungsi.",
+  "Kontak saya tersedia atas permintaan.",
+].join("\n");
+
+export const RULES_CV_UNDATED_EXPERIENCE = [
+  "Experience",
+  "Data Analyst at PT Contoh Rekaan",
+  "• Built dashboards for 12 teams",
+  "Skills",
+  "SQL",
+].join("\n");
+
+/** Text from a two-column layout read across both columns at once: nothing should be guessed from it. */
+export const RULES_CV_TWO_COLUMN = [
+  "Rina Fiktif                 Skills",
+  "Experience                  SQL, Python",
+  "Data Analyst at PT Contoh   Education",
+  "Rekaan 2019 - 2021          Universitas Rekaan 2013",
+  "• Built dashboards          Languages",
+].join("\n");
+
+/**
+ * Lines shaped to trigger backtracking in naive patterns; each must be handled quickly. Most stay just under the
+ * 500 character anchor limit so every pattern really runs on them; the last ones are over it.
+ */
+export const RULES_HOSTILE_LINES = [
+  "2020 - ".repeat(70),
+  "Jan ".repeat(122) + "x",
+  "a".repeat(495) + "@",
+  "a@".repeat(245) + "a.",
+  "+1 ".repeat(165),
+  "1/".repeat(245),
+  "0".repeat(499),
+  "-".repeat(499),
+  "S1, ".repeat(124),
+  "a.".repeat(245) + "com",
+  "Universitas ".repeat(41),
+  ("Analyst at Org, " + "x ".repeat(40)).repeat(5),
+  "Jan ".repeat(300) + "2020 - now",
+  "a.".repeat(1200),
+];
+
 export function eicarDocx(): Buffer {
   return cvDocx(CV_LINES, { extra: { "test-signature.txt": EICAR } });
 }

@@ -202,3 +202,23 @@ describe("T17 candidate persistence states", () => {
     expect(html).toContain("Changed elsewhere");
   });
 });
+
+describe("T26 S03: candidates read without AI", () => {
+  it("shows a plain-text note above the groups for a rules batch only", () => {
+    counter = 0;
+    const items = [item("experience", 1, experience)];
+    const rules = render(snapshot(items, { batch: { ...snapshot([]).batch, extraction_mode: "rules" } }));
+    const note = "These records were read without AI. Check employers, job titles and dates before you confirm.";
+    expect(rules).toContain(note);
+    expect(rules.indexOf(note)).toBeLessThan(rules.indexOf('class="import-group"'));
+    expect(render(snapshot(items))).not.toContain(note);
+    expect(render(snapshot(items, { batch: { ...snapshot([]).batch, extraction_mode: "rules" } }), "id"))
+      .toContain("Data ini dibaca tanpa AI. Cek nama perusahaan, jabatan, dan tanggal sebelum mengonfirmasi.");
+  });
+
+  it("uses the rules copy for an empty rules review", () => {
+    const empty = render(snapshot([], { batch: { ...snapshot([]).batch, extraction_mode: "rules" } }));
+    expect(empty).toContain("Two-column or table-based CVs often can&#x27;t be read without AI.");
+    expect(render(snapshot([]))).not.toContain("Two-column");
+  });
+});

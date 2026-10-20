@@ -467,7 +467,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
         {header}
         <section className="space-y-3" aria-labelledby="import-review-state">
           <h2 id="import-review-state" className="text-xl font-semibold" aria-live="polite">{t(locale, "import.review.emptyTitle")}</h2>
-          <p className="text-sm">{t(locale, "import.review.emptyBody")}</p>
+          <p className="text-sm">{t(locale, view.extractionMode === "rules" ? "import.emptyBodyRules" : "import.review.emptyBody")}</p>
           <div className="import-actions">{manual(true)}{cancelButton}</div>
         </section>
         {cancelDialog}
@@ -484,6 +484,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
     <div className="import-review space-y-5">
       {header}
       <p className="text-sm">{t(locale, "import.review.intro")}</p>
+      {view.extractionMode === "rules" ? <p className="import-note">{t(locale, "import.rulesNote")}</p> : null}
       {autoCancelDeadline ? (
         <p className="field-help" data-testid="import-auto-cancel-notice">
           {t(locale, "import.review.autoCancelNotice", { date: formatAbandonedReviewDate(autoCancelDeadline, locale) })}

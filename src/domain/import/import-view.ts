@@ -4,6 +4,7 @@ import {
   IMPORT_MAX_RETRIES,
   isPermanentImportError,
   type ImportEntityType,
+  type ImportExtractionMode,
   type ImportStage,
   type ImportStatus,
 } from "./contracts.ts";
@@ -20,6 +21,8 @@ export type ImportBatchRow = {
   purged_at: string | null;
   created_at: string;
   revision: number;
+  /** Absent on rows read before T26: the column default is ai. */
+  extraction_mode?: ImportExtractionMode;
 };
 
 export type ImportViewState =
@@ -52,6 +55,7 @@ export type ImportView = {
   /** True while the server state can still change without user action. */
   polling: boolean;
   duplicate: { createdAt: string; status: string } | null;
+  extractionMode: ImportExtractionMode | null;
 };
 
 export type ImportViewInput = {
@@ -91,16 +95,17 @@ export function toImportView(input: ImportViewInput): ImportView {
   if (!batch) {
     return {
       state: "choose", batchId: null, filename: null, revision: null, errorCode: null, counts, total: 0,
-      canRetry: false, retryBlockReason: null, canCancel: false, polling: false, duplicate: null,
+      canRetry: false, retryBlockReason: null, canCancel: false, polling: false, duplicate: null, extractionMode: null,
     };
   }
   const state = stateOf(batch, total);
+  const extractionMode = batch.extraction_mode ?? "ai";
   let retryBlockReason: RetryBlockReason = null;
   if (state === "failed_retriable") {
     const now = (input.now ?? new Date()).getTime();
     if (batch.purged_at !== null || (batch.expires_at !== null && Date.parse(batch.expires_at) <= now)) retryBlockReason = "expired";
     else if (batch.retry_count >= IMPORT_MAX_RETRIES) retryBlockReason = "exhausted";
-    else if (!input.consent) retryBlockReason = "consent";
+    else if (!input.consent && extractionMode === "ai") retryBlockReason = "consent";
   }
   return {
     state,
@@ -115,5 +120,6 @@ export function toImportView(input: ImportViewInput): ImportView {
     canCancel: batch.status === "queued" || batch.status === "running" || batch.status === "review",
     polling: ["uploading", "waiting", "screening", "parsing", "extracting"].includes(state),
     duplicate: input.duplicate ?? null,
+    extractionMode,
   };
 }

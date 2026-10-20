@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 18 Oktober 2026
-- Status saat plan ditulis: **TODO** (draft, belum di-commit, menunggu review pengguna).
+- Status plan: **DONE** 20 Oktober 2026 (gate review PASS, [bukti](T26-import-rules-extraction.md)).
 - Dependensi: T15, T16, T17 **DONE** (acceptance lokal), T23 **DONE**, Gate M3 dan M4 **PASSED**. T25 masih **PARTIAL** (staging); T26 tidak menyentuh pekerjaan staging T25.
 - Asal task: penambahan scope oleh pengguna pada 18 Oktober 2026. T26 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Desain disetujui per bagian di chat (arsitektur, aturan ekstraksi, UI/copy/error, pengujian).
 - Eksekutor: satu agent **Claude**. Semua fase dikerjakan berurutan tanpa delegasi.
@@ -14,7 +14,7 @@
   - User Flow F01 dan *Import exceptions*; Wireframe S02, S03.
   - Database Schema §4 `import_batches`/`import_items`.
   - `AGENTS.md` *Konteks proyek* (jalur manual harus tetap berfungsi tanpa AI) dan *Files, import, dan cleanup*.
-  - `docs/decisions/0021-t15-import-staging.md` (poin 1, 3, 5, 6, 7, 9, 11, 13), `0022-t16-import-commit.md`, `0023-t17-import-review-ui.md`, draft `0032-t26-import-rules-extraction.md`.
+  - `docs/decisions/0021-t15-import-staging.md` (poin 1, 3, 5, 6, 7, 9, 11, 13), `0022-t16-import-commit.md`, `0023-t17-import-review-ui.md`, draft `0033-t26-import-rules-extraction.md`.
 
 **Goal:** Pengguna yang belum memberi consent AI tetap bisa mengimpor CV PDF/DOCX. Saat upload, dialog pilihan netral menampilkan dua kartu setara, **Pakai AI** dan **Baca tanpa AI**, tanpa jawaban default. Pilihan kedua meng-upload batch dengan mode `rules`: worker membaca teks seperti biasa, lalu parser berbasis aturan (heading en/id, pola tanggal, daftar) mengusulkan kandidat profil, experience, education, dan skills. Kandidat melewati validator grounding yang sama dengan output AI dan masuk review S03. Tidak ada teks yang dikirim ke penyedia AI, dan tidak ada yang tersimpan sebelum pengguna mengonfirmasi.
 
@@ -26,7 +26,7 @@
 
 ## 0. Cara memakai handoff ini
 
-Baca dokumen ini sampai selesai sebelum mengubah kode. Setelah itu baca `AGENTS.md`, entry teratas `docs/IMPLEMENTATION_STATUS.md`, decision 0021/0022/0023, draft decision 0032, `Design.md` (dialog, form, state, aksesibilitas), lalu `docs/verification/T17-implementation-plan.md` sebagai pola format. Bila perlu memastikan isi PRD/F01/S02/S03, ekstrak DOCX dengan alat ekstraksi (mis. `python` + `zipfile` atas `word/document.xml`); jangan menebak isinya.
+Baca dokumen ini sampai selesai sebelum mengubah kode. Setelah itu baca `AGENTS.md`, entry teratas `docs/IMPLEMENTATION_STATUS.md`, decision 0021/0022/0023, draft decision 0033, `Design.md` (dialog, form, state, aksesibilitas), lalu `docs/verification/T17-implementation-plan.md` sebagai pola format. Bila perlu memastikan isi PRD/F01/S02/S03, ekstrak DOCX dengan alat ekstraksi (mis. `python` + `zipfile` atas `word/document.xml`); jangan menebak isinya.
 
 Kutipan sumber yang mengikat (parafrase ringkas):
 
@@ -34,7 +34,7 @@ Kutipan sumber yang mengikat (parafrase ringkas):
 - **PRD R02:** ekstrak data CV ke staging; pengguna mengedit dan memilih sebelum satu commit atomik.
 - **PRD §3:** klaim hasil import tetap kandidat sampai pengguna memilih *Confirm*.
 - **F01 Import exceptions:** ekstraksi parsial membuka review dengan field kurang di-highlight; tidak ada hasil yang auto-confirm.
-- **Decision 0021 #1:** consent sebelum upload karena import saat itu hanya ada untuk mengirim teks ke AI. T26 mengubah poin ini (draft decision 0032): consent hanya wajib untuk mode `ai`.
+- **Decision 0021 #1:** consent sebelum upload karena import saat itu hanya ada untuk mengirim teks ke AI. T26 mengubah poin ini (draft decision 0033): consent hanya wajib untuk mode `ai`.
 - **Decision 0021 #9 dan #11:** parsing terisolasi di `worker_threads` (256 MB heap, env kosong, timeout 30 detik); grounding `import.v1` membuang kandidat yang excerpt-nya tidak ada di teks dan mengosongkan fakta yang tidak ada di excerpt.
 
 Pertahankan perubahan lokal pengguna. Jangan menandai T26 DONE dan jangan menulis bagian authoritative `IMPLEMENTATION_STATUS.md`. Pada akhir setiap fase, tulis **receipt** di `docs/verification/T26-phaseN-<slug>.md` berisi: tujuan, file berubah, command beserta hasil aktual (exit code dan angka pass/fail), acceptance yang terbukti, warning/kegagalan, blocker, dan langkah berikutnya. Angka yang ditulis harus hasil command yang benar-benar dijalankan.
@@ -65,7 +65,7 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - Migration `supabase/migrations/20261019090000_t26_import_rules_extraction.sql`, pgTAP `supabase/tests/database/import_rules.test.sql`, regenerasi `src/server/supabase/database.types.ts`.
 - Domain murni `src/domain/import/rules-extract.ts` (+ `rules-patterns.ts` bila file melebihi ~400 baris).
 - Parser thread, worker import, gateway Supabase worker, service dan route upload, view model S02/S03.
-- UI S02 (`import-start.tsx`), dialog pilihan baru (`import-mode-dialog.tsx`), opsi fokus judul pada primitive `Dialog`, catatan S03 (`import-review.tsx`), copy en/id, test unit/integration/E2E, receipt, draft decision 0032 final.
+- UI S02 (`import-start.tsx`), dialog pilihan baru (`import-mode-dialog.tsx`), opsi fokus judul pada primitive `Dialog`, catatan S03 (`import-review.tsx`), copy en/id, test unit/integration/E2E, receipt, draft decision 0033 final.
 
 ### 2.2 Keputusan implementasi
 
@@ -111,7 +111,8 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
     - `import.rulesNote`: en "These records were read without AI. Check employers, job titles and dates before you confirm." / id "Data ini dibaca tanpa AI. Cek nama perusahaan, jabatan, dan tanggal sebelum mengonfirmasi."
     - `import.emptyBodyRules`: en "We couldn't find an Experience, Education or Skills section in this file. Two-column or table-based CVs often can't be read without AI. You can try another file or start manually." / id "Kami tidak menemukan bagian Pengalaman, Pendidikan, atau Skill di file ini. CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI. Anda bisa mencoba file lain atau mulai manual."
     - `import.failed.IMPORT_RULES_FAILED`: en "We couldn't read this CV without AI. Try another file or start manually." / id "Kami tidak bisa membaca CV ini tanpa AI. Coba file lain atau mulai manual."
-13. **Nomor.** Migration `20261019090000_t26_import_rules_extraction.sql` (parity 37/37). Decision `docs/decisions/0032-t26-import-rules-extraction.md`. Tidak ada script npm baru; suite baru masuk ke script yang ada (`test`, `test:integration:import`, `test:e2e:import`).
+13. **Nomor.** Migration `20261019090000_t26_import_rules_extraction.sql` (parity 38/38). Decision `docs/decisions/0033-t26-import-rules-extraction.md`. Tidak ada script npm baru; suite baru masuk ke script yang ada (`test`, `test:integration:import`, `test:e2e:import`).
+14. **Basis usage limits (revisi 18 Oktober 2026).** Pengguna memutuskan T26 berbasis branch `claude/eloquent-jones-3c0191` (batas pemakaian AI, migration `20261018090000_ai_usage_limits.sql`, decision 0032). `begin_import_batch` dan `retry_import_batch` di migration T26 mengambil body versi usage limits: batch `ai` tetap men-charge unit `import` seperti di branch itu, batch `rules` tidak men-charge karena tidak ada panggilan provider. Decision T26 menjadi 0033. Parity menjadi 38/38.
 
 ### 2.3 Di luar scope
 
@@ -172,14 +173,14 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 | Create | `tests/unit/import-rules-extract.test.ts` |
 | Modify | `tests/import-fixtures.ts`, `tests/unit/import-worker.test.ts`, `tests/unit/import-view.test.ts`, `tests/unit/import-start-ui.test.tsx`, `tests/unit/import-review-ui.test.tsx`, `tests/integration/import-staging.test.ts`, `tests/integration/import-commit.test.ts`, `tests/integration/account-deletion.test.ts`, `tests/e2e/import-onboarding.spec.ts` |
 | Create | `docs/verification/T26-phase{0..5}-*.md`, `docs/verification/T26-import-rules-extraction.md` |
-| Modify | `docs/decisions/0032-t26-import-rules-extraction.md` (draft → final) |
+| Modify | `docs/decisions/0033-t26-import-rules-extraction.md` (draft → final) |
 
 ## 5. Fase eksekusi
 
 ### Fase 0: Baseline (tanpa edit kode)
 
 - [ ] `git status` bersih untuk path T26 (catat file lain yang kotor, jangan disentuh); branch kerja baru dari `main`.
-- [ ] Parity migration lokal **36/36**, migration terakhir `20261012090000_t25_operational_health.sql`.
+- [ ] Parity migration lokal **37/37**, migration terakhir `20261018090000_ai_usage_limits.sql` (basis branch `claude/eloquent-jones-3c0191`).
 - [ ] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm db:test`, `pnpm db:lint`, `pnpm worker:check`. Harapan dari receipt terakhir: unit **118/1068**, pgTAP **20/1638**. Catat angka aktual.
 - [ ] Jalankan `pnpm test:integration:import`, `test:integration:import-commit`, `test:integration:import-review`, `test:e2e:import`, `test:e2e:import-review`; catat angka.
 - [ ] Verifikasi rujukan file:baris di §3 masih benar terhadap source; selisih dicatat di receipt.
@@ -223,7 +224,7 @@ T26 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
-- [ ] Finalkan decision 0032 (hapus penanda draft, isi angka aktual).
+- [ ] Finalkan decision 0033 (hapus penanda draft, isi angka aktual).
 - [ ] Tulis `docs/verification/T26-import-rules-extraction.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
 - [ ] Commit.
 

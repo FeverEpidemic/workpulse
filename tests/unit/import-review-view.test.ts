@@ -250,3 +250,12 @@ describe("T17 import review view model", () => {
     expect(JSON.stringify(view)).not.toContain("LEAK");
   });
 });
+
+describe("T26 import review view model: extraction mode", () => {
+  it("carries the batch mode and reads a missing one as ai", () => {
+    const base = snapshot([item("skill", 0, { name: "SQL" })]);
+    expect(toImportReviewView(base).extractionMode).toBe("ai");
+    expect(toImportReviewView({ ...base, batch: { ...base.batch, extraction_mode: "rules" } }).extractionMode).toBe("rules");
+    expect(toImportReviewView({ ...base, items: [], batch: { ...base.batch, extraction_mode: "rules" } })).toMatchObject({ state: "review_empty", extractionMode: "rules" });
+  });
+});

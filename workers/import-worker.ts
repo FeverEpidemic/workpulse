@@ -6,9 +6,12 @@ import {
   IMPORT_MAX_PAGES,
   IMPORT_MAX_TEXT_CHARS,
   IMPORT_MIME_TYPES,
+  IMPORT_EXTRACTION_MODES,
   IMPORT_SCAN_MAX_ATTEMPTS,
+  type ImportExtractionMode,
   type ImportFileErrorCode,
 } from "../src/domain/import/contracts.ts";
+import { validateImportResult, type StagedItem } from "../src/domain/import/extract-result.ts";
 import type { DocxPageRenderer } from "../src/server/documents/docx-renderer.ts";
 import type { ParseKind, ParseResult } from "../src/server/documents/parse-in-thread.ts";
 import type { PrivateStorageMimeType } from "../src/server/storage/constants.ts";
@@ -33,6 +36,7 @@ export type ImportJob = {
   sha256: string;
   attempt_count: number;
   attempt_token: string;
+  extraction_mode: ImportExtractionMode;
 };
 
 export type ImportCleanupJob = {
@@ -51,7 +55,8 @@ export interface ImportWorkerDatabase {
   reconcileOrphanImportObjects(minAgeSeconds: number, limit: number): Promise<number>;
   claimImportJobs(limit: number): Promise<ImportJob[]>;
   advanceImportJob(jobId: string, attemptToken: string): Promise<boolean>;
-  completeImportParse(jobId: string, attemptToken: string, text: string, pageCount: number): Promise<string>;
+  /** `items` only for rules batches: validated candidates staged with the text in one transaction. */
+  completeImportParse(jobId: string, attemptToken: string, text: string, pageCount: number, items?: StagedItem[]): Promise<string>;
   failImportJob(input: { jobId: string; attemptToken: string; errorCode: string; final: boolean; nextAttemptAt: string }): Promise<boolean>;
   claimImportCleanupJobs(limit: number): Promise<ImportCleanupJob[]>;
   completeImportCleanupJob(jobId: string, attemptToken: string): Promise<boolean>;
@@ -69,7 +74,7 @@ export type ImportWorkerOptions = {
   database: ImportWorkerDatabase;
   storage: ImportWorkerStorage;
   scanner: MalwareScanner;
-  parse: (kind: ParseKind, bytes: Uint8Array) => Promise<ParseResult>;
+  parse: (kind: ParseKind, bytes: Uint8Array, options?: { extract?: boolean }) => Promise<ParseResult>;
   renderer: DocxPageRenderer;
   claimLimit?: number;
   housekeepingLimit?: number;
@@ -88,6 +93,8 @@ export type ImportWorkerSummary = {
   importOrphansQueued: number;
   importJobsClaimed: number;
   importParsed: number;
+  /** Rules batches staged without AI; also counted in importParsed. */
+  importRulesStaged: number;
   importFailed: Partial<Record<string, number>>;
   importRetried: number;
   importStale: number;
@@ -107,6 +114,7 @@ function validJob(job: ImportJob): boolean {
     && Number.isInteger(job.expected_bytes) && job.expected_bytes > 0 && job.expected_bytes <= IMPORT_MAX_BYTES
     && (IMPORT_MIME_TYPES as readonly string[]).includes(job.mime_type)
     && SHA256_PATTERN.test(job.sha256)
+    && (IMPORT_EXTRACTION_MODES as readonly string[]).includes(job.extraction_mode)
     && Number.isInteger(job.attempt_count) && job.attempt_count >= 1 && job.attempt_count <= IMPORT_SCAN_MAX_ATTEMPTS;
 }
 
@@ -114,7 +122,7 @@ function digestMatches(bytes: Uint8Array, job: ImportJob): boolean {
   return bytes.byteLength === job.expected_bytes && createHash("sha256").update(bytes).digest("hex") === job.sha256;
 }
 
-type Outcome = "parsed" | "retried" | "failed" | "stale";
+type Outcome = "parsed" | "staged" | "retried" | "failed" | "stale";
 
 async function processJob(job: ImportJob, options: ImportWorkerOptions, summary: ImportWorkerSummary): Promise<Outcome> {
   const now = options.now ?? (() => new Date());
@@ -157,7 +165,9 @@ async function processJob(job: ImportJob, options: ImportWorkerOptions, summary:
   if (!await options.database.advanceImportJob(job.id, job.attempt_token)) return "stale";
   await options.onScanned?.(job);
 
-  const parsed = await options.parse(job.mime_type === IMPORT_DOCX_MIME ? "docx" : "pdf", bytes);
+  const kind = job.mime_type === IMPORT_DOCX_MIME ? "docx" : "pdf";
+  const rules = job.extraction_mode === "rules";
+  const parsed = rules ? await options.parse(kind, bytes, { extract: true }) : await options.parse(kind, bytes);
   if (parsed.status === "error") return fail(parsed.code, true);
   const text = parsed.text ?? "";
   let pageCount = parsed.pageCount;
@@ -170,8 +180,18 @@ async function processJob(job: ImportJob, options: ImportWorkerOptions, summary:
   if (pageCount > IMPORT_MAX_PAGES) return fail("TOO_MANY_PAGES" satisfies ImportFileErrorCode, true);
   if (text.length > IMPORT_MAX_TEXT_CHARS) return fail("IMPORT_TEXT_TOO_LONG", true);
 
-  const outcome = await options.database.completeImportParse(job.id, job.attempt_token, text, pageCount);
-  if (outcome === "succeeded") return "parsed";
+  let outcome: string;
+  if (rules) {
+    // The same grounding as AI output (decision 0021 #11). A throw or invalid output is a WorkPulse bug: final.
+    const validation = parsed.extractionFailed || parsed.extraction === undefined
+      ? { ok: false as const }
+      : validateImportResult(parsed.extraction, text);
+    if (!validation.ok) return fail("IMPORT_RULES_FAILED", true);
+    outcome = await options.database.completeImportParse(job.id, job.attempt_token, text, pageCount, validation.items);
+  } else {
+    outcome = await options.database.completeImportParse(job.id, job.attempt_token, text, pageCount);
+  }
+  if (outcome === "succeeded") return rules ? "staged" : "parsed";
   if (outcome.startsWith("failed:")) {
     const code = outcome.slice(7);
     summary.importFailed[code] = (summary.importFailed[code] ?? 0) + 1;
@@ -220,7 +240,7 @@ export async function runImportWorkerOnce(options: ImportWorkerOptions): Promise
     importReviewsExpired: await options.database.expireAbandonedImportReviews(housekeeping),
     importPurged: await options.database.purgeExpiredImportBatches(housekeeping),
     importOrphansQueued: await options.database.reconcileOrphanImportObjects(options.orphanMinAgeSeconds ?? IMPORT_ORPHAN_MIN_AGE_SECONDS, housekeeping),
-    importJobsClaimed: 0, importParsed: 0, importFailed: {}, importRetried: 0, importStale: 0,
+    importJobsClaimed: 0, importParsed: 0, importRulesStaged: 0, importFailed: {}, importRetried: 0, importStale: 0,
     importCleanupClaimed: 0, importCleanupCompleted: 0, importCleanupRetried: 0,
   };
 
@@ -229,6 +249,7 @@ export async function runImportWorkerOnce(options: ImportWorkerOptions): Promise
   for (const job of jobs) {
     const outcome = await processJob(job, options, summary);
     if (outcome === "parsed") summary.importParsed += 1;
+    else if (outcome === "staged") { summary.importParsed += 1; summary.importRulesStaged += 1; }
     else if (outcome === "retried") summary.importRetried += 1;
     else if (outcome === "stale") summary.importStale += 1;
   }

@@ -24,7 +24,9 @@ import { createSupabaseAiWorkerGateway } from "../../workers/supabase-ai-gateway
 import { createSupabaseImportWorkerGateway } from "../../workers/supabase-import-gateway.ts";
 import {
   CV_LINES, cvDocx, cvPdf, DOCX_MIME, eicarDocx, emptyDocx, encryptedOfficeFile, macroDocx, PDF_MIME, pdfFixture,
+  RULES_CV_NO_HEADINGS, RULES_CV_PDF_LINES, rulesCvPdf,
 } from "../import-fixtures";
+import { assignAiPlan } from "./ai-usage-support";
 
 const CONTENT_SENTINEL = "WP-PRIVATE-IMPORT-SENTINEL";
 const FILENAME_SENTINEL = `cv-WP-FILENAME-SENTINEL-${randomUUID()}.pdf`;
@@ -40,6 +42,10 @@ let aiGateway: ReturnType<typeof createSupabaseAiWorkerGateway>;
 let scanner: MalwareScanner;
 let ownerA: Account;
 let ownerB: Account;
+/** T26: never grants AI consent. */
+let ownerRules: Account;
+let rulesBatchId = "";
+const RULES_SENTINEL = "WP-RULES-PRIVATE-SENTINEL";
 const users: string[] = [];
 /** Everything the suite could print or return besides owner views: checked for sentinels at the end. */
 const observed: string[] = [];
@@ -52,6 +58,7 @@ async function createAccount(label: string): Promise<Account> {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("import fixture creation failed");
   users.push(created.data.user.id);
+  assignAiPlan(created.data.user.id, "unlimited");
   const client = createClient<Database>(adminConfig.url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
@@ -72,12 +79,13 @@ function body(bytes: Uint8Array) {
   return new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array(bytes)); controller.close(); } });
 }
 
-function upload(acc: Account, bytes: Uint8Array, mime = PDF_MIME, options: { key?: string; name?: string; length?: number } = {}) {
+function upload(acc: Account, bytes: Uint8Array, mime = PDF_MIME, options: { key?: string; name?: string; length?: number; mode?: string } = {}) {
   return acc.service.upload({
     idempotencyKey: options.key ?? randomUUID(),
     filename: encodeURIComponent(options.name ?? FILENAME_SENTINEL),
     contentType: mime,
     contentLength: String(options.length ?? bytes.byteLength),
+    extractionMode: options.mode,
     body: body(bytes),
   });
 }
@@ -419,6 +427,61 @@ describe("T15 import staging against local Supabase, Storage and ClamAV", () => 
     expect((await ownerA.client.from("import_batches").select("file_key").eq("id", view.batchId!)).error).not.toBeNull();
   });
 
+  it("T26-1. rules without consent: upload -> scan -> parse + rules -> review, with no AI job or provider call", async () => {
+    ownerRules = await createAccount("rules");
+    const before = await canonicalCount(ownerRules);
+    const provider = new ExplicitTestFakeAIProvider("valid");
+    await expectCode(upload(ownerRules, rulesCvPdf(), PDF_MIME, { mode: "ai" }), "CONSENT_REQUIRED");
+    await expectCode(upload(ownerRules, rulesCvPdf(), PDF_MIME, { mode: "ocr" }), "VALIDATION");
+    const view = await upload(ownerRules, rulesCvPdf(), PDF_MIME, { mode: "rules", name: "rules.pdf" });
+    expect(view).toMatchObject({ state: "waiting", extractionMode: "rules" });
+    const row = await drive(view.batchId!, provider);
+    expect(row).toMatchObject({ status: "review", stage: "done", page_count: 1, extraction_mode: "rules", error_code: null });
+    expect(provider.importCalls).toHaveLength(0);
+    expect((await admin.from("ai_jobs").select("id").eq("import_batch_id", view.batchId!)).data).toEqual([]);
+    const staged = await items(view.batchId!);
+    expect([...new Set(staged.map((item) => item.entity_type))].sort()).toEqual(["education", "experience", "profile", "skill"]);
+    for (const item of staged) expect(row.extracted_text).toContain(item.source_excerpt!);
+    expect(staged.find((item) => item.entity_type === "experience")!.payload).toMatchObject({
+      organization: "PT Contoh Rekaan", role_title: "Senior Data Analyst", is_current: true, start_date: "2021-01-01",
+    });
+    expect(JSON.stringify(staged)).not.toContain(RULES_SENTINEL);
+    expect(await canonicalCount(ownerRules)).toBe(before);
+    const final = await ownerRules.service.getView(view.batchId!);
+    expect(final).toMatchObject({ state: "review_ready", extractionMode: "rules", polling: false });
+    expect(final.counts).toMatchObject({ profile: 1, experience: 1, education: 1, skill: 2, certification: 0, achievement: 0 });
+    expect(JSON.stringify(final)).not.toContain(RULES_SENTINEL);
+    rulesBatchId = view.batchId!;
+  });
+
+  it("T26-2. a rules CV without sections opens an empty review instead of an error", async () => {
+    const lines = [...RULES_CV_NO_HEADINGS.split("\n"), "Tidak ada bagian yang dapat dibaca oleh aturan tetap di dokumen ini sama sekali."];
+    const view = await upload(ownerRules, pdfFixture([lines]), PDF_MIME, { mode: "rules", name: "empty.pdf" });
+    expect(await drive(view.batchId!)).toMatchObject({ status: "review", stage: "done" });
+    expect(await ownerRules.service.getView(view.batchId!)).toMatchObject({ state: "review_empty", extractionMode: "rules" });
+    await ownerRules.service.cancel(view.batchId!);
+  });
+
+  it("T26-3. a transient rules failure retries without consent", async () => {
+    const view = await upload(ownerRules, rulesCvPdf([...RULES_CV_PDF_LINES, "retry"]), PDF_MIME, { mode: "rules", name: "retry.pdf" });
+    const unavailable = resolveMalwareScanner({ mode: "unavailable" });
+    const past = () => new Date(Date.now() - 3_600_000);
+    for (let pass = 0; pass < 6 && (await batchRow(view.batchId!)).status !== "failed"; pass += 1) {
+      await importPass({ scanner: unavailable, now: past });
+    }
+    expect(await ownerRules.service.getView(view.batchId!)).toMatchObject({ state: "failed_retriable", canRetry: true, retryBlockReason: null });
+    expect(await ownerRules.service.retry(view.batchId!)).toMatchObject({ state: "waiting" });
+    expect(await drive(view.batchId!)).toMatchObject({ status: "review", retry_count: 1, extraction_mode: "rules" });
+    await ownerRules.service.cancel(view.batchId!);
+  });
+
+  it("T26-4. another account cannot see, cancel or retry a rules batch", async () => {
+    await expectCode(ownerB.service.getView(rulesBatchId), "NOT_FOUND");
+    await expectCode(ownerB.service.cancel(rulesBatchId), "NOT_FOUND");
+    await expectCode(ownerB.service.retry(rulesBatchId), "NOT_FOUND");
+    expect((await ownerB.client.from("import_items").select("id").eq("batch_id", rulesBatchId)).data).toEqual([]);
+  });
+
   it("14. log hygiene: summaries and errors never carry CV text, file names or keys", () => {
     const joined = observed.join("\n");
     expect(observed.length).toBeGreaterThan(10);
@@ -426,5 +489,7 @@ describe("T15 import staging against local Supabase, Storage and ClamAV", () => 
     expect(joined).not.toContain(FILENAME_SENTINEL);
     expect(joined).not.toContain(KEY_SENTINEL);
     expect(joined).not.toContain("PT Sentinel Nusantara");
+    expect(joined).not.toContain(RULES_SENTINEL);
+    expect(joined).not.toContain("PT Contoh Rekaan");
   });
 });

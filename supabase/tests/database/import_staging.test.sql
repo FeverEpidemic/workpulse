@@ -49,10 +49,10 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.begin_import_batch(uuid,text,bigint,text,text)', 'EXECUTE')
+  has_function_privilege('authenticated', 'public.begin_import_batch(uuid,text,bigint,text,text,text)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.cancel_import_batch(uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.retry_import_batch(uuid)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.begin_import_batch(uuid,text,bigint,text,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.begin_import_batch(uuid,text,bigint,text,text,text)', 'EXECUTE')
   and not has_function_privilege('service_role', 'public.cancel_import_batch(uuid)', 'EXECUTE'),
   'import user RPCs are executable by authenticated only'
 );
@@ -60,7 +60,7 @@ select ok(
 select ok(
   has_function_privilege('service_role', 'public.finalize_import_upload(uuid,uuid)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.claim_import_jobs(integer)', 'EXECUTE')
-  and has_function_privilege('service_role', 'public.complete_import_parse(uuid,uuid,text,integer)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.complete_import_parse(uuid,uuid,text,integer,jsonb)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.complete_import_ai_job(uuid,uuid,jsonb,jsonb)', 'EXECUTE')
   and has_function_privilege('service_role', 'public.purge_expired_import_batches(integer)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.finalize_import_upload(uuid,uuid)', 'EXECUTE')
@@ -94,6 +94,11 @@ insert into auth.users (
   ('f1515151-1515-4151-8151-151515151512', '00000000-0000-0000-0000-000000000000',
    'authenticated', 'authenticated', 'import-b@workpulse.local', '', now(),
    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now());
+
+-- These fixtures exercise staging, not the AI usage limit (decision 0032).
+insert into internal.ai_plan_assignments (user_id, plan) values
+  ('e1515151-1515-4151-8151-151515151511', 'unlimited'),
+  ('f1515151-1515-4151-8151-151515151512', 'unlimited');
 
 create or replace function pg_temp.set_jwt_subject(p_user_id uuid, p_role text default 'authenticated')
 returns void

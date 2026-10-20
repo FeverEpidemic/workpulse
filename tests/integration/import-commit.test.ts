@@ -25,7 +25,8 @@ import { runAiWorkerOnce } from "../../workers/ai-worker.ts";
 import { runImportWorkerOnce, type ImportWorkerOptions } from "../../workers/import-worker.ts";
 import { createSupabaseAiWorkerGateway } from "../../workers/supabase-ai-gateway.ts";
 import { createSupabaseImportWorkerGateway } from "../../workers/supabase-import-gateway.ts";
-import { CV_LINES, cvPdf, PDF_MIME } from "../import-fixtures";
+import { CV_LINES, cvPdf, PDF_MIME, rulesCvPdf } from "../import-fixtures";
+import { assignAiPlan } from "./ai-usage-support";
 
 const CONTENT_SENTINEL = "WP-PRIVATE-IMPORT-SENTINEL";
 const FILENAME_SENTINEL = `cv-WP-FILENAME-SENTINEL-${randomUUID()}.pdf`;
@@ -75,16 +76,19 @@ async function secondSession(acc: Account): Promise<Account> {
   return accountFor(acc.id, acc.email, acc.password);
 }
 
-async function createAccount(label: string, options: { onboarded: boolean }): Promise<Account> {
+async function createAccount(label: string, options: { onboarded: boolean; consent?: boolean }): Promise<Account> {
   const email = `import-commit-${label}-${randomUUID()}@workpulse.test`;
   const password = randomBytes(18).toString("base64url") + "Aa1!";
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("import-commit fixture creation failed");
   users.push(created.data.user.id);
+  assignAiPlan(created.data.user.id, "unlimited");
   const account = await accountFor(created.data.user.id, email, password);
   const { data } = await account.client.from("profiles").select("revision").eq("id", account.id).single();
-  const consent = await createAiConsentService(account.client).setConsent({ expectedRevision: data!.revision, consented: true });
-  void consent;
+  if (options.consent !== false) {
+    const consent = await createAiConsentService(account.client).setConsent({ expectedRevision: data!.revision, consented: true });
+    void consent;
+  }
   if (options.onboarded) {
     const { data: profile } = await account.client.from("profiles").select("revision").eq("id", account.id).single();
     const done = await account.client.rpc("complete_onboarding", {
@@ -99,10 +103,10 @@ function body(bytes: Uint8Array) {
   return new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array(bytes)); controller.close(); } });
 }
 
-async function upload(acc: Account, bytes: Uint8Array) {
+async function upload(acc: Account, bytes: Uint8Array, extractionMode?: string) {
   return acc.imports.upload({
     idempotencyKey: randomUUID(), filename: encodeURIComponent(FILENAME_SENTINEL), contentType: PDF_MIME,
-    contentLength: String(bytes.byteLength), body: body(bytes),
+    contentLength: String(bytes.byteLength), body: body(bytes), extractionMode,
   });
 }
 
@@ -489,6 +493,37 @@ describe("T16 import commit against local Supabase, Storage and ClamAV", () => {
     await ownerA.imports.cancel(batchId);
   });
 
+  it("T26. a rules batch without consent: review, edit, commit with onboarding, then purge text and object", async () => {
+    const fresh = await createAccount("rules", { onboarded: false, consent: false });
+    const view = await upload(fresh, rulesCvPdf(), "rules");
+    const row = await drive(view.batchId!);
+    expect(row).toMatchObject({ status: "review", extraction_mode: "rules" });
+    const staged = await items(view.batchId!);
+    const experienceItem = staged.find((item) => item.entity_type === "experience")!;
+    // Rules never guess the kind of employment, so the user picks it in review.
+    expect(payloadOf(experienceItem).kind).toBeNull();
+    const saved = await fresh.review.updateItem({ item_id: experienceItem.id, expected_revision: 1, payload_patch: { kind: "employment" } });
+    expect(await fresh.review.validate(view.batchId!)).toEqual([]);
+    const result = await fresh.review.commit({
+      batch_id: view.batchId!, expected_revision: saved.batchRevision,
+      onboarding: { display_name: "Rina Fiktif", locale: "en", timezone: "Asia/Jakarta" },
+    });
+    record(result);
+    expect(result).toMatchObject({ onboarding_completed: true });
+    expect(result.counts).toMatchObject({
+      experience: { created: 1 }, education: { created: 1 }, skill: { created: 2 }, achievement: { created: 0 }, certification: { created: 0 },
+    });
+    expect(await canonicalCount(fresh)).toBe(4);
+    expect((await admin.from("ai_jobs").select("id").eq("import_batch_id", view.batchId!)).data).toEqual([]);
+    const { data: profile } = await fresh.client.from("profiles").select("ai_consent_at").eq("id", fresh.id).single();
+    expect(profile!.ai_consent_at).toBeNull();
+
+    expect(await importObjects(fresh.id)).toContain(view.batchId);
+    for (let pass = 0; pass < 3; pass += 1) await importPass();
+    expect(await batchRow(view.batchId!)).toMatchObject({ status: "committed", extracted_text: null, file_key: null });
+    expect(await importObjects(fresh.id)).not.toContain(view.batchId);
+  });
+
   it("9. log hygiene: errors, details, results and console output never carry CV text or file names", () => {
     const joined = observed.join("\n");
     expect(observed.length).toBeGreaterThan(10);
@@ -497,5 +532,7 @@ describe("T16 import commit against local Supabase, Storage and ClamAV", () => {
     expect(joined).not.toContain("PT Sentinel Nusantara");
     expect(joined).not.toContain("Menurunkan waktu laporan");
     expect(joined).not.toMatch(/cv-WP-FILENAME/);
+    expect(joined).not.toContain("WP-RULES-PRIVATE-SENTINEL");
+    expect(joined).not.toContain("PT Contoh Rekaan");
   });
 });

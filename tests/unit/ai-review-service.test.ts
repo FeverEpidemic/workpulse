@@ -130,6 +130,7 @@ describe("AI review service — applySuggestion", () => {
 describe("AI review service — getAnalysisView", () => {
   function analysisClient(overrides: {
     activity?: unknown; profile?: unknown; job?: unknown; achievement?: unknown; review?: unknown;
+    usage?: { data: unknown; error: unknown };
   } = {}) {
     const activity = overrides.activity === undefined
       ? { id: ACTIVITY_ID, revision: 1, role: null, scope: null, outcome: null, raw_text: "Migrated 3 reports" }
@@ -157,14 +158,29 @@ describe("AI review service — getAnalysisView", () => {
       };
       return chain;
     });
-    return { value: { auth: { getUser }, from } as unknown as SupabaseClient<Database> };
+    const rpc = vi.fn(async () => overrides.usage ?? { data: null, error: null });
+    return { value: { auth: { getUser }, from, rpc } as unknown as SupabaseClient<Database> };
   }
+
+  it("carries the analysis usage window, and an unreadable usage read does not fail the view", async () => {
+    const row = (bucket: string) => ({
+      bucket, day_used: 20, day_limit: 20, month_used: 20, month_limit: 200, limit_reason: "daily", resets_at: "2026-10-19T00:00:00+00:00",
+    });
+    const limited = await createAiReviewService(analysisClient({ usage: { data: [row("analysis"), row("import")], error: null } }).value)
+      .getAnalysisView(ACTIVITY_ID);
+    expect(limited.usage).toMatchObject({ dayUsed: 20, limitReason: "daily" });
+    const failed = await createAiReviewService(analysisClient({ usage: { data: null, error: { message: "boom" } } }).value)
+      .getAnalysisView(ACTIVITY_ID);
+    expect(failed.usage).toBeNull();
+    expect(failed.view.state).toBe("none");
+  });
 
   it("returns state none when there is no job", async () => {
     const { value } = analysisClient();
     const result = await createAiReviewService(value).getAnalysisView(ACTIVITY_ID);
     expect(result.view.state).toBe("none");
     expect(result.job).toBeNull();
+    expect(result.usage).toBeNull();
     expect(result.achievement).toBeNull();
   });
 

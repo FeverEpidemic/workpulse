@@ -37,6 +37,7 @@ export function ActivityDetailClient({
   returnTo,
   consent,
   initialAnalysis,
+  timeZone,
 }: {
   locale: Locale;
   ownerId: string;
@@ -48,6 +49,8 @@ export function ActivityDetailClient({
   returnTo: string;
   consent: AnalysisPanelConsent;
   initialAnalysis?: AnalysisViewPayload | null;
+  /** Profile IANA timezone, used to show when AI analysis is available again. */
+  timeZone?: string;
 }) {
   const [activity, setActivity] = useState(initialActivity);
   const [editing, setEditing] = useState(false);
@@ -179,6 +182,7 @@ export function ActivityDetailClient({
         consent={consent}
         returnTo={returnTo}
         initialPayload={initialAnalysis ?? null}
+        timeZone={timeZone}
       />
 
       <Card>

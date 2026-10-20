@@ -40,6 +40,7 @@ function payload(state: AnalysisState, over: {
   result?: DetectResult | null;
   questions?: boolean;
   achievement?: AnalysisViewPayload["achievement"];
+  usage?: AnalysisViewPayload["usage"];
 } = {}): AnalysisViewPayload {
   const status = over.status ?? (state === "queued" ? "queued" : state === "running" ? "running" : state === "failed" ? "failed" : "succeeded");
   return {
@@ -57,10 +58,15 @@ function payload(state: AnalysisState, over: {
       applyBlockReason: over.block ?? null,
       visibleQuestions: over.questions === false ? [] : (state === "suggestion" ? RESULT.questions : []),
     },
+    usage: over.usage ?? null,
   };
 }
 
-function render(p: AnalysisViewPayload | null, options: { granted?: boolean; locale?: "en" | "id" } = {}): string {
+const DAILY_LIMIT: NonNullable<AnalysisViewPayload["usage"]> = {
+  dayUsed: 20, dayLimit: 20, monthUsed: 34, monthLimit: 200, limitReason: "daily", resetsAt: "2026-10-19T00:00:00Z",
+};
+
+function render(p: AnalysisViewPayload | null, options: { granted?: boolean; locale?: "en" | "id"; timeZone?: string } = {}): string {
   return renderToStaticMarkup(
     <ActivityAnalysisPanel
       locale={options.locale ?? "en"}
@@ -70,6 +76,7 @@ function render(p: AnalysisViewPayload | null, options: { granted?: boolean; loc
       consent={{ granted: options.granted ?? true, profileRevision: 3 }}
       initialPayload={p}
       returnTo="/activity"
+      timeZone={options.timeZone}
     />,
   );
 }
@@ -192,6 +199,41 @@ describe("ActivityAnalysisPanel", () => {
   it("renders Indonesian copy", () => {
     const html = render(payload("none"), { locale: "id" });
     expect(html).toContain("Analisis dengan AI");
+  });
+
+  it("replaces Analyze with the daily limit, its reset time in the profile timezone, and the manual path", () => {
+    const html = render(payload("none", { usage: DAILY_LIMIT }), { timeZone: "Asia/Jakarta" });
+    expect(html).not.toContain("Analyze with AI");
+    expect(html).toContain("AI analysis limit reached");
+    expect(html).toContain("You&#x27;ve used today&#x27;s 20 AI analyses");
+    expect(html).toContain("07:00");
+    expect(html).toContain("Create achievement manually");
+    expect(html).toContain("/achievements/new?");
+  });
+
+  it("names the monthly window and the shared capacity separately", () => {
+    const monthly = render(payload("stale", { usage: { ...DAILY_LIMIT, monthUsed: 200, limitReason: "monthly", resetsAt: "2026-11-01T00:00:00Z" } }));
+    expect(monthly).toContain("this month&#x27;s 200 AI analyses");
+    expect(monthly).not.toContain("Analyze again");
+    const capacity = render(payload("none", { usage: { ...DAILY_LIMIT, dayUsed: 2, limitReason: "capacity" } }));
+    expect(capacity).toContain("paused for all pilot accounts");
+  });
+
+  it("hides Retry while limited but keeps the source and manual creation", () => {
+    const html = render(payload("failed", { errorCode: "AI_PROVIDER_UNAVAILABLE", canRetry: true, usage: DAILY_LIMIT }));
+    expect(html).not.toContain(">Retry<");
+    expect(html).toContain("AI analysis limit reached");
+    expect(html).toContain("Create achievement manually");
+    expect(html).toContain(SOURCE);
+  });
+
+  it("keeps Analyze when usage is under the limit or unknown", () => {
+    expect(render(payload("none", { usage: { ...DAILY_LIMIT, dayUsed: 19, limitReason: null, resetsAt: null } }))).toContain("Analyze with AI");
+    expect(render(payload("none", { usage: null }))).toContain("Analyze with AI");
+  });
+
+  it("renders the limit in Indonesian", () => {
+    expect(render(payload("none", { usage: DAILY_LIMIT }), { locale: "id" })).toContain("Batas analisis AI tercapai");
   });
 
   it("renders a loading status before the first payload arrives", () => {

@@ -9,6 +9,8 @@ export type ImportServiceErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
   | "CONSENT_REQUIRED"
+  | "QUOTA_EXCEEDED"
+  | "CAPACITY_EXCEEDED"
   | "UNAVAILABLE"
   | "FILE_EMPTY"
   | "FILE_TOO_LARGE"
@@ -35,6 +37,8 @@ const MESSAGE_KEYS: Record<ImportServiceErrorCode, MessageKey> = {
   NOT_FOUND: "error.notFound",
   CONFLICT: "error.conflict",
   CONSENT_REQUIRED: "import.error.consentRequired",
+  QUOTA_EXCEEDED: "import.error.quotaExceeded",
+  CAPACITY_EXCEEDED: "import.error.capacityExceeded",
   UNAVAILABLE: "error.unavailable",
   FILE_EMPTY: "import.failed.FILE_EMPTY",
   FILE_TOO_LARGE: "import.failed.FILE_TOO_LARGE",
@@ -62,6 +66,8 @@ const HTTP_STATUS: Record<ImportServiceErrorCode, number> = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   CONSENT_REQUIRED: 409,
+  QUOTA_EXCEEDED: 429,
+  CAPACITY_EXCEEDED: 429,
   UNAVAILABLE: 503,
   FILE_EMPTY: 422,
   FILE_TOO_LARGE: 413,
@@ -121,6 +127,8 @@ export function mapImportDatabaseError(error: { code?: string; message?: string;
   switch (error.message) {
     case "AUTH_REQUIRED": return new ImportServiceError("UNAUTHENTICATED");
     case "CONSENT_REQUIRED": return new ImportServiceError("CONSENT_REQUIRED");
+    case "AI_QUOTA_EXCEEDED": return new ImportServiceError("QUOTA_EXCEEDED");
+    case "AI_CAPACITY_EXCEEDED": return new ImportServiceError("CAPACITY_EXCEEDED");
     case "IMPORT_NOT_FOUND": return new ImportServiceError("NOT_FOUND");
     case "IDEMPOTENCY_KEY_REUSED": return new ImportServiceError("CONFLICT");
     case "IMPORT_NOT_RETRIABLE": return new ImportServiceError("NOT_RETRIABLE");

@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { ActionFeedback, FieldError, fieldErrorControlProps, fieldErrorId } from "@/components/forms/action-feedback";
 import { LocaleSwitcher } from "@/components/forms/locale-switcher";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { signInAction, signUpAction, requestRecoveryAction } from "@/server/auth/actions";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
@@ -38,7 +39,7 @@ export function SignInClient({
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-6xl content-center gap-8 px-5 py-10 lg:grid-cols-[1fr_420px] lg:px-10">
       <section className="flex flex-col justify-center gap-6 py-6">
-        <Link href="/" className="text-lg font-bold tracking-tight">WorkPulse</Link>
+        <Link href="/" className="brand-logo"><BrandLogo /></Link>
         <div className="max-w-xl space-y-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--wp-muted)]">{t(locale, "auth.heroKicker")}</p>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t(locale, "auth.heroTitle")}</h1>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import * as z from "zod";
 
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { OnboardingForm } from "@/features/profile/onboarding-form";
 import { ProfileWorkspace } from "@/features/profile/profile-workspace";
 import { getRequestContext, getRequestLocale } from "@/server/auth/context";
@@ -20,7 +21,7 @@ export default async function ProfileSettingsPage({ searchParams }: { searchPara
     return (
       <main className="mx-auto grid min-h-screen w-full max-w-4xl content-center gap-8 px-5 py-10 md:grid-cols-[1fr_440px]">
         <section className="space-y-4">
-          <Link href="/" className="text-lg font-bold">WorkPulse</Link>
+          <Link href="/" className="brand-logo"><BrandLogo /></Link>
           <h1 className="mt-8 text-3xl font-semibold tracking-tight">{t(locale, "profile.onboardingTitle")}</h1>
           <p className="max-w-lg text-[var(--wp-muted)]">{t(locale, "profile.onboardingDescription")}</p>
         </section>

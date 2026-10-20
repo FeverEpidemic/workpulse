@@ -9,6 +9,7 @@ import { CV_LINES, cvDocx, cvPdf, DOCX_MIME } from "../import-fixtures";
 import { expectNoWcagViolations } from "./helpers/accessibility";
 import { drainAiWorker } from "./helpers/ai-worker";
 import { drainImportWorker } from "./helpers/import-worker";
+import { assignAiPlan } from "../integration/ai-usage-support";
 
 /**
  * Gate M3 (Assisted entry): one new user goes through F01 import and F02 assisted capture in
@@ -43,6 +44,7 @@ async function createUser(): Promise<User> {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   const id = created.data.user?.id;
   if (created.error || !id) throw new Error("M3 browser fixture setup failed");
+  assignAiPlan(id, "unlimited");
   const user = { id, email, password };
   users.push(user);
   return user;
@@ -135,9 +137,10 @@ test("M3 journey: import through an AI outage and retry, onboarding by commit, a
   const valid = { name: `cv-${FILENAME_SENTINEL}.pdf`, mimeType: "application/pdf", buffer: cvPdf(1, [...CV_LINES, `Journey ${randomUUID()}`]) };
   await page.locator('input[type="file"]').setInputFiles(valid);
   await page.getByRole("button", { name: "Upload and extract" }).click();
-  const consent = page.getByRole("dialog", { name: "Allow AI processing?" });
+  // T26: a user without consent picks how the CV is read; Use AI gives consent (intended change).
+  const consent = page.getByRole("dialog", { name: "How should we read your CV?" });
   await expect(consent).toBeVisible();
-  await consent.getByRole("button", { name: "Allow AI", exact: true }).click();
+  await consent.getByRole("button", { name: "Use AI", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
 
   // 2. AI unavailable: the batch fails as retriable, manual entry stays offered, Retry reuses the batch.

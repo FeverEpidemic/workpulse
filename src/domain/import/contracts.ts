@@ -21,6 +21,10 @@ export type ImportStatus = (typeof IMPORT_STATUSES)[number];
 export const IMPORT_STAGES = ["uploading", "screening", "parsing", "extracting", "done"] as const;
 export type ImportStage = (typeof IMPORT_STAGES)[number];
 
+/** T26: fixed at upload. ai sends the text to the AI provider (needs consent); rules reads it with fixed rules. */
+export const IMPORT_EXTRACTION_MODES = ["ai", "rules"] as const;
+export type ImportExtractionMode = (typeof IMPORT_EXTRACTION_MODES)[number];
+
 export const IMPORT_ENTITY_TYPES = ["profile", "experience", "education", "certification", "skill", "achievement"] as const;
 export type ImportEntityType = (typeof IMPORT_ENTITY_TYPES)[number];
 
@@ -41,6 +45,8 @@ export const IMPORT_PERMANENT_ERROR_CODES = [
   "UPLOAD_INCOMPLETE",
   "ACCOUNT_DELETING",
   "INVALID_IMPORT_JOB",
+  // T26: the rule extractor threw or its output failed validation (a WorkPulse bug, not the file).
+  "IMPORT_RULES_FAILED",
 ] as const;
 
 export const IMPORT_TRANSIENT_ERROR_CODES = [
