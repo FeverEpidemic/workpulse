@@ -4,12 +4,12 @@
 # Follows Supabase's CLI backup method: roles, schema and data dumps, restored
 # with psql in that order. Storage objects (evidence, CV files) are NOT included.
 #
-# Usage: backup.sh            dump now, then prune
+# Usage: backup.sh            prune, then dump now
 # Env file: backup.env next to this script, mode 600, with
 #   WORKPULSE_BACKUP_DB_URL   session pooler URL, percent-encoded password
 #   WORKPULSE_BACKUP_DIR      optional, default <script dir>/backups
 #
-# Exit 0 ok, 1 dump or prune failed. Output has no URL, password or row content.
+# Exit 0 ok, 1 prune or dump failed. Output has no URL, password or row content.
 set -euo pipefail
 umask 077
 
@@ -28,6 +28,12 @@ keep_days=29
 mkdir -p "$backup_dir"
 exec 9>"$backup_dir/.lock"
 flock -n 9 || { echo "$(date -u +%FT%TZ) backup: previous run still active"; exit 1; }
+
+# Prune before dumping, so a dump that keeps failing cannot keep old copies past
+# 30 days. Leftover .partial-* dirs come from runs that were killed mid-dump.
+find "$backup_dir" -mindepth 1 -maxdepth 1 -type d -name '20*Z' -mtime +"$((keep_days - 1))" -exec rm -rf {} +
+find "$backup_dir" -mindepth 1 -maxdepth 1 -type f -name 'failed-*.err' -mtime +"$((keep_days - 1))" -delete
+find "$backup_dir" -mindepth 1 -maxdepth 1 -type d -name '.partial-*' -mtime +0 -exec rm -rf {} +
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 work="$backup_dir/.partial-$stamp"
@@ -54,9 +60,6 @@ dump data --data-only --use-copy
 (cd "$work" && sha256sum ./*.sql.gz > SHA256SUMS)
 mv "$work" "$backup_dir/$stamp"
 trap - EXIT
-
-find "$backup_dir" -mindepth 1 -maxdepth 1 -type d -name '20*Z' -mtime +"$((keep_days - 1))" -exec rm -rf {} +
-find "$backup_dir" -mindepth 1 -maxdepth 1 -type f -name 'failed-*.err' -mtime +"$((keep_days - 1))" -delete
 
 size="$(du -sh "$backup_dir/$stamp" | cut -f1)"
 count="$(find "$backup_dir" -mindepth 1 -maxdepth 1 -type d -name '20*Z' | wc -l)"
