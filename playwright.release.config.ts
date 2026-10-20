@@ -16,7 +16,7 @@ const webEnv = Object.fromEntries(
 
 export default defineConfig({
   testDir: "tests/e2e",
-  testMatch: ["release-a11y.spec.ts", "release-keyboard.spec.ts"],
+  testMatch: ["release-a11y.spec.ts", "release-keyboard.spec.ts", "mobile-tab-bar.spec.ts"],
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env["CI"]),

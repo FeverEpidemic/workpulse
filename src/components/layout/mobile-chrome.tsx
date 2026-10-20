@@ -8,9 +8,8 @@ import { MobileHeader } from "@/components/layout/mobile-header";
 import { MoreMenuSheet, QuickLogSheet } from "@/components/layout/mobile-sheets";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { useScrollChrome } from "@/components/layout/use-scroll-chrome";
-import { useToast } from "@/components/ui/toast";
 import type { ThemePreference } from "@/domain/theme/theme-preference";
-import { t, type Locale } from "@/i18n/messages";
+import type { Locale } from "@/i18n/messages";
 
 function focusQuickLogNote(): boolean {
   const note = document.getElementById("quick-log-note");
@@ -39,7 +38,6 @@ export function MobileChrome({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const showToast = useToast();
   const { compact, expand } = useScrollChrome();
   const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -73,11 +71,11 @@ export function MobileChrome({
     return () => window.cancelAnimationFrame(frame);
   }, [quickLogOpen]);
 
+  // The form's ActionFeedback already shows the "Activity saved." toast; the sheet only closes and refreshes the page.
   const onCreated = useCallback(() => {
     setQuickLogOpen(false);
-    showToast(t(locale, "activity.saved"));
     router.refresh();
-  }, [locale, router, showToast]);
+  }, [router]);
 
   return (
     <>

@@ -405,9 +405,10 @@ a {
   height: var(--tab-bar-height, 64px);
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
-  gap: var(--space-1);
+  gap: 0;
   margin: 0;
-  padding: 0 var(--space-2);
+  /* Narrow gutters leave each slot about 70 px at 360 px, enough for the bold "Dashboard" label. */
+  padding: 0 var(--space-1);
   list-style: none;
   transition: height var(--motion-normal) ease-out;
 }
