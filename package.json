@@ -104,7 +104,7 @@
     "eslint-plugin-storybook": "^10.6.1",
     "msw": "2.15.0",
     "msw-storybook-addon": "3.0.3",
-    "playwright": "latest",
+    "playwright": "1.63.0",
     "storybook": "^10.6.1",
     "supabase": "2.117.0",
     "tailwindcss": "4.3.3",
