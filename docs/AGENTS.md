@@ -117,7 +117,7 @@ Struktur di atas sebagian besar sudah ada (termasuk `src/components/{ui,forms,la
 
 ## UI dan aksesibilitas
 
-Gunakan token `Design.md`: muted sage tanpa gradient, Plus Jakarta Sans, spacing berbasis 4px, light/dark theme, compact rows, satu aksi utama, dan progressive disclosure. Desktop memakai sidebar, mobile memakai drawer; Quick log langsung membuka input terfokus dalam satu aksi.
+Gunakan token `Design.md`: muted sage tanpa gradient, Plus Jakarta Sans, spacing berbasis 4px, light/dark theme, compact rows, satu aksi utama, dan progressive disclosure. Desktop memakai sidebar, mobile memakai bottom tab bar; Quick log membuka sheet dengan input terfokus dalam satu aksi.
 
 Gunakan primitives bersama dan satu keluarga ikon. Definisikan loading, empty, error, disabled, focus, unsaved, conflict, dan unavailable states yang relevan. Pertahankan filter dalam URL sesuai rencana. Save capture, confirm achievement, commit import, dan request export adalah aksi eksplisit; autosave harus menunjukkan status persistensi.
 

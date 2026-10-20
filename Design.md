@@ -183,9 +183,16 @@ Navigation should feel minimal and visually quiet.
 
 ## 4.3 Mobile Navigation
 
-Use a **drawer-based mobile navigation**, not a persistent desktop-style sidebar.
+Use a **bottom tab bar** with five slots, not a persistent desktop-style sidebar (decision 0034, T27):
 
-The persistent primary creation control is a floating **Add Activity** action.
+**Dashboard · Activity · + (Quick log) · Projects · Profile**
+
+- The **+** slot is the persistent primary creation control and the only accent in the bar. It opens a bottom sheet composer with the note focused, saves in place, and links to the full form.
+- The current tab uses the same sage background as the desktop sidebar, plus a heavier icon and label.
+- Labels show at the top of the page and when scrolling up or tapping the bar; scrolling down shrinks the bar to icons. Labels stay available to screen readers in both states.
+- A compact header shows the page title and hides with the bar while scrolling down, but never while keyboard focus is inside it or a sheet is open.
+- Achievements, Timeline, CV, theme and sign out live in a labelled **More** sheet opened from the Profile header.
+- The Profile tab shows the user's initials until profile photos exist.
 
 Mobile must support:
 

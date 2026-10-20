@@ -1,6 +1,6 @@
 # Handoff T27 Bottom tab bar mobile: eksekusi single-agent
 
-> **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
+> **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [x]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 20 Oktober 2026
 - Status saat plan ditulis: **TODO**.
@@ -141,57 +141,57 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 0: Baseline (tanpa edit kode)
 
-- [ ] `git status` bersih untuk path T27 (logo brand dan Storybook sudah di-commit pada 20 Oktober 2026). Bila ada path T27 yang kotor, **stop** (§8). Jangan stash atau menimpa. `.claude/launch.json` dan `.claude/setting.local.json` sengaja tetap lokal; jangan di-commit.
-- [ ] Branch kerja baru dari `main` setelah branch yang memuat logo brand, Storybook, dan plan ini sudah merge.
-- [ ] Catat parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
-- [ ] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari receipt T26 Fase 5: unit **121/1151** (bisa berbeda karena Storybook ikut dikonfigurasi di Vitest); catat angka aktual. `pnpm lint` di checkout yang punya `.claude/worktrees/*/.next` gagal karena file build di sana; jalankan dengan `--ignore-pattern ".claude/**"` dan catat.
-- [ ] Jalankan `pnpm test:e2e:ui` dan `pnpm test:e2e:release`; catat angka.
-- [ ] Verifikasi rujukan file:baris di dokumen ini masih benar; selisih dicatat.
-- [ ] Receipt `T27-phase0-baseline.md`.
+- [x] `git status` bersih untuk path T27 (logo brand dan Storybook sudah di-commit pada 20 Oktober 2026). Bila ada path T27 yang kotor, **stop** (§8). Jangan stash atau menimpa. `.claude/launch.json` dan `.claude/setting.local.json` sengaja tetap lokal; jangan di-commit.
+- [x] Branch kerja baru dari `main` setelah branch yang memuat logo brand, Storybook, dan plan ini sudah merge.
+- [x] Catat parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
+- [x] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari receipt T26 Fase 5: unit **121/1151** (bisa berbeda karena Storybook ikut dikonfigurasi di Vitest); catat angka aktual. `pnpm lint` di checkout yang punya `.claude/worktrees/*/.next` gagal karena file build di sana; jalankan dengan `--ignore-pattern ".claude/**"` dan catat.
+- [x] Jalankan `pnpm test:e2e:ui` dan `pnpm test:e2e:release`; catat angka.
+- [x] Verifikasi rujukan file:baris di dokumen ini masih benar; selisih dicatat.
+- [x] Receipt `T27-phase0-baseline.md`.
 
 ### Fase 1: Rute dan state murni (unit)
 
-- [ ] Test gagal: `navigation-routes.test.ts` (acceptance 2 pemetaan, §2.2.4, judul §2.2.6 termasuk fallback logo), `use-scroll-chrome.test.ts` (acceptance 3 dan 4: ambang, puncak, reset saat pathname berubah, `expand()`), `initials-avatar.test.ts` (acceptance 8).
-- [ ] Implementasi §3.1 dan fungsi murni §3.2; `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
-- [ ] Receipt `T27-phase1-routes-state.md`, commit.
+- [x] Test gagal: `navigation-routes.test.ts` (acceptance 2 pemetaan, §2.2.4, judul §2.2.6 termasuk fallback logo), `use-scroll-chrome.test.ts` (acceptance 3 dan 4: ambang, puncak, reset saat pathname berubah, `expand()`), `initials-avatar.test.ts` (acceptance 8).
+- [x] Implementasi §3.1 dan fungsi murni §3.2; `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
+- [x] Receipt `T27-phase1-routes-state.md`, commit.
 
 ### Fase 2: Tab bar dan header
 
-- [ ] Test gagal `mobile-navigation-ui.test.tsx`: lima slot dan urutan, `aria-current`, label `sr-only` di `compact`, tap area bar memanggil `expand`, tombol ≡ hanya di Profile, header `data-hidden` tidak aktif saat fokus di dalam.
-- [ ] Implementasi `mobile-tab-bar.tsx`, `mobile-header.tsx`, CSS bar dan header, `viewport` di `layout.tsx`, padding bawah konten. Hapus drawer (§2.2.11).
-- [ ] Receipt `T27-phase2-tab-bar.md`, commit.
+- [x] Test gagal `mobile-navigation-ui.test.tsx`: lima slot dan urutan, `aria-current`, label `sr-only` di `compact`, tap area bar memanggil `expand`, tombol ≡ hanya di Profile, header `data-hidden` tidak aktif saat fokus di dalam.
+- [x] Implementasi `mobile-tab-bar.tsx`, `mobile-header.tsx`, CSS bar dan header, `viewport` di `layout.tsx`, padding bawah konten. Hapus drawer (§2.2.11).
+- [x] Receipt `T27-phase2-tab-bar.md`, commit.
 
 ### Fase 3: Composer dan Menu lainnya
 
-- [ ] Test gagal: varian `sheet` merender hanya field §2.2.8; default `full` tidak berubah (test form lama lulus tanpa diubah); draft `quick-log-note` dipakai bersama; `onSaved` menutup sheet; link Detail lengkap membawa `returnTo`.
-- [ ] Test gagal: sheet Menu lainnya berisi tiga link + theme + sign out; Esc mengembalikan fokus ke ≡.
-- [ ] Implementasi §3.2 (`mobile-sheets.tsx`, varian form, prop `timezone`).
-- [ ] Receipt `T27-phase3-sheets.md`, commit.
+- [x] Test gagal: varian `sheet` merender hanya field §2.2.8; default `full` tidak berubah (test form lama lulus tanpa diubah); draft `quick-log-note` dipakai bersama; `onSaved` menutup sheet; link Detail lengkap membawa `returnTo`.
+- [x] Test gagal: sheet Menu lainnya berisi tiga link + theme + sign out; Esc mengembalikan fokus ke ≡.
+- [x] Implementasi §3.2 (`mobile-sheets.tsx`, varian form, prop `timezone`).
+- [x] Receipt `T27-phase3-sheets.md`, commit.
 
 ### Fase 4: Copy dan aksesibilitas unit
 
-- [ ] Test gagal: key §2.2.12 ada di en dan id, tanpa em dash; key drawer yang dihapus tidak dirujuk lagi.
-- [ ] Bila ada token baru, tambahkan pasangan ke `theme-contrast.test.ts`.
-- [ ] Receipt `T27-phase4-copy-a11y.md`, commit.
+- [x] Test gagal: key §2.2.12 ada di en dan id, tanpa em dash; key drawer yang dihapus tidak dirujuk lagi.
+- [x] Bila ada token baru, tambahkan pasangan ke `theme-contrast.test.ts`.
+- [x] Receipt `T27-phase4-copy-a11y.md`, commit.
 
 ### Fase 5: E2E, aksesibilitas, regresi, Delivery Gate
 
-- [ ] Perbarui `app-frame.spec.ts:259-278`: ganti skenario drawer dengan bar (acceptance 1, 2, 3, 4, 5, 6, 7, 9, 10). Scroll diuji dengan `page.mouse.wheel` di halaman yang cukup panjang (seed aktivitas lewat helper yang ada).
-- [ ] Perbarui `release-keyboard.spec.ts:193-202` untuk sheet Menu lainnya dan composer (Enter/Space membuka, Esc menutup, fokus kembali).
-- [ ] Tambah halaman dan sheet ke `release-a11y.spec.ts` (acceptance 11). Perbarui golden aria snapshot hanya untuk bagian navigasi mobile; catat diff-nya di receipt.
-- [ ] Jalankan composer di proyek WebKit Playwright bila tersedia di config; bila tidak, catat bahwa perilaku keyboard iOS belum terbukti di perangkat nyata.
-- [ ] Regresi §7 lengkap. Tidak ada assertion lama yang dilemahkan selain yang memang menguji drawer; setiap perubahan disertai alasan.
-- [ ] Jalankan Delivery Gate antislop (core + checklist `antislop-layoutmobile`) dan tulis laporan PASS/FAIL dengan bukti di receipt, termasuk click-through setiap kontrol bar dan sheet di 360 px light/dark.
-- [ ] Screenshot 360 px: bar `expanded`, bar `compact`, composer terbuka, Menu lainnya terbuka, light dan dark.
-- [ ] Receipt `T27-phase5-e2e-regression.md`, commit. **Stop: gate review Claude.**
+- [x] Perbarui `app-frame.spec.ts:259-278`: ganti skenario drawer dengan bar (acceptance 1, 2, 3, 4, 5, 6, 7, 9, 10). Scroll diuji dengan `page.mouse.wheel` di halaman yang cukup panjang (seed aktivitas lewat helper yang ada).
+- [x] Perbarui `release-keyboard.spec.ts:193-202` untuk sheet Menu lainnya dan composer (Enter/Space membuka, Esc menutup, fokus kembali).
+- [x] Tambah halaman dan sheet ke `release-a11y.spec.ts` (acceptance 11). Perbarui golden aria snapshot hanya untuk bagian navigasi mobile; catat diff-nya di receipt.
+- [x] Jalankan composer di proyek WebKit Playwright bila tersedia di config; bila tidak, catat bahwa perilaku keyboard iOS belum terbukti di perangkat nyata.
+- [x] Regresi §7 lengkap. Tidak ada assertion lama yang dilemahkan selain yang memang menguji drawer; setiap perubahan disertai alasan.
+- [x] Jalankan Delivery Gate antislop (core + checklist `antislop-layoutmobile`) dan tulis laporan PASS/FAIL dengan bukti di receipt, termasuk click-through setiap kontrol bar dan sheet di 360 px light/dark.
+- [x] Screenshot 360 px: bar `expanded`, bar `compact`, composer terbuka, Menu lainnya terbuka, light dan dark.
+- [x] Receipt `T27-phase5-e2e-regression.md`, commit. **Stop: gate review Claude.**
 
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
-- [ ] `docs/Design.md` dan `Design.md` §4.3: ganti drawer dengan bottom tab bar lima slot, composer sheet, dan Menu lainnya; alur Open → Add Activity → Type tetap.
-- [ ] `AGENTS.md` dan `docs/AGENTS.md` baris 120: "mobile memakai bottom tab bar; Quick log membuka sheet dengan input terfokus".
-- [ ] Draft decision `0034-t27-mobile-tab-bar.md` (alasan mengganti drawer, keputusan §2.2, follow-up foto profil).
-- [ ] `docs/verification/T27-mobile-tab-bar.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
-- [ ] Commit.
+- [x] `docs/Design.md` dan `Design.md` §4.3: ganti drawer dengan bottom tab bar lima slot, composer sheet, dan Menu lainnya; alur Open → Add Activity → Type tetap.
+- [x] `AGENTS.md` dan `docs/AGENTS.md` baris 120: "mobile memakai bottom tab bar; Quick log membuka sheet dengan input terfokus".
+- [x] Draft decision `0034-t27-mobile-tab-bar.md` (alasan mengganti drawer, keputusan §2.2, follow-up foto profil).
+- [x] `docs/verification/T27-mobile-tab-bar.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
+- [x] Commit.
 
 ## 6. Fixture
 
@@ -233,14 +233,14 @@ Berhenti dan laporkan bila:
 
 Read-only setelah Fase 5. P0–P2 memblokir, P3 follow-up.
 
-- [ ] Receipt Fase 0–5 lengkap dengan angka aktual; ulang `lint`, `typecheck`, `test`, `test:e2e:ui`, `test:e2e:release` di worktree bersih.
-- [ ] Desktop 1440 px identik dengan sebelum T27 (sidebar, topbar, Quick log link).
-- [ ] Lima slot, pemetaan aktif §2.2.4, `aria-current` benar.
-- [ ] Label selalu ada di nama aksesibel; state `compact` tidak menghapus label dari DOM.
-- [ ] Header tidak sembunyi saat fokus di dalamnya atau sheet terbuka.
-- [ ] Composer: fokus langsung, draft bersama, simpan tanpa redirect, form penuh tidak berubah.
-- [ ] Tidak ada konten tertutup bar di 360 × 640; safe-area dipakai.
-- [ ] Copy en/id sesuai §2.2.12, tanpa em dash. Delivery Gate antislop tercatat tanpa FAIL.
+- [x] Receipt Fase 0–5 lengkap dengan angka aktual; ulang `lint`, `typecheck`, `test`, `test:e2e:ui`, `test:e2e:release` di worktree bersih.
+- [x] Desktop 1440 px identik dengan sebelum T27 (sidebar, topbar, Quick log link).
+- [x] Lima slot, pemetaan aktif §2.2.4, `aria-current` benar.
+- [x] Label selalu ada di nama aksesibel; state `compact` tidak menghapus label dari DOM.
+- [x] Header tidak sembunyi saat fokus di dalamnya atau sheet terbuka.
+- [x] Composer: fokus langsung, draft bersama, simpan tanpa redirect, form penuh tidak berubah.
+- [x] Tidak ada konten tertutup bar di 360 × 640; safe-area dipakai.
+- [x] Copy en/id sesuai §2.2.12, tanpa em dash. Delivery Gate antislop tercatat tanpa FAIL.
 
 ## 10. Review focus
 
