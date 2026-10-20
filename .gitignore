@@ -35,3 +35,6 @@ supabase/.env
 
 # Agent/host session state (generated, not project content)
 .reasonix/
+
+*storybook.log
+storybook-static
