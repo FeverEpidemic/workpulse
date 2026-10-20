@@ -394,41 +394,145 @@ a {
   white-space: nowrap;
 }
 
-.workspace-mobile-header {
+/* T27 mobile chrome. Solid surfaces without blur, so tab labels keep their contrast over any content. */
+.workspace-mobile-header,
+.workspace-tab-bar {
   display: none;
 }
 
-.workspace-drawer-dialog {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: min(320px, 88vw);
-  height: 100dvh;
-  max-height: 100dvh;
-  margin: 0;
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-}
-
-.workspace-drawer {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-}
-
-.workspace-drawer-header {
-  display: flex;
+.workspace-tab-list {
+  display: grid;
+  height: var(--tab-bar-height, 64px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 var(--space-2);
+  list-style: none;
+  transition: height var(--motion-normal) ease-out;
 }
 
-.workspace-drawer .workspace-navigation {
-  margin-top: var(--space-5);
+.workspace-tab-bar[data-compact="true"] {
+  --tab-bar-height: 52px;
 }
 
-.workspace-drawer-footer {
-  margin-top: auto;
-  border-top: 1px solid var(--color-border-default);
-  padding-top: var(--space-4);
+.workspace-tab-list > li {
+  display: flex;
+  min-width: 0;
+  justify-content: center;
+}
+
+.workspace-tab {
+  display: flex;
+  width: 100%;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: var(--space-1) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+
+.workspace-tab:active {
+  background: var(--color-bg-subtle);
+}
+
+/* Same treatment as .workspace-nav-link.is-current, plus a heavier icon and label so the state is not colour alone. */
+.workspace-tab.is-current {
+  border-color: var(--color-border-default);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.workspace-tab.is-current svg {
+  color: var(--color-action-primary);
+}
+
+.workspace-tab-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Quick log is the one accent in the bar: the single main action from Design.md §31. */
+.workspace-tab--quick-log {
+  width: auto;
+  border: 0;
+  padding: 0;
+}
+
+.workspace-tab--quick-log:active {
+  background: transparent;
+}
+
+.workspace-tab-plus {
+  display: grid;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-text);
+  transition: background-color var(--motion-fast) ease;
+}
+
+.workspace-tab--quick-log:hover .workspace-tab-plus,
+.workspace-tab--quick-log:active .workspace-tab-plus {
+  background: var(--color-action-primary-hover);
+}
+
+.initials-avatar {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.workspace-tab.is-current .initials-avatar {
+  border-width: 2px;
+  border-color: var(--color-action-primary);
+}
+
+.workspace-mobile-title {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-more-button {
+  display: inline-flex;
+  min-height: var(--touch-target-min);
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
 }
 
 .workspace-filter-form {
@@ -1024,12 +1128,18 @@ a {
     z-index: 30;
     top: 0;
     display: flex;
-    min-height: 64px;
+    height: 52px;
     align-items: center;
     gap: var(--space-3);
     border-bottom: 1px solid var(--color-border-default);
     background: var(--color-bg-surface);
-    padding: var(--space-2) var(--space-4);
+    padding: 0 var(--space-4);
+    transition: transform var(--motion-normal) ease-out;
+  }
+
+  /* Keyboard focus inside the header always brings it back, even before React hears about it. */
+  .workspace-mobile-header[data-hidden="true"]:not(:focus-within) {
+    transform: translateY(-100%);
   }
 
   .workspace-mobile-brand {
@@ -1039,19 +1149,21 @@ a {
     white-space: nowrap;
   }
 
+  .workspace-tab-bar {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: block;
+    border-top: 1px solid var(--color-border-default);
+    background: var(--color-bg-surface);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Room for the expanded bar, so the last row or button is never under it. */
   .workspace-content {
-    padding: var(--space-6) var(--space-4) var(--space-10);
-  }
-
-  .workspace-quick-log--compact {
-    width: var(--touch-target-min);
-    min-width: var(--touch-target-min);
-    padding: 0;
-  }
-
-  .workspace-quick-log--compact .ui-tooltip,
-  .workspace-quick-log--compact > span:not(.sr-only) {
-    display: none;
+    padding: var(--space-6) var(--space-4) calc(64px + env(safe-area-inset-bottom) + var(--space-10));
   }
 
   .workspace-filter-form {
@@ -1252,6 +1364,13 @@ button:disabled {
   width: min(360px, calc(100vw - 32px));
   gap: var(--space-2);
   pointer-events: none;
+}
+
+/* Toasts sit above the T27 tab bar instead of on it. */
+@media (max-width: 880px) {
+  .ui-toast-region {
+    bottom: calc(64px + env(safe-area-inset-bottom) + var(--space-3));
+  }
 }
 
 .ui-toast {

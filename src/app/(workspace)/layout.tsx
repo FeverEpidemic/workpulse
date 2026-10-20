@@ -16,6 +16,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   return (
     <ApplicationFrame
       displayName={context.profile.display_name}
+      email={context.user.email ?? ""}
       ownerId={context.profile.id}
       locale={locale}
       initialTheme={initialTheme}

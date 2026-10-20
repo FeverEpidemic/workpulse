@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
@@ -26,6 +26,13 @@ export const metadata: Metadata = {
   metadataBase: publicSiteUrl(),
   title: "WorkPulse",
   description: "Private career workspace for capturing activity and building one master CV.",
+};
+
+// viewport-fit=cover makes env(safe-area-inset-*) report the iOS home indicator for the mobile tab bar.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
