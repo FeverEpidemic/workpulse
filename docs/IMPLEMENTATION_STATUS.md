@@ -88,6 +88,17 @@ Berikutnya: pasang `backup.sh` baru di server; dua baris `backup: ok` dari cron,
 
 Status: **PARTIAL**. CI (`checks`, `database`) hijau di PR #17 dan sudah di `main`. CD: job `images` membangun dan menguji image `workpulse-web` dan `workpulse-worker`, lalu mempublikasikannya ke GHCR saat push ke `main` atau tag `v*`; belum ada deploy ke host. Tidak mengubah status T01-T25 atau gate release. Detail: [ci-github-actions](verification/ci-github-actions.md).
 
+## Storybook AI setup, tooling lokal, 10 Oktober 2026
+
+Status: **DONE** untuk permintaan terarah pengguna. Tidak mengubah status T01-T25 atau gate release. Dependensi: aplikasi dan shared primitives yang sudah tersedia serta bootstrap Storybook pengguna.
+
+- Scope selesai: preview dengan CSS/font/provider nyata, App Router, tema light/dark dan locale en/id; addon MSW 3.0.3, MSW 2.15.0, worker publik; tujuh file story colocated (29 story), tepat satu `CssCheck`, tanpa tag `needs-work`; contoh scaffold dihapus setelah story aplikasi lulus.
+- File: `.storybook/{main.ts,preview.tsx,msw-handlers.ts}`, `src/components/ui/{button,badge,input,textarea,select,dialog,revision-conflict}.stories.tsx`, `public/mockServiceWorker.js`, package/lockfile, build allowlist pnpm, ESLint ignores. Konfigurasi Storybook awal pengguna dipertahankan.
+- Verifikasi aktual: `npx vitest --project storybook run` **7 file / 29 test PASS**; `pnpm typecheck`, `pnpm lint`, `pnpm build-storybook` dan `git diff --check` **PASS**. QA Chromium atas static build: **28 render** (7 target × 2 tema × 360/1440px), tanpa horizontal overflow; native Escape dan focus return lulus di empat kombinasi. Delapan screenshot input/dialog telah diinspeksi. Kontras tombol primary: light **5,09:1**, dark **7,53:1**.
+- Tidak ada migration atau keputusan produk. Tidak menjalankan regresi database, worker, PDF maupun Next.js production build karena perubahan ini hanya tooling/story; bukan bukti integrasi production. Warning tooling nonfatal dan batas pengujian dicatat di laporan.
+- Rencana: [storybook-ai-setup-plan.md](verification/storybook-ai-setup-plan.md). Bukti dan delivery gate antislop: [storybook-ai-setup.md](verification/storybook-ai-setup.md).
+- Berikutnya: gunakan `pnpm storybook` untuk katalog lokal. T25 tetap mengikuti checkpoint proyek sebelumnya.
+
 ## T24 — Instrumentation dan performance, acceptance lokal — 10 Oktober 2026
 
 Status T24: **DONE** (acceptance lokal). Ke-18 poin acceptance §1 terbukti lokal. Target performa terbukti pada satu mesin pengembangan, bukan di layanan hosted (T25).

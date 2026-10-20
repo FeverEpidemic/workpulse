@@ -2,6 +2,8 @@
 # No `packages` key on purpose: WorkPulse is one Next.js package at the repository
 # root, not a monorepo. Native build scripts are allow-listed explicitly.
 allowBuilds:
+  esbuild: true
+  msw: false
   unrs-resolver: true
 # T15: pdfjs-dist lists @napi-rs/canvas as optional (rendering only). Import parsing is
 # text extraction in an isolated thread and must stay pure JavaScript, so the native
