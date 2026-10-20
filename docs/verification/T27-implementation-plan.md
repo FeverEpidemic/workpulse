@@ -4,7 +4,7 @@
 
 - Tanggal: 20 Oktober 2026
 - Status saat plan ditulis: **TODO**.
-- Dependensi: T04 (app frame), T07 (Quick log), T25 aksesibilitas **selesai secara lokal** (T25 masih PARTIAL hanya karena staging; T27 tidak menyentuh staging). Tidak bergantung pada T26.
+- Dependensi: T04 (app frame), T07 (Quick log), T25 aksesibilitas **selesai secara lokal** (T25 masih PARTIAL hanya karena staging; T27 tidak menyentuh staging). T26 dan batas pemakaian AI sudah ada di branch; T27 tidak menyentuh import atau AI.
 - Asal task: permintaan terarah pengguna pada 20 Oktober 2026 ("Navigation Bar untuk mobile seperti Instagram iOS"). T27 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Semua keputusan §2.2 berasal dari interview di chat dan sudah dijawab pengguna.
 - Eksekutor: satu agent **Claude**. Semua fase berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 5; Fase 6 (draft dokumen) setelah gate.
@@ -29,7 +29,7 @@ Baca dokumen ini sampai selesai sebelum mengubah kode. Setelah itu baca `AGENTS.
 Kutipan sumber yang mengikat (parafrase ringkas):
 
 - **Design.md §4.1:** navigasi primer kecil; jangan mempromosikan setiap kemampuan ke navigasi primer.
-- **Design.md §4.3 (lama):** mobile memakai drawer dan aksi mengambang Add Activity. T27 **mengganti** poin ini (decision 0033); alur Open → Add Activity → Type tetap wajib.
+- **Design.md §4.3 (lama):** mobile memakai drawer dan aksi mengambang Add Activity. T27 **mengganti** poin ini (decision 0034); alur Open → Add Activity → Type tetap wajib.
 - **Design.md §31:** tiga use case mobile utama: tambah aktivitas, lihat aktivitas terbaru, kelola proyek. Keyboard fokus otomatis saat capture dibuka. Target sentuh ≥ 44 × 44 px.
 - **AGENTS.md:** WCAG 2.2 AA, focus management/return, reduced motion, status tidak bergantung pada warna; verifikasi 360 px dan 1440 px light/dark.
 
@@ -58,7 +58,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 - Komponen navigasi mobile, hook scroll, varian `sheet` pada `ActivityCaptureForm`, copy en/id, CSS di `globals.css` dengan token yang ada.
 - Pembaruan test E2E yang mengasumsikan drawer (`app-frame.spec.ts:259-278`, `release-keyboard.spec.ts:193-202`).
-- `docs/Design.md` §4.3 dan `Design.md` (root) §4.3, `AGENTS.md` baris 120, draft decision 0033.
+- `docs/Design.md` §4.3 dan `Design.md` (root) §4.3, `AGENTS.md` dan `docs/AGENTS.md` baris 120, draft decision 0034.
 
 ### 2.2 Keputusan implementasi
 
@@ -93,7 +93,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
     - `quickLog.openFullForm`: "Open full form" / "Detail lengkap".
     - Label tab Quick log memakai `workspace.quickLog` yang sudah ada.
 13. **Dial antislop.** Design Read: *app shell mobile untuk workspace karier privat, bahasa visual tenang sesuai Design.md, dial ENERGY 1 / RHYTHM 1 / MOTION 2.* MOTION 2 karena dua transisi (label dan header) membantu pengguna melihat chrome yang berubah; durasi ≤ 200 ms, `ease-out`, dimatikan oleh reduced motion.
-14. **Nomor.** Decision `docs/decisions/0033-t27-mobile-tab-bar.md`. Tidak ada migration (parity tetap seperti baseline). Tidak ada script npm baru; test baru masuk ke `pnpm test` dan suite E2E yang ada.
+14. **Nomor.** Decision `docs/decisions/0034-t27-mobile-tab-bar.md` (0032 dan 0033 sudah dipakai batas AI dan T26). Tidak ada migration (parity tetap 38/38). Tidak ada script npm baru; test baru masuk ke `pnpm test` dan suite E2E yang ada.
 
 ### 2.3 Di luar scope
 
@@ -134,17 +134,17 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 | Modify | `src/features/activity/activity-capture-form.tsx`, `src/i18n/messages.ts`, `src/app/globals.css` |
 | Create | `tests/unit/{navigation-routes,use-scroll-chrome,mobile-navigation-ui,initials-avatar}.test.ts(x)` |
 | Modify | `tests/unit/` test form activity yang ada (varian `sheet`), `tests/e2e/app-frame.spec.ts`, `tests/e2e/release-keyboard.spec.ts`, `tests/e2e/release-a11y.spec.ts`, golden aria snapshot terkait bila berubah |
-| Modify | `docs/Design.md`, `Design.md`, `AGENTS.md` (baris 120) |
-| Create | `docs/verification/T27-phase{0..5}-*.md`, `docs/verification/T27-mobile-tab-bar.md`, `docs/decisions/0033-t27-mobile-tab-bar.md` |
+| Modify | `docs/Design.md`, `Design.md`, `AGENTS.md` dan `docs/AGENTS.md` (baris 120) |
+| Create | `docs/verification/T27-phase{0..5}-*.md`, `docs/verification/T27-mobile-tab-bar.md`, `docs/decisions/0034-t27-mobile-tab-bar.md` |
 
 ## 5. Fase eksekusi
 
 ### Fase 0: Baseline (tanpa edit kode)
 
-- [ ] `git status`. Saat plan ditulis (20 Oktober 2026) file berikut berisi perubahan pengguna yang belum di-commit: `src/components/layout/workspace-navigation.tsx`, `src/app/globals.css`, `src/app/layout.tsx`, `Design.md`, `docs/Design.md`. Bila masih kotor, **stop** dan minta pengguna meng-commit atau memindahkannya (§8). Jangan stash atau menimpa.
-- [ ] Branch kerja baru dari `main` setelah path T27 bersih.
-- [ ] Catat parity migration (harapan 36/36, atau 37/37 bila T26 sudah merge).
-- [ ] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari receipt terakhir: unit **118/1068** (bisa bertambah oleh story Storybook); catat angka aktual.
+- [ ] `git status` bersih untuk path T27 (logo brand dan Storybook sudah di-commit pada 20 Oktober 2026). Bila ada path T27 yang kotor, **stop** (§8). Jangan stash atau menimpa. `.claude/launch.json` dan `.claude/setting.local.json` sengaja tetap lokal; jangan di-commit.
+- [ ] Branch kerja baru dari `main` setelah branch yang memuat logo brand, Storybook, dan plan ini sudah merge.
+- [ ] Catat parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
+- [ ] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari receipt T26 Fase 5: unit **121/1151** (bisa berbeda karena Storybook ikut dikonfigurasi di Vitest); catat angka aktual. `pnpm lint` di checkout yang punya `.claude/worktrees/*/.next` gagal karena file build di sana; jalankan dengan `--ignore-pattern ".claude/**"` dan catat.
 - [ ] Jalankan `pnpm test:e2e:ui` dan `pnpm test:e2e:release`; catat angka.
 - [ ] Verifikasi rujukan file:baris di dokumen ini masih benar; selisih dicatat.
 - [ ] Receipt `T27-phase0-baseline.md`.
@@ -188,8 +188,8 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
 - [ ] `docs/Design.md` dan `Design.md` §4.3: ganti drawer dengan bottom tab bar lima slot, composer sheet, dan Menu lainnya; alur Open → Add Activity → Type tetap.
-- [ ] `AGENTS.md` baris 120: "mobile memakai bottom tab bar; Quick log membuka sheet dengan input terfokus".
-- [ ] Draft decision `0033-t27-mobile-tab-bar.md` (alasan mengganti drawer, keputusan §2.2, follow-up foto profil).
+- [ ] `AGENTS.md` dan `docs/AGENTS.md` baris 120: "mobile memakai bottom tab bar; Quick log membuka sheet dengan input terfokus".
+- [ ] Draft decision `0034-t27-mobile-tab-bar.md` (alasan mengganti drawer, keputusan §2.2, follow-up foto profil).
 - [ ] `docs/verification/T27-mobile-tab-bar.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
 - [ ] Commit.
 
