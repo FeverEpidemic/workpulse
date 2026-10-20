@@ -86,6 +86,9 @@ export function ActivityCaptureForm({
   activity,
   onSaved,
   onCancel,
+  variant = "full",
+  onCreated,
+  onOpenFullForm,
 }: {
   locale: Locale;
   ownerId: string;
@@ -97,13 +100,23 @@ export function ActivityCaptureForm({
   activity?: ActivityRow;
   onSaved?: (record: ActivityRow) => void;
   onCancel?: () => void;
+  /** "sheet" is the T27 mobile composer: note and date only, saved in place instead of opening the detail page. */
+  variant?: "full" | "sheet";
+  onCreated?: (activityId: string) => void;
+  onOpenFullForm?: () => void;
 }) {
   const isEditing = Boolean(activity);
+  const isSheet = variant === "sheet" && !activity;
   const formId = activity ? `activity-edit-form-${activity.id}` : "quick-log-note-form";
   const formKey = activity ? `activity-edit-${activity.id}` : "quick-log-note";
   const serverAction = activity ? updateActivityAction : createActivityAction;
   const [state, formAction] = useActionState(serverAction, IDLE_ACTION_STATE);
-  const { formRef, onInputCapture: persistInput, onChangeCapture: persistChange } = useSessionDraft(formKey, ownerId, state);
+  const { formRef, onInputCapture: persistInput, onChangeCapture: persistChange } = useSessionDraft(
+    formKey,
+    ownerId,
+    state,
+    { merge: isSheet },
+  );
   const unsaved = useUnsavedForm(formId, state);
   const markDirty = unsaved.markDirty;
   const operationKey = useCreateOperationKey(ownerId, isEditing ? null : "activity-create", state);
@@ -214,7 +227,8 @@ export function ActivityCaptureForm({
       setDraftRevisionState("none");
     }
 
-    if (!hasChanges && storageKey) {
+    // The composer sheet saves its draft on every keystroke and is closed on purpose, so it never blocks navigation.
+    if (!hasChanges && storageKey && !isSheet) {
       try {
         const rawDraft = sessionStorage.getItem(storageKey);
         if (rawDraft) {
@@ -228,7 +242,7 @@ export function ActivityCaptureForm({
         // An unavailable or malformed tab draft does not block capture.
       }
     }
-  }, [activity, formKey, formRef, hasChanges, initialProjectId, isEditing, markDirty, options.projects, ownerId, stateCorrelationId, storageKey]);
+  }, [activity, formKey, formRef, hasChanges, initialProjectId, isEditing, isSheet, markDirty, options.projects, ownerId, stateCorrelationId, storageKey]);
 
   useEffect(() => {
     if (state.status !== "error" || focusedErrorId.current === state.error.correlationId) return;
@@ -257,6 +271,10 @@ export function ActivityCaptureForm({
     if (!isEditing) {
       const activityId = createdActivityId(state);
       if (!activityId) return;
+      if (isSheet) {
+        window.setTimeout(() => onCreated?.(activityId), 0);
+        return;
+      }
       const query = new URLSearchParams({ returnTo }).toString();
       router.push(`/activity/${activityId}?${query}`);
       return;
@@ -264,7 +282,7 @@ export function ActivityCaptureForm({
 
     const savedRecord = recordFromAction(state);
     if (savedRecord && onSaved) window.setTimeout(() => onSaved(savedRecord), 0);
-  }, [formId, isEditing, onSaved, returnTo, router, state]);
+  }, [formId, isEditing, isSheet, onCreated, onSaved, returnTo, router, state]);
 
   function updateProject(event: ChangeEvent<HTMLSelectElement>) {
     const projectId = event.currentTarget.value;
@@ -347,13 +365,13 @@ export function ActivityCaptureForm({
         onInputCapture={(event) => {
           ensureActivityDraftMetadata();
           persistInput(event);
-          unsaved.onInputCapture(event);
+          if (!isSheet) unsaved.onInputCapture(event);
           setHasChanges(true);
         }}
         onChangeCapture={(event) => {
           ensureActivityDraftMetadata();
           persistChange(event);
-          unsaved.onChangeCapture(event);
+          if (!isSheet) unsaved.onChangeCapture(event);
           setHasChanges(true);
         }}
       >
@@ -366,7 +384,9 @@ export function ActivityCaptureForm({
           <input type="hidden" name="operation_key" value={operationKey ?? ""} />
         )}
 
-        {activity ? (
+        {isSheet ? (
+          <input type="hidden" name="capture_mode" value="note" />
+        ) : activity ? (
           <p className="activity-capture-mode-readonly">
             <span className="field-label">{t(locale, "quickLog.modeLabel")}</span>
             <span className="activity-mode-choice is-selected">{captureModeLabel(locale, activity.capture_mode)}</span>
@@ -445,6 +465,7 @@ export function ActivityCaptureForm({
           <FieldError state={state} field="occurred_on" locale={locale} id={dateErrorId} />
         </label>
 
+        {isSheet ? null : (
         <fieldset className="activity-context-fields">
           <legend className="field-label">{t(locale, "quickLog.contextLabel")}</legend>
           {contextIssue ? (
@@ -505,8 +526,9 @@ export function ActivityCaptureForm({
             </span>
           </label>
         </fieldset>
+        )}
 
-        {showEditableStructuredFields ? (
+        {isSheet ? null : showEditableStructuredFields ? (
           <details className="activity-details-disclosure" hidden={!activity && mode !== "form"} open={detailFieldError || undefined}>
             <summary>{t(locale, "quickLog.addDetails")}</summary>
             <div className="activity-details-fields">
@@ -583,7 +605,9 @@ export function ActivityCaptureForm({
           </section>
         ) : null}
         <div className="flex flex-wrap items-center gap-3">
-          {activity ? (
+          {isSheet ? (
+            <Link className="button-secondary" href={retryReturnTo} onClick={onOpenFullForm}>{t(locale, "quickLog.openFullForm")}</Link>
+          ) : activity ? (
             <Button variant="secondary" type="button" onClick={requestCancelEdit}>{t(locale, "common.cancel")}</Button>
           ) : (
             <Link className="button-secondary" href={returnTo}>{t(locale, "common.cancel")}</Link>

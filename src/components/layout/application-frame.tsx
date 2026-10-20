@@ -12,6 +12,7 @@ export function ApplicationFrame({
   displayName,
   email,
   ownerId,
+  timezone,
   locale,
   initialTheme,
 }: {
@@ -19,6 +20,7 @@ export function ApplicationFrame({
   displayName: string;
   email: string;
   ownerId: string;
+  timezone: string;
   locale: Locale;
   initialTheme: ThemePreference;
 }) {
@@ -34,7 +36,14 @@ export function ApplicationFrame({
             initialTheme={initialTheme}
           />
           <div className="workspace-main-column">
-            <MobileChrome locale={locale} displayName={displayName} email={email}>
+            <MobileChrome
+              locale={locale}
+              displayName={displayName}
+              email={email}
+              ownerId={ownerId}
+              timezone={timezone}
+              initialTheme={initialTheme}
+            >
               <WorkspaceTopBar displayName={displayName} locale={locale} />
               <main id="main-content" className="workspace-content" tabIndex={-1}>
                 {children}

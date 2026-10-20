@@ -257,7 +257,25 @@ function restoreFormValues(form: HTMLFormElement, candidate: unknown): void {
   }
 }
 
-export function useSessionDraft(key: string, ownerId: string | null | undefined, state: ActionState) {
+// A form that shows only some fields of a shared draft keeps the fields it does not render.
+export function mergeDraftValues(existing: string | null, values: DraftValues): DraftValues {
+  try {
+    const parsed: unknown = existing ? JSON.parse(existing) : null;
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return { ...(parsed as DraftValues), ...values };
+    }
+  } catch {
+    // A malformed draft is replaced by the current values.
+  }
+  return values;
+}
+
+export function useSessionDraft(
+  key: string,
+  ownerId: string | null | undefined,
+  state: ActionState,
+  { merge = false }: { merge?: boolean } = {},
+) {
   const formRef = useRef<HTMLFormElement>(null);
   const storageKey = sessionDraftStorageKey(ownerId, key);
   const previousStorageKey = useRef(storageKey);
@@ -265,11 +283,15 @@ export function useSessionDraft(key: string, ownerId: string | null | undefined,
   const persist = useCallback((form: HTMLFormElement) => {
     if (!storageKey) return;
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify(formValues(form)));
+      const values = formValues(form);
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify(merge ? mergeDraftValues(sessionStorage.getItem(storageKey), values) : values),
+      );
     } catch {
       // A disabled or full sessionStorage must not prevent saving the form.
     }
-  }, [storageKey]);
+  }, [merge, storageKey]);
 
   useEffect(() => {
     const form = formRef.current;
