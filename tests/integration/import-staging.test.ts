@@ -25,6 +25,7 @@ import { createSupabaseImportWorkerGateway } from "../../workers/supabase-import
 import {
   CV_LINES, cvDocx, cvPdf, DOCX_MIME, eicarDocx, emptyDocx, encryptedOfficeFile, macroDocx, PDF_MIME, pdfFixture,
 } from "../import-fixtures";
+import { assignAiPlan } from "./ai-usage-support";
 
 const CONTENT_SENTINEL = "WP-PRIVATE-IMPORT-SENTINEL";
 const FILENAME_SENTINEL = `cv-WP-FILENAME-SENTINEL-${randomUUID()}.pdf`;
@@ -52,6 +53,7 @@ async function createAccount(label: string): Promise<Account> {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("import fixture creation failed");
   users.push(created.data.user.id);
+  assignAiPlan(created.data.user.id, "unlimited");
   const client = createClient<Database>(adminConfig.url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });

@@ -10,6 +10,7 @@ import {
 } from "@/domain/ai/analysis-view";
 import { validateDetectResult, type DetectResult } from "@/domain/ai/detect-result";
 import { buildDetectInput } from "@/domain/ai/minimize";
+import { parseAiUsageRows, type AiUsageWindow } from "@/domain/ai/usage";
 import {
   AiServiceError,
   mapAiDatabaseError,
@@ -36,6 +37,8 @@ export interface AnalysisViewPayload {
   job: AnalysisViewJob | null;
   achievement: AnalysisViewAchievement | null;
   view: AnalysisView;
+  /** Analysis units for the session owner; null when usage could not be read (the request still enforces it). */
+  usage: AiUsageWindow | null;
 }
 
 const jobIdSchema = z.object({ jobId: z.uuid() }).strict();
@@ -181,7 +184,7 @@ export function createAiReviewService(client: AiClient) {
         const id = activityIdParsed.data;
         const actorId = await requireAiActorId(client);
 
-        const [activityResult, profileResult, jobResult, achievementResult] = await Promise.all([
+        const [activityResult, profileResult, jobResult, achievementResult, usageResult] = await Promise.all([
           client.from("activities").select("id, revision, role, scope, outcome, raw_text")
             .eq("user_id", actorId).eq("id", id).maybeSingle(),
           client.from("profiles").select("ai_consent_at, ai_consent_version").eq("id", actorId).maybeSingle(),
@@ -191,6 +194,7 @@ export function createAiReviewService(client: AiClient) {
             .limit(1).maybeSingle(),
           client.from("achievements").select("id, revision, status")
             .eq("user_id", actorId).eq("activity_id", id).maybeSingle(),
+          client.rpc("get_ai_usage"),
         ]);
         if (activityResult.error || profileResult.error || jobResult.error || achievementResult.error) {
           throw new AiServiceError("UNAVAILABLE");
@@ -284,7 +288,9 @@ export function createAiReviewService(client: AiClient) {
           derivedAchievement: achievement,
         });
 
-        return { activityRevision: activityRow.data.revision, job, achievement, view };
+        const usage = usageResult.error ? null : parseAiUsageRows(usageResult.data)?.analysis ?? null;
+
+        return { activityRevision: activityRow.data.revision, job, achievement, view, usage };
       });
     },
   };

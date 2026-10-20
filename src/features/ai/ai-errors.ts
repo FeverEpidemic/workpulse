@@ -19,6 +19,8 @@ export type AiServiceErrorCode =
   | "STALE_INPUT"
   | "CONSENT_REQUIRED"
   | "RETRY_EXHAUSTED"
+  | "QUOTA_EXCEEDED"
+  | "CAPACITY_EXCEEDED"
   | "UNAVAILABLE"
   | "AI_JOB_NOT_APPLICABLE"
   | "AI_SUGGESTION_DISMISSED"
@@ -37,6 +39,8 @@ const AI_ERROR_MESSAGE_KEYS: Record<AiServiceErrorCode, MessageKey> = {
   STALE_INPUT: "error.staleInput",
   CONSENT_REQUIRED: "error.consentRequired",
   RETRY_EXHAUSTED: "error.aiRetryExhausted",
+  QUOTA_EXCEEDED: "error.aiQuotaExceeded",
+  CAPACITY_EXCEEDED: "error.aiCapacityExceeded",
   UNAVAILABLE: "error.unavailable",
   AI_JOB_NOT_APPLICABLE: "error.aiJobNotApplicable",
   AI_SUGGESTION_DISMISSED: "error.aiSuggestionDismissed",
@@ -100,6 +104,10 @@ export function mapAiDatabaseError(error: { code?: string; message?: string }): 
       return new AiServiceError("STALE_INPUT");
     case "AI_RETRY_EXHAUSTED":
       return new AiServiceError("RETRY_EXHAUSTED");
+    case "AI_QUOTA_EXCEEDED":
+      return new AiServiceError("QUOTA_EXCEEDED");
+    case "AI_CAPACITY_EXCEEDED":
+      return new AiServiceError("CAPACITY_EXCEEDED");
     case "STALE_REVISION":
     case "AI_JOB_NOT_RETRYABLE":
     case "IDEMPOTENCY_KEY_REUSED":

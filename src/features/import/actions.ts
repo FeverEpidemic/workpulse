@@ -25,6 +25,8 @@ function mapCode(code: ImportServiceError["code"]): ErrorCode {
     case "UNAUTHENTICATED": return "UNAUTHENTICATED";
     case "NOT_FOUND": return "NOT_FOUND";
     case "UNAVAILABLE": return "UNAVAILABLE";
+    case "QUOTA_EXCEEDED":
+    case "CAPACITY_EXCEEDED": return "RATE_LIMITED";
     default: return "CONFLICT";
   }
 }

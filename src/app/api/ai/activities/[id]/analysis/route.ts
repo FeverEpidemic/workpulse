@@ -16,6 +16,8 @@ function statusFor(code: AiServiceError["code"]): number {
     case "UNAUTHENTICATED": return 401;
     case "NOT_FOUND": return 404;
     case "UNAVAILABLE": return 503;
+    case "QUOTA_EXCEEDED":
+    case "CAPACITY_EXCEEDED": return 429;
     default: return 409;
   }
 }

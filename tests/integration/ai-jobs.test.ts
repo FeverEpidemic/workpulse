@@ -22,6 +22,7 @@ import type { Database } from "@/server/supabase/database.types";
 
 import { runAiWorkerOnce, type AiWorkerSummary } from "../../workers/ai-worker.ts";
 import { createSupabaseAiWorkerGateway } from "../../workers/supabase-ai-gateway.ts";
+import { assignAiPlan } from "./ai-usage-support";
 import { startOpenAIStub, type OpenAIStub } from "./openai-stub";
 
 const execFileAsync = promisify(execFile);
@@ -52,6 +53,7 @@ async function createAccount(label: string): Promise<Account> {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("AI fixture creation failed");
   users.push(created.data.user.id);
+  assignAiPlan(created.data.user.id, "unlimited");
   const client = createClient<Database>(pub.url, pub.publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });

@@ -9,6 +9,7 @@ import { CV_LINES, cvDocx, cvPdf, DOCX_MIME } from "../import-fixtures";
 import { expectNoWcagViolations } from "./helpers/accessibility";
 import { drainAiWorker } from "./helpers/ai-worker";
 import { drainImportWorker } from "./helpers/import-worker";
+import { assignAiPlan } from "../integration/ai-usage-support";
 
 /**
  * Gate M3 (Assisted entry): one new user goes through F01 import and F02 assisted capture in
@@ -43,6 +44,7 @@ async function createUser(): Promise<User> {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   const id = created.data.user?.id;
   if (created.error || !id) throw new Error("M3 browser fixture setup failed");
+  assignAiPlan(id, "unlimited");
   const user = { id, email, password };
   users.push(user);
   return user;

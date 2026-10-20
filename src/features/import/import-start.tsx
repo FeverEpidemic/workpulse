@@ -8,9 +8,11 @@ import type { DragEvent, KeyboardEvent } from "react";
 import { AiConsentDialog } from "@/components/ui/ai-consent-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import type { AiUsageWindow } from "@/domain/ai/usage";
 import { IMPORT_ENTITY_TYPES, IMPORT_MAX_BYTES } from "@/domain/import/contracts";
 import type { ImportView } from "@/domain/import/import-view";
 import { setAiConsentAction } from "@/features/ai/actions";
+import { AiLimitNotice, isAiLimited } from "@/features/ai/ai-limit-notice";
 import { EVIDENCE_POLL_DELAYS } from "@/features/evidence/evidence-attachments";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
@@ -59,9 +61,13 @@ export type ImportStartProps = {
   consent: { granted: boolean; profileRevision: number };
   /** A returning user (onboarding finished) starts manually in the profile editor, not in onboarding mode. */
   onboarded?: boolean;
+  /** Import AI units at page load; the upload and retry RPCs enforce the limit regardless. */
+  usage?: AiUsageWindow | null;
+  /** Profile IANA timezone for the AI limit reset time. */
+  timeZone?: string;
 };
 
-export function ImportStart({ locale, initialView, consent, onboarded = false }: ImportStartProps) {
+export function ImportStart({ locale, initialView, consent, onboarded = false, usage = null, timeZone }: ImportStartProps) {
   const [view, setView] = useState<ImportView>(initialView);
   const [choosing, setChoosing] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -203,6 +209,7 @@ export function ImportStart({ locale, initialView, consent, onboarded = false }:
   };
 
   const showChooser = view.state === "choose" || choosing;
+  const limited = isAiLimited(usage) ? usage : null;
   const progress = PROGRESS_KEYS[view.state];
   const manual = (primary = false) => (
     <Link className={primary ? "button-primary" : "button-secondary"} href={onboarded ? "/settings/profile" : MANUAL_HREF}>{t(locale, "import.startManually")}</Link>
@@ -215,7 +222,13 @@ export function ImportStart({ locale, initialView, consent, onboarded = false }:
 
   return (
     <div className="import-start space-y-5">
-      {showChooser ? (
+      {showChooser && limited ? (
+        <section className="space-y-4" aria-labelledby="import-choose-title">
+          <h2 id="import-choose-title" className="text-xl font-semibold">{t(locale, "import.title")}</h2>
+          <AiLimitNotice locale={locale} bucket="import" usage={limited} timeZone={timeZone} />
+          <div className="import-actions">{manual(true)}</div>
+        </section>
+      ) : showChooser ? (
         <section className="space-y-4" aria-labelledby="import-choose-title">
           <h2 id="import-choose-title" className="text-xl font-semibold">{t(locale, "import.title")}</h2>
           <p className="text-sm text-[var(--color-text-secondary)]">{t(locale, "import.intro")}</p>
@@ -304,6 +317,9 @@ export function ImportStart({ locale, initialView, consent, onboarded = false }:
               {view.state === "failed_retriable" && view.retryBlockReason ? (
                 <p className="field-help">{t(locale, `import.retry.${view.retryBlockReason}` as MessageKey)}</p>
               ) : null}
+              {view.state === "failed_retriable" && view.canRetry && limited ? (
+                <AiLimitNotice locale={locale} bucket="import" usage={limited} timeZone={timeZone} />
+              ) : null}
             </>
           ) : null}
 
@@ -330,7 +346,7 @@ export function ImportStart({ locale, initialView, consent, onboarded = false }:
             {view.state === "committed" ? (
               <Link className="button-primary" href="/dashboard">{t(locale, "import.openDashboard")}</Link>
             ) : null}
-            {view.state === "failed_retriable" ? (
+            {view.state === "failed_retriable" && !(view.canRetry && limited) ? (
               <Button disabled={!view.canRetry} loading={pending} loadingLabel={t(locale, "common.loading")} onClick={() => runBatchAction(retryImportAction)}>
                 {t(locale, "import.retry")}
               </Button>

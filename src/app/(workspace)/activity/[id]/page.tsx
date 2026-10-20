@@ -86,6 +86,7 @@ export default async function ActivityDetailPage({ params, searchParams }: Activ
       returnTo={returnTo}
       consent={{ granted: hasCurrentAiConsent(profile), profileRevision: profile.revision }}
       initialAnalysis={initialAnalysis}
+      timeZone={profile.timezone}
     />
   );
 }

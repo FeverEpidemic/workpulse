@@ -2022,6 +2022,18 @@ export type Database = {
           scope: string
         }[]
       }
+      get_ai_usage: {
+        Args: never
+        Returns: {
+          bucket: string
+          day_limit: number
+          day_used: number
+          limit_reason: string
+          month_limit: number
+          month_used: number
+          resets_at: string
+        }[]
+      }
       get_cv_export_download: { Args: { p_export_id: string }; Returns: string }
       get_cv_export_input: {
         Args: { p_attempt_token: string; p_export_id: string }

@@ -1,5 +1,14 @@
 # WorkPulse Implementation Status
 
+## Batas pemakaian AI per akun untuk pilot: DONE lokal, 18 Oktober 2026
+
+Pendaftaran pilot terbuka, jadi setiap request yang mengantrekan attempt provider kini dibebankan satu unit di database, dalam transaksi yang sama dengan job: `analysis` 20/hari dan 200/bulan, `import` 3/hari dan 5/bulan, kapasitas bersama 2.000/hari (UTC). Angka disetujui pengguna 18 Oktober 2026. S06 dan S02 menampilkan batas, waktu reset dalam timezone profil, dan jalur manual. Paket ada di `internal.ai_plans` (`free`, `unlimited`) sebagai kaitan billing nanti. Migration ke-37 `20261018090000_ai_usage_limits.sql`.
+
+- Checks: lint, typecheck, `db:lint` exit 0; unit 119/1084; pgTAP 20/1638; integration `ai-usage` 9/9, `ai` 13/13, `ai-review` 21/21, `storage` 1/1, `import` 21/21, `import-commit` 11/11, `import-review` 6/6, `m3` 7/7, `account-deletion` 14/14, `release` 12/12; `test:e2e:import` 7/7, `test:e2e:m3` 2/2 (setelah drift indeks Storage lokal diperbaiki).
+- Belum terverifikasi: E2E lain belum dijalankan; staging belum dimigrasi. Belum ada gate review independen.
+
+[Decision 0032](decisions/0032-ai-usage-limits.md), [receipt](verification/ai-usage-limits.md).
+
 ## T25 Regression, aksesibilitas dan release handoff: PARTIAL, 11 Oktober 2026
 
 Status T25: **PARTIAL**. Semua bukti lokal lulus dan gate review lulus setelah remediasi RV1. Staging (Fase 7) **sebagian**: migrasi hosted (Fase 7a), SMTP dan template, deploy web/worker di server pribadi, smoke §8, dan uji ulang recovery dari Gmail setelah PR #19 lulus. Backup harian `pg_dump` dan latihan restore lulus 17 Oktober 2026; retensi ≤ 30 hari belum terverifikasi sampai dua run cron tercatat. Kalimat selesai rencana ("integrasi nyata diverifikasi di staging") belum terpenuhi penuh.
