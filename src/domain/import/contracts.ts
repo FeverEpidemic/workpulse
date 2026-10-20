@@ -25,7 +25,7 @@ export type ImportStage = (typeof IMPORT_STAGES)[number];
 export const IMPORT_EXTRACTION_MODES = ["ai", "rules"] as const;
 export type ImportExtractionMode = (typeof IMPORT_EXTRACTION_MODES)[number];
 
-export const IMPORT_ENTITY_TYPES =["profile", "experience", "education", "certification", "skill", "achievement"] as const;
+export const IMPORT_ENTITY_TYPES = ["profile", "experience", "education", "certification", "skill", "achievement"] as const;
 export type ImportEntityType = (typeof IMPORT_ENTITY_TYPES)[number];
 
 /** File-level failures a retry cannot fix; must match internal.is_permanent_import_error(). */

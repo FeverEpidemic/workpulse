@@ -1,5 +1,22 @@
 # WorkPulse Implementation Status
 
+## T26 Import CV tanpa AI (parser aturan): DONE lokal, 20 Oktober 2026
+
+Status T26: **DONE** (acceptance lokal). Pengguna tanpa consent AI kini dapat mengimpor CV PDF/DOCX: dialog pilihan netral (*Pakai AI* / *Baca tanpa AI*, fokus awal di judul) menentukan `extraction_mode` batch saat upload. Batch `rules` dibaca parser aturan di parser thread yang terisolasi, divalidasi dengan grounding yang sama dengan AI, lalu di-stage dan dibuka untuk review S03 dalam satu transaksi, tanpa `ai_jobs`, tanpa consent, dan tanpa unit AI.
+
+- Pelaksana Fase 0-5: Claude (Opus 5.5). Gate review Claude (Opus 5.5) pada `650b375`: **PASS**, tanpa P0-P2, tujuh P3 (N1-N7). Fase 6 ditulis reviewer, termasuk perbaikan N5.
+- Dependensi: T15, T16, T17, T23 **DONE**; Gate M3/M4 **PASSED**; batas pemakaian AI (decision 0032) gate PASS. T25 tetap PARTIAL dan tidak disentuh.
+- Scope: profil, experience, education, skills. Achievement dari bullet, sertifikasi, proyek, lokasi, dan pilihan tanpa AI bagi pengguna yang sudah consent di luar scope.
+- File: migration `20261019090000_t26_import_rules_extraction.sql` (ke-38) dan pgTAP `import_rules.test.sql`; `src/domain/import/rules-extract.ts`; parser thread, worker import, gateway, service dan route upload (`x-extraction-mode`); `import-mode-dialog.tsx`, prop `focusTitle` pada `Dialog`, S02/S03, 14 key copy en/id; test unit/integration/E2E.
+- Keputusan: [decision 0033](decisions/0033-t26-import-rules-extraction.md) mengubah 0021 #1 (consent hanya untuk mode `ai`). Kode permanen baru `IMPORT_RULES_FAILED`.
+- Checks (reviewer, 20 Oktober 2026): lint, typecheck, `worker:check`, `db:lint`, build exit 0; unit 121/1151; pgTAP 21/1725; integration `account-deletion` 15, `import` 25, `import-commit` 12, `import-review` 6, `m3` 7, `release` 12, `ai-usage` 9, `ai` 13, `ai-review` 21, `storage` 1; E2E `import` 11, `import-review` 10, `m3` 2, `release` 15, `ai` 2, `ai-review` 11, `m2` lulus.
+- Belum dijalankan: `test:e2e:evidence`, `test:e2e:account-deletion`, `test:pdf`, `test:perf` (domain tidak disentuh); uji CV nyata; NVDA manusia.
+- Risiko: T26 bertumpuk di branch usage limits yang belum di-push (N1); migration dan worker harus dideploy bersamaan (N2).
+
+Berikutnya: push dan PR branch usage limits lalu T26, kemudian deploy staging lewat alur T25. Uji kualitas ekstraksi dengan 5-10 CV nyata milik pemilik produk.
+
+[Rencana](verification/T26-implementation-plan.md), [bukti](verification/T26-import-rules-extraction.md), [gate review](verification/T26-gate-review.md), receipt [Fase 0](verification/T26-phase0-baseline.md) sampai [5](verification/T26-phase5-e2e-regression.md).
+
 ## Batas pemakaian AI per akun untuk pilot: DONE lokal, 18 Oktober 2026
 
 Pendaftaran pilot terbuka, jadi setiap request yang mengantrekan attempt provider kini dibebankan satu unit di database, dalam transaksi yang sama dengan job: `analysis` 20/hari dan 200/bulan, `import` 3/hari dan 5/bulan, kapasitas bersama 2.000/hari (UTC). Angka disetujui pengguna 18 Oktober 2026. S06 dan S02 menampilkan batas, waktu reset dalam timezone profil, dan jalur manual. Paket ada di `internal.ai_plans` (`free`, `unlimited`) sebagai kaitan billing nanti. Migration ke-37 `20261018090000_ai_usage_limits.sql`.
@@ -1153,7 +1170,8 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T22 | Preview dan PDF QA | DONE |
 | T23 | Account deletion dan retention | DONE |
 | T24 | Instrumentation dan performance | DONE |
-| T25 | Regression dan release handoff | TODO |
+| T25 | Regression dan release handoff | PARTIAL |
+| T26 | Import CV tanpa AI (parser aturan) | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

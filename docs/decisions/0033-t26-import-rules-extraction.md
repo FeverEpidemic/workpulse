@@ -1,8 +1,8 @@
 # Decision 0033: T26 import CV tanpa AI (parser aturan)
 
-Date: 18 Oktober 2026
+Date: 18 Oktober 2026 (final 20 Oktober 2026)
 
-Status: **Draft**. Desain disetujui pengguna di chat pada 18 Oktober 2026; implementasi belum dimulai. Difinalkan pada Fase 6 rencana setelah gate review. Task: T26 (penambahan scope pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T26-implementation-plan.md).
+Status: Accepted. Desain disetujui pengguna di chat pada 18 Oktober 2026; gate review 20 Oktober 2026 PASS tanpa P0-P2. Task: T26 (penambahan scope pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5; R02, F01, S02/S03). [Rencana](../verification/T26-implementation-plan.md), [bukti](../verification/T26-import-rules-extraction.md), [gate review](../verification/T26-gate-review.md). Migration `20261019090000_t26_import_rules_extraction.sql` (ke-38).
 
 ## References
 
@@ -28,6 +28,9 @@ Bagian lokal pipeline (malware scan, parsing PDF/DOCX di thread terisolasi, hitu
 7. **Kode error baru `IMPORT_RULES_FAILED` (permanen).** Dipakai bila extractor melempar exception atau outputnya gagal validasi. Keduanya bug di kode WorkPulse, bukan masalah file pengguna, jadi Retry tidak ditawarkan. Timeout dan crash thread tetap `PARSER_TIMEOUT` dan `CORRUPT_FILE`.
 8. **Batch `rules` tidak memakai kuota AI.** T26 dibangun di atas batas pemakaian AI (decision 0032). Unit `import` hanya di-charge untuk batch `ai`, baik saat batch baru maupun saat retry.
 9. **Copy jujur tentang kualitas.** S02 menjelaskan kedua jalur bagi pengguna tanpa consent. Hasil batch `rules` membawa catatan agar pengguna mengecek perusahaan, jabatan, dan tanggal. Hasil kosong menyebut bahwa CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI.
+
+10. **Rincian implementasi yang diterima di gate.** `begin_import_batch` mendapat parameter keenam `p_extraction_mode text default 'ai'`, sehingga client tanpa header tetap `ai`; hash idempotency `ai` sama persis dengan T15 dan `rules` diberi akhiran `:rules`. Header `x-extraction-mode` yang tidak dikenal ditolak di service sebagai `VALIDATION` (HTTP 400) sebelum RPC. Output `rules` yang gagal validasi struktur di database menutup job `failed` dan tidak menyimpan teks. Saat kuota import AI habis, kartu AI di dialog menampilkan pemberitahuan batas dan *Pakai AI* nonaktif; kartu tanpa AI tetap aktif. *Alasan:* kompatibel dengan pemanggil lama, job dan batch konsisten, dan dialog tidak menawarkan pilihan yang pasti ditolak.
+11. **Deploy bersamaan.** Migration ini dan worker T26 harus dideploy bersama. Worker lama yang meng-claim job `rules` memanggil `complete_import_parse` tanpa `p_items`, ditolak `INVALID_IMPORT_PARSE`, dan batch berakhir `IMPORT_WORKER_TIMEOUT`. *Alasan:* alur deploy T25 menerapkan migration dan image worker dalam satu rilis.
 
 ## Error codes
 
@@ -57,3 +60,5 @@ Tidak berubah dari 0021: profile (`for share`) → import batch (`for update`) �
 
 - Kualitas ekstraksi pada CV nyata belum diukur. Rencana menyarankan uji manual dengan 5 sampai 10 CV milik pemilik produk (en/id, satu dan dua kolom), dicatat tanpa menyimpan isi CV.
 - Apakah achievement dari bullet experience ditambahkan setelah uji CV nyata.
+- Uji screen reader manusia (NVDA) pada dialog pilihan belum dilakukan; Axe dan urutan tab lulus di E2E.
+- Fokus setelah *Pakai AI* berhasil (dialog di-unmount saat consent tersimpan) belum diperiksa di E2E (gate N3).

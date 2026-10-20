@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 18 Oktober 2026
-- Status saat plan ditulis: **TODO** (draft, belum di-commit, menunggu review pengguna).
+- Status plan: **DONE** 20 Oktober 2026 (gate review PASS, [bukti](T26-import-rules-extraction.md)).
 - Dependensi: T15, T16, T17 **DONE** (acceptance lokal), T23 **DONE**, Gate M3 dan M4 **PASSED**. T25 masih **PARTIAL** (staging); T26 tidak menyentuh pekerjaan staging T25.
 - Asal task: penambahan scope oleh pengguna pada 18 Oktober 2026. T26 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Desain disetujui per bagian di chat (arsitektur, aturan ekstraksi, UI/copy/error, pengujian).
 - Eksekutor: satu agent **Claude**. Semua fase dikerjakan berurutan tanpa delegasi.
