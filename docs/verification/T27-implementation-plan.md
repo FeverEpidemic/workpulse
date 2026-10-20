@@ -81,7 +81,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
    - `ApplicationFrame` menerima `timezone` dari layout workspace untuk menghitung tanggal default dengan `activityDateInTimeZone`.
    - Desktop tetap memakai `QuickLogLink` ke `/activity/new`.
 9. **Menu lainnya.** Tombol ≡ (`Menu`) hanya dirender di header saat route `/settings/profile`. Sheet memakai pola dialog yang sama dengan composer, judul `workspace.moreMenu`. Isi: link Achievements, Timeline, CV (komponen link yang sama dengan sidebar), `ThemeToggle`, `SignOutForm`. Link Profile tidak diulang karena pengguna sudah di Profile.
-10. **Foto profil ditunda.** Skema saat ini tidak punya kolom foto atau avatar (tidak ada `avatar`/`photo` di `src/`). T27 memakai inisial saja. Foto + fallback inisial menjadi follow-up yang butuh migration dan storage.
+10. **Foto profil ditunda.** Skema saat ini tidak punya kolom foto atau avatar (tidak ada `avatar`/`photo` di `src/`). T27 memakai inisial saja (disetujui pengguna 20 Oktober 2026). Foto + fallback inisial menjadi follow-up yang butuh migration dan storage.
 11. **Drawer dihapus.** `MobileNavigation`, kelas `.workspace-drawer*`, dan key `workspace.openMenu`/`workspace.closeMenu`/`workspace.mobileNavigationDescription` dihapus bila tidak dipakai lagi (cek dengan grep). Sidebar desktop tidak disentuh.
 12. **Copy baru** (en / id):
     - `workspace.tabBar`: "Main tabs" / "Tab utama" (label `nav` bar).
