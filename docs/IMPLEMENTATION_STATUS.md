@@ -1,5 +1,22 @@
 # WorkPulse Implementation Status
 
+## T27 Bottom tab bar mobile: DONE lokal, 21 Oktober 2026
+
+Status T27: **DONE** (acceptance lokal). Di ≤ 880 px, hamburger + drawer diganti header ringkas dan bottom tab bar lima slot (Dashboard, Activity, +, Projects, Profile) yang menyusut menjadi ikon saat scroll ke bawah. + membuka sheet composer dengan catatan langsung terfokus, menyimpan di tempat dengan toast, dan berbagi draft `quick-log-note` dengan `/activity/new`. Achievements, Timeline, CV, tema, dan keluar pindah ke sheet Menu lainnya dari header Profile. Desktop tidak berubah.
+
+- Pelaksana Fase 0-6 dan gate review: Claude (Opus 5.5), atas permintaan pengguna; independensi review terbatas. Gate di worktree bersih pada `971e618`: **PASS**, tiga P2 ditemukan dan diperbaiki sebelum gate selesai (toast ganda, label tab aktif terpotong di 360 px, header tertahan setelah navigasi dari Menu lainnya), empat P3 (G4-G7).
+- Dependensi: T04, T07, T25 **DONE**. T27 adalah permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5.
+- Scope: navigasi mobile, composer sheet, Menu lainnya, inisial di tab Profile. Foto profil, back stack, gesture, dan desktop di luar scope.
+- File: `src/components/layout/{navigation-routes.ts,use-scroll-chrome.ts,mobile-tab-bar.tsx,mobile-header.tsx,mobile-sheets.tsx,mobile-chrome.tsx}`, `src/components/ui/initials-avatar.tsx`; varian `sheet` di `activity-capture-form.tsx`; opsi `merge` di `useSessionDraft`; `viewport-fit=cover` di root layout; CSS dan copy en/id; `tests/e2e/mobile-tab-bar.spec.ts` masuk config release; langkah drawer di `app-frame` dan `release-keyboard` diganti.
+- Keputusan: [decision 0035](decisions/0035-t27-mobile-tab-bar.md) mengganti Design.md §4.3 (drawer) dengan bottom tab bar. Plan menulis 0034, tetapi nomor itu dipakai closeout T25 di `main`; T27 dinomori ulang saat merge. Tanpa migration (parity tetap 38), tanpa route API atau dependency baru.
+- Checks (20 Oktober 2026, sebelum merge `main`): lint, typecheck, build exit 0; unit 134/1261; E2E `release` 21 (termasuk 6 dari spec T27), `ui`, `auth`, `activity`, `m2`, `dashboard` masing-masing 1. Ulang di worktree bersih: lint, typecheck, unit 134/1261, `ui` 1, `release` 21. Merge `main` 21 Oktober hanya membawa dokumen T25/M5.
+- Belum dijalankan: `test:e2e:evidence`, `projects`, `achievements`, `cv*`, `import*`, `ai*` (tidak menyentuh domain itu; app frame diuji oleh `ui`, `release`, `m2`); WebKit/Safari iOS (tidak ada di config, browser tidak terpasang); NVDA manusia.
+- Risiko: keyboard iOS Safari saat composer dibuka hanya dibuktikan lewat desain (fokus sinkron di handler tap) dan Chromium (G4).
+
+Berikutnya: review dan merge PR T27, uji composer di iPhone nyata, lalu follow-up foto profil (migration + storage) bila diinginkan.
+
+[Rencana](verification/T27-implementation-plan.md), [bukti](verification/T27-mobile-tab-bar.md), [gate review](verification/T27-gate-review.md), receipt [Fase 0](verification/T27-phase0-baseline.md) sampai [5](verification/T27-phase5-e2e-regression.md).
+
 ## T25 Regression, aksesibilitas dan release handoff: DONE (lokal dan staging), 20 Oktober 2026
 
 Status T25: **DONE**. Bukti lokal 11 Oktober tetap berlaku (entry T25 di bawah). Staging terverifikasi 16-20 Oktober 2026. Satu pengecualian dari pemilik produk: p95 hosted tidak diukur, ditunda dan wajib sebelum production ("p95 hosted saya tunda sebagai pengecualian pemilik produk, wajib diukur sebelum production"). Release checklist tetap **tidak siap untuk production**, dengan sepuluh BLOCKER terbuka.
@@ -1198,6 +1215,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T24 | Instrumentation dan performance | DONE |
 | T25 | Regression dan release handoff | DONE |
 | T26 | Import CV tanpa AI (parser aturan) | DONE |
+| T27 | Bottom tab bar mobile | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

@@ -256,26 +256,27 @@ test("authenticated frame, themes, filters, keyboard paths, and responsive state
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
 
+  // T27: the drawer is replaced by a bottom tab bar; tests/e2e/mobile-tab-bar.spec.ts covers it in depth.
   await page.setViewportSize({ width: 360, height: 820 });
   await page.goto("/dashboard");
-  const menuButton = page.getByRole("button", { name: "Open navigation menu" });
-  await menuButton.click();
-  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
-  await expect(drawer).toBeVisible();
-  await attachViewportScreenshot(page, testInfo, "navigation-drawer-mobile.png");
-  await page.keyboard.press("Escape");
-  await expect(drawer).not.toBeVisible();
-  await expect(menuButton).toBeFocused();
-  await menuButton.click();
-  await drawer.getByRole("link", { name: "Activity", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Open navigation menu" })).toHaveCount(0);
+  const tabBar = page.getByRole("navigation", { name: "Main tabs" });
+  await expect(tabBar.locator("a, button")).toHaveCount(5);
+  await attachViewportScreenshot(page, testInfo, "navigation-tab-bar-mobile.png");
+  await tabBar.getByRole("link", { name: "Activity", exact: true }).click();
   await expect(page).toHaveURL(/\/activity$/);
-  await expect(drawer).not.toBeVisible();
-  const mobileQuickLog = page.locator(".workspace-mobile-header").getByRole("link", { name: "Quick log", exact: true });
+  await expect(tabBar.getByRole("link", { name: "Activity", exact: true })).toHaveAttribute("aria-current", "page");
+  const mobileQuickLog = tabBar.getByRole("button", { name: "Quick log", exact: true });
   await expect(mobileQuickLog).toBeVisible();
 
   await mobileQuickLog.click();
-  await expect(page).toHaveURL(/\/activity\/new$/);
-  await expect(page.getByLabel("Work note")).toBeFocused();
+  const quickLogSheet = page.getByRole("dialog", { name: "Quick log" });
+  await expect(quickLogSheet).toBeVisible();
+  await expect(quickLogSheet.getByLabel("Work note")).toBeFocused();
+  await expect(quickLogSheet.getByLabel("Work note")).toHaveValue(quickLogNote);
+  await page.keyboard.press("Escape");
+  await expect(quickLogSheet).toBeHidden();
+  await expect(mobileQuickLog).toBeFocused();
 
   const responsiveRoutes = ["/dashboard", "/activity", "/activity/new", "/settings/profile"];
   for (const width of [360, 1440]) {
