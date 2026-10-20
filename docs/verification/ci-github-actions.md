@@ -8,9 +8,12 @@ CD sejauh ini berarti build, uji, dan publish image Docker ke GHCR. Deploy image
 
 | Job | Isi | Butuh Docker |
 | --- | --- | --- |
+| `changes` | `dorny/paths-filter@v3`: menentukan apakah ada perubahan di luar `docs/**` dan `**/*.md` | Tidak |
 | `checks` | `pnpm lint`, `pnpm typecheck`, `pnpm test` (unit, plus project Storybook di Chromium bila ada), `pnpm worker:check`, `pnpm build` | Tidak |
 | `database` | `supabase start` lokal, `supabase db lint --level error`, `supabase test db` (pgTAP), cek tipe hasil generate sama dengan `src/server/supabase/database.types.ts`, integration yang cukup dengan Supabase, smoke E2E (`playwright.config.ts`) | Ya (bawaan runner) |
 | `images` (matrix `web`, `worker`) | Setelah `checks` dan `database` lulus: build target dari [`Dockerfile`](../../Dockerfile), cek tidak ada file `.env*`, uji container, lalu publish ke GHCR bila push ke `main` atau tag `v*` | Ya |
+
+Perubahan yang hanya menyentuh docs (`docs/**`, `**/*.md`) membuat `checks`, `database`, dan `images` berstatus skipped, sehingga image tidak dipublish ulang. Job tetap ada di run, jadi required check yang skipped dihitung lulus dan PR docs bisa di-merge. Pengecualian: perubahan `docs/verification/T25-release-*.md` tetap menjalankan `checks`, karena `tests/unit/release-docs.test.ts` membaca runbook dan checklist itu. Tag `v*` dan `workflow_dispatch` selalu menjalankan semua job. Bila ada tes baru yang membaca file docs, tambahkan polanya ke filter di job `changes`.
 
 Integration yang dijalankan, dengan `account-deletion` paling awal: worker di suite itu hanya mengambil satu job cleanup per ronde, jadi job Storage sisa suite lain membuat receipt tidak selesai dalam batas 12 ronde (gagal di run pertama CI). Sisanya: `activity`, `projects`, `achievements`, `dashboard`, `m2`, `cv`, `cv-builder`, `cv-freshness`, `ai-review`, `product-events`, `release`.
 
