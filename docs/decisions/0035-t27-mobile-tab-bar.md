@@ -1,4 +1,4 @@
-# Decision 0034: T27 bottom tab bar mobile
+# Decision 0035: T27 bottom tab bar mobile
 
 Date: 20 Oktober 2026 (final 21 Oktober 2026)
 

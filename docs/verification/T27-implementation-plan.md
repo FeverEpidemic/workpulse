@@ -30,7 +30,7 @@ Baca dokumen ini sampai selesai sebelum mengubah kode. Setelah itu baca `AGENTS.
 Kutipan sumber yang mengikat (parafrase ringkas):
 
 - **Design.md §4.1:** navigasi primer kecil; jangan mempromosikan setiap kemampuan ke navigasi primer.
-- **Design.md §4.3 (lama):** mobile memakai drawer dan aksi mengambang Add Activity. T27 **mengganti** poin ini (decision 0034); alur Open → Add Activity → Type tetap wajib.
+- **Design.md §4.3 (lama):** mobile memakai drawer dan aksi mengambang Add Activity. T27 **mengganti** poin ini (decision 0035); alur Open → Add Activity → Type tetap wajib.
 - **Design.md §31:** tiga use case mobile utama: tambah aktivitas, lihat aktivitas terbaru, kelola proyek. Keyboard fokus otomatis saat capture dibuka. Target sentuh ≥ 44 × 44 px.
 - **AGENTS.md:** WCAG 2.2 AA, focus management/return, reduced motion, status tidak bergantung pada warna; verifikasi 360 px dan 1440 px light/dark.
 
@@ -59,7 +59,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 - Komponen navigasi mobile, hook scroll, varian `sheet` pada `ActivityCaptureForm`, copy en/id, CSS di `globals.css` dengan token yang ada.
 - Pembaruan test E2E yang mengasumsikan drawer (`app-frame.spec.ts:259-278`, `release-keyboard.spec.ts:193-202`).
-- `docs/Design.md` §4.3 dan `Design.md` (root) §4.3, `AGENTS.md` dan `docs/AGENTS.md` baris 120, draft decision 0034.
+- `docs/Design.md` §4.3 dan `Design.md` (root) §4.3, `AGENTS.md` dan `docs/AGENTS.md` baris 120, draft decision 0035.
 
 ### 2.2 Keputusan implementasi
 
@@ -94,7 +94,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
     - `quickLog.openFullForm`: "Open full form" / "Detail lengkap".
     - Label tab Quick log memakai `workspace.quickLog` yang sudah ada.
 13. **Dial antislop.** Design Read: *app shell mobile untuk workspace karier privat, bahasa visual tenang sesuai Design.md, dial ENERGY 1 / RHYTHM 1 / MOTION 2.* MOTION 2 karena dua transisi (label dan header) membantu pengguna melihat chrome yang berubah; durasi ≤ 200 ms, `ease-out`, dimatikan oleh reduced motion.
-14. **Nomor.** Decision `docs/decisions/0034-t27-mobile-tab-bar.md` (0032 dan 0033 sudah dipakai batas AI dan T26). Tidak ada migration (parity tetap 38/38). Tidak ada script npm baru; test baru masuk ke `pnpm test` dan suite E2E yang ada.
+14. **Nomor.** Decision `docs/decisions/0035-t27-mobile-tab-bar.md` (0032 dan 0033 sudah dipakai batas AI dan T26; plan awal menulis 0034, tetapi nomor itu dipakai closeout T25 di `main`, jadi T27 memakai 0035 saat merge 21 Oktober 2026). Tidak ada migration (parity tetap 38/38). Tidak ada script npm baru; test baru masuk ke `pnpm test` dan suite E2E yang ada.
 
 ### 2.3 Di luar scope
 
@@ -136,7 +136,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 | Create | `tests/unit/{navigation-routes,use-scroll-chrome,mobile-navigation-ui,initials-avatar}.test.ts(x)` |
 | Modify | `tests/unit/` test form activity yang ada (varian `sheet`), `tests/e2e/app-frame.spec.ts`, `tests/e2e/release-keyboard.spec.ts`, `tests/e2e/release-a11y.spec.ts`, golden aria snapshot terkait bila berubah |
 | Modify | `docs/Design.md`, `Design.md`, `AGENTS.md` dan `docs/AGENTS.md` (baris 120) |
-| Create | `docs/verification/T27-phase{0..5}-*.md`, `docs/verification/T27-mobile-tab-bar.md`, `docs/decisions/0034-t27-mobile-tab-bar.md` |
+| Create | `docs/verification/T27-phase{0..5}-*.md`, `docs/verification/T27-mobile-tab-bar.md`, `docs/decisions/0035-t27-mobile-tab-bar.md` |
 
 ## 5. Fase eksekusi
 
@@ -190,7 +190,7 @@ T27 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 - [x] `docs/Design.md` dan `Design.md` §4.3: ganti drawer dengan bottom tab bar lima slot, composer sheet, dan Menu lainnya; alur Open → Add Activity → Type tetap.
 - [x] `AGENTS.md` dan `docs/AGENTS.md` baris 120: "mobile memakai bottom tab bar; Quick log membuka sheet dengan input terfokus".
-- [x] Draft decision `0034-t27-mobile-tab-bar.md` (alasan mengganti drawer, keputusan §2.2, follow-up foto profil).
+- [x] Draft decision `0035-t27-mobile-tab-bar.md` (alasan mengganti drawer, keputusan §2.2, follow-up foto profil).
 - [x] `docs/verification/T27-mobile-tab-bar.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
 - [x] Commit.
 

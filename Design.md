@@ -183,7 +183,7 @@ Navigation should feel minimal and visually quiet.
 
 ## 4.3 Mobile Navigation
 
-Use a **bottom tab bar** with five slots, not a persistent desktop-style sidebar (decision 0034, T27):
+Use a **bottom tab bar** with five slots, not a persistent desktop-style sidebar (decision 0035, T27):
 
 **Dashboard · Activity · + (Quick log) · Projects · Profile**
 

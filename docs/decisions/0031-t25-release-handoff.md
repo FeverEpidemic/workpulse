@@ -2,7 +2,7 @@
 
 Date: 11 Oktober 2026
 
-Status: Accepted untuk bukti lokal (11 Oktober 2026). T25 **PARTIAL**: staging belum tersedia dan retensi backup belum terverifikasi. Task: T25 (PRD §2 R01–R10, §4, §5 M5; rencana M5). [Rencana](../verification/T25-implementation-plan.md), [laporan handoff](../verification/T25-release-handoff.md), [matriks](../verification/T25-release-matrix.md), [runbook rilis](../verification/T25-release-runbook.md), [checklist](../verification/T25-release-checklist.md), [gate review](../verification/T25-review-remediation-plan.md).
+Status: Accepted untuk bukti lokal (11 Oktober 2026). Saat ditulis T25 **PARTIAL**: staging belum tersedia dan retensi backup belum terverifikasi. Ditutup DONE pada 20 Oktober 2026 oleh [decision 0034](0034-t25-staging-closeout.md). Task: T25 (PRD §2 R01–R10, §4, §5 M5; rencana M5). [Rencana](../verification/T25-implementation-plan.md), [laporan handoff](../verification/T25-release-handoff.md), [matriks](../verification/T25-release-matrix.md), [runbook rilis](../verification/T25-release-runbook.md), [checklist](../verification/T25-release-checklist.md), [gate review](../verification/T25-review-remediation-plan.md).
 
 ## References
 

@@ -119,7 +119,7 @@ Gate M5 **tidak** mencakup:
 ### 2.3 Di luar scope
 
 - Fitur baru, refactor, perubahan copy/desain non-P0–P2.
-- Migration, kecuali perbaikan P0/P1 yang memerlukannya. Itu wajib decision baru (nomor berikutnya **0035**; 0034 dipakai T27) dan persetujuan reviewer; pelaksana **stop** lebih dulu.
+- Migration, kecuali perbaikan P0/P1 yang memerlukannya. Itu wajib decision baru (nomor berikutnya **0036**; 0034 dipakai closeout T25, 0035 dipakai T27) dan persetujuan reviewer; pelaksana **stop** lebih dulu.
 - Mengubah angka batas AI, kontrak `extraction_mode`, aturan retry export, atau retensi snapshot.
 - Deploy, migrasi hosted, atau akses server oleh pelaksana. Semua aksi lingkungan pilot dikerjakan operator; pelaksana hanya menyiapkan daftar periksa dan query read-only.
 - `db reset` database lokal aktif.

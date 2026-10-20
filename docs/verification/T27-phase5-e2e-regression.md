@@ -103,7 +103,7 @@ Design Read: app shell mobile untuk workspace karier privat, bahasa visual tenan
 
 ### Block 4: Craftsmanship & Quality Locks
 
-Semua NO: tidak ada keputusan "default AI" tanpa alasan, tidak ada kontrol mati, tidak ada bagian template, tidak rusak di tema/breakpoint/keyboard, tidak ada klaim palsu, radius bervariasi (sm tab, md kotak +, lg atas sheet, full inisial), tanpa CTA generik atau buzzword, palet tetap token Design.md, bukan klon (pola tab bawah diminta pengguna; bentuk mengikuti token WorkPulse), setiap keputusan punya alasan tertulis di receipt Fase 2 dan decision 0034.
+Semua NO: tidak ada keputusan "default AI" tanpa alasan, tidak ada kontrol mati, tidak ada bagian template, tidak rusak di tema/breakpoint/keyboard, tidak ada klaim palsu, radius bervariasi (sm tab, md kotak +, lg atas sheet, full inisial), tanpa CTA generik atau buzzword, palet tetap token Design.md, bukan klon (pola tab bawah diminta pengguna; bentuk mengikuti token WorkPulse), setiap keputusan punya alasan tertulis di receipt Fase 2 dan decision 0035.
 
 ### Checklist antislop-layoutmobile
 

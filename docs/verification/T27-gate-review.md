@@ -39,10 +39,10 @@ Worktree terpisah `D:\Project\wp-t27-base`, detached di `971e618`, dependensi da
 | G4 | P3 | Keyboard iOS Safari belum dibuktikan di WebKit atau perangkat nyata (WebKit tidak ada di config maupun terpasang). | Follow-up: uji di perangkat. |
 | G5 | P3 | Fallback inisial dari email hanya dibuktikan unit; onboarding mewajibkan nama sehingga akun tanpa nama tidak bisa dibuat lewat produk. | Diterima. |
 | G6 | P3 | `mobile-tab-bar.tsx` tidak bertanda `"use client"` tetapi memakai handler; aman karena hanya diimpor dari `MobileChrome` (client), dan unit test memanggilnya sebagai fungsi. | Diterima. |
-| G7 | P3 | Composer selalu menyimpan `capture_mode` `note`; draft mode chat/form dari form penuh tetap dipulihkan lewat "Detail lengkap". | Diterima, dicatat di decision 0034. |
+| G7 | P3 | Composer selalu menyimpan `capture_mode` `note`; draft mode chat/form dari form penuh tetap dipulihkan lewat "Detail lengkap". | Diterima, dicatat di decision 0035. |
 
 Tidak ada P0-P2 terbuka.
 
 ## Verdict
 
-**PASS** untuk masuk Fase 6 (draft dokumen). Closeout 21 Oktober 2026: T27 ditandai DONE di `IMPLEMENTATION_STATUS.md` dan decision 0034 Accepted.
+**PASS** untuk masuk Fase 6 (draft dokumen). Closeout 21 Oktober 2026: T27 ditandai DONE di `IMPLEMENTATION_STATUS.md` dan decision 0035 Accepted.

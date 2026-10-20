@@ -1,7 +1,7 @@
 # T25 Fase 7 · Verifikasi staging
 
 - Tanggal pemeriksaan hosted: 11 Oktober 2026.
-- Status: **SEBAGIAN · migrasi hosted selesai, SMTP dan template terpasang**. Repair riwayat, parity 36/36, bucket, katalog, privilege health, dan ops terbukti. URL Auth tersimpan; konfirmasi email aktif. SMTP MXroute diatur pengguna pada 16 Oktober 2026; dua template terpasang dan kiriman nyata diterima di Gmail setelah DNS email diperbaiki (lihat [Lanjutan 16 Oktober](#lanjutan-16-oktober-2026-smtp-template-dan-kiriman-nyata)). Pada 17 Oktober 2026 web dan worker berjalan di server pribadi dan smoke §8 lulus kecuali recovery dari klien email, yang diperbaiki di PR #19 dan belum diuji ulang di staging (lihat [Lanjutan 17 Oktober](#lanjutan-17-oktober-2026-deploy-server-pribadi-dan-smoke)). Retensi backup belum dapat dipastikan.
+- Status: **SELESAI untuk staging, 20 Oktober 2026, dengan satu pengecualian pemilik produk (p95 hosted)**. Repair riwayat, parity 36/36, bucket, katalog, privilege health, dan ops terbukti. URL Auth tersimpan; konfirmasi email aktif. SMTP MXroute diatur pengguna pada 16 Oktober 2026; dua template terpasang dan kiriman nyata diterima di Gmail setelah DNS email diperbaiki (lihat [Lanjutan 16 Oktober](#lanjutan-16-oktober-2026-smtp-template-dan-kiriman-nyata)). Pada 17 Oktober 2026 web dan worker berjalan di server pribadi dan smoke §8 lulus; recovery dari Gmail lulus pada uji ulang malam itu (lihat [Lanjutan 17 Oktober](#lanjutan-17-oktober-2026-deploy-server-pribadi-dan-smoke)). Retensi backup terverifikasi untuk staging pada 20 Oktober 2026; p95 hosted tidak diukur atas keputusan pemilik produk dan menjadi BLOCKER production (lihat [Penutupan 20 Oktober](#penutupan-20-oktober-2026-retensi-backup-dan-p95)).
 - Eksekutor pemeriksaan ini: ChatGPT, mengikuti `T25-phase7-hosted-migration-handoff.md`. Receipt awal ditulis Claude Sonnet 5.5.
 - Commit acuan handoff: `cccdc43a3a0ead21e1e440ae02cd390bae72358b`; commit awal sesi lanjutan: `19a0d194dea1433df74495b81dd8ce7f0964683c`.
 - Target: Supabase Workpulse, region `ap-northeast-2`, PostgreSQL 17.11, paket Free (dashboard Database Backups).
@@ -227,7 +227,7 @@ Dua job gagal di `jobs_failed_24h`, menurut pengguna: impor CV berformat PDF saa
 | Host web | Terpenuhi 17 Oktober 2026: image `workpulse-web` di server pribadi, `/api/health` 200 dari luar. |
 | Host worker | Terpenuhi 17 Oktober 2026: image `workpulse-worker` dan cron `ops:check` tiap 5 menit. |
 | ClamAV, Gotenberg DOCX, Gotenberg PDF | Terpenuhi 17 Oktober 2026: tiga container di compose staging, dipakai smoke §8. |
-| SMTP untuk Auth | MXroute terpasang, dua template tersimpan, dan email konfirmasi serta recovery diterima di Gmail (16 Oktober 2026); link diklik sampai selesai pada 17 Oktober. Tersisa DKIM di Cloudflare. |
+| SMTP untuk Auth | MXroute terpasang, dua template tersimpan, dan email konfirmasi serta recovery diterima di Gmail (16 Oktober 2026); link diklik sampai selesai pada 17 Oktober. DKIM terpasang 17 Oktober (lihat "Uji ulang dan keputusan"). |
 | Penyediaan secret | key diberikan ke host lewat env proses atau secret manager; **tidak** ditempel di chat atau repo |
 | Otorisasi tertulis | migrate dan konfigurasi staging telah diizinkan dalam konteks Workpulse; scope saat ini mengikuti handoff Fase 7a, tanpa membuat akun uji. |
 | Keputusan AI | apakah pemakaian key AI di staging diizinkan; bila tidak, mode `unavailable` dan jalur manual saja |
@@ -243,7 +243,7 @@ Dua job gagal di `jobs_failed_24h`, menurut pengguna: impor CV berformat PDF saa
    - export CV dengan renderer nyata, unduh PDF, ekstraksi teks cocok;
    - AI hanya bila diizinkan;
    - penghapusan akun sampai `completed`, `pnpm ops:check` exit 0;
-   - p95 baca dan simpan dengan `WORKPULSE_PERF_OUT` ke file staging terpisah, bila dataset staging boleh di-seed.
+   - p95 baca dan simpan dengan `WORKPULSE_PERF_OUT` ke file staging terpisah, bila dataset staging boleh di-seed. Tidak dijalankan: ditunda pemilik produk 20 Oktober 2026 (lihat Penutupan).
 5. Retensi backup mengikuti [T23 §3](T23-retention-runbook.md): paket, retensi, tautan dokumentasi resmi, tanggal akses, pemeriksa.
 6. Bersihkan akun uji lewat jalur penghapusan; catat nol sisa.
 
@@ -251,9 +251,9 @@ Dua job gagal di `jobs_failed_24h`, menurut pengguna: impor CV berformat PDF saa
 
 | Acceptance (§1) | Status |
 | --- | --- |
-| §1.17 backup dan restore jujur | klaim retensi ≤ 30 hari **tetap belum terverifikasi**; checklist menahan production (BLOCKER) |
-| §1.18 staging | **hampir terpenuhi**. Migrasi, SMTP, template, deploy web/worker, dan smoke §8 langkah 2-6 lulus; recovery dari klien email menunggu deploy PR #19. p95 hosted tidak diukur. |
-| Rencana T25, kalimat selesai | "integrasi nyata diverifikasi di staging" terpenuhi untuk scanner, renderer, export, dan penghapusan; recovery menunggu uji ulang |
+| §1.17 backup dan restore jujur | **terpenuhi untuk staging** (20 Oktober 2026): paket Free tanpa backup proyek, backup sendiri `pg_dump` harian dengan prune ≥ 29 hari sebelum dump, dua run cron `backup: ok`, uji aturan prune, latihan restore 17 Oktober. Paket dan retensi production tetap BLOCKER |
+| §1.18 staging | **terpenuhi dengan satu pengecualian pemilik produk**. Migrasi, SMTP, template, deploy web/worker, smoke §8, dan recovery dari Gmail lulus. p95 hosted tidak diukur; ditunda pemilik produk dan wajib sebelum production |
+| Rencana T25, kalimat selesai | "integrasi nyata diverifikasi di staging" terpenuhi untuk Auth email, scanner, renderer, export, penghapusan, ops, dan backup; p95 hosted dikecualikan |
 
 ## Langkah berikutnya
 
@@ -277,7 +277,7 @@ Deploy dan smoke selesai 17 Oktober 2026; akun uji lama dan baru sudah dihapus.
 | Run manual pertama | `2026-10-17T16:31:13Z backup: ok 20261017T162948Z size=112K copies=1`, exit 0 |
 | Mode file | direktori `drwx------`; `roles.sql.gz` (233 B), `schema.sql.gz` (90739 B), `data.sql.gz` (5603 B), `SHA256SUMS` semuanya `-rw-------`, pemilik user compose |
 | `SHA256SUMS` | `data.sql.gz` `f73f40d09c61a74c26e44cb3c71ade8d8e773e01c6466a636c85a03b2a87a5b2`; `roles.sql.gz` `c5af79e30d334e17590489d17adc22b8bed2a19241475e0f9d5196b5246693e1`; `schema.sql.gz` `35ba92f5ede889687547b2e85bed753358e71b873095fd7e40d08a8990496426` |
-| Cron harian | Dipasang pengguna (19:30 UTC sesuai runbook, dilaporkan). Baris cron tidak tampil di output yang dikirim; run terjadwal pertama belum terjadi. |
+| Cron harian | Dipasang pengguna. Run terjadwal tercatat pukul 12:30 UTC (19:30 WIB), bukan 19:30 UTC seperti contoh runbook §2 langkah 5; bukti di [Penutupan](#penutupan-20-oktober-2026-retensi-backup-dan-p95). |
 
 Staging tidak berisi akun saat backup ini dibuat, jadi salinan ini hanya memuat schema dan data sistem.
 
@@ -304,6 +304,40 @@ Batas: backup tidak memuat baris pengguna, jadi restore data pengguna dengan rel
 
 Tersisa:
 
-1. Dua baris `backup: ok` dari cron (runbook §4 langkah 4). Setelah itu BLOCKER retensi backup di checklist dapat dinilai ulang.
+1. ~~Dua baris `backup: ok` dari cron (runbook §4 langkah 4).~~ Tercatat 20 Oktober 2026 (Penutupan).
 2. ~~Ganti `WORKPULSE_TAG` di server ke `sha-1de73187792325e948fbd08215733540968a15c4` (S2).~~ Selesai menurut laporan pengguna, 18 Oktober 2026; `.env` dan `docker compose ps` tidak dibaca Claude.
-3. Reviewer memeriksa receipt ini, termasuk pengecualian tipe dan klaim backup yang tetap terbuka. Status authoritative T25 dan checklist release tidak diubah oleh receipt ini.
+3. ~~Reviewer memeriksa receipt ini.~~ Direview 20 Oktober 2026 ([review penutupan](T25-closeout-review.md)).
+
+## Penutupan, 20 Oktober 2026: retensi backup dan p95
+
+### Bukti cron (runbook §4 langkah 4)
+
+Baris dari `backup.log` dan isi `backups/` ditempel pengguna dari server (dibaca Claude dari chat, bukan dari server):
+
+```text
+2026-10-18T12:30:53Z backup: ok 20261018T123002Z size=112K copies=2
+2026-10-19T12:30:53Z backup: ok 20261019T123002Z size=112K copies=3
+20261017T162948Z  20261018T123002Z  20261019T123002Z  20261020T132654Z
+```
+
+- Dua run terjadwal pada dua tanggal berbeda, jam yang sama, exit `ok`. `copies` naik 2 → 3 sesuai jumlah folder saat itu.
+- Folder `20261020T132654Z` (20 Oktober 13:26 UTC) di luar jadwal cron, kemungkinan run manual setelah `backup.sh` dari `6e35778` dipasang. Baris lognya tidak ikut ditempel, jadi versi script yang terpasang tidak terbukti dari bukti ini.
+- Baris `crontab -l` tidak ikut ditempel; jadwal dibaca dari stempel waktu run.
+
+### Uji aturan prune
+
+Aturan `find` di `deploy/staging/backup.sh` (baris 34 dan 36, `keep_days=29`) dijalankan Claude di container `public.ecr.aws/supabase/postgres:17.11.0.003` (GNU findutils) atas folder tiruan dengan `mtime` mundur 0, 1, 27, 28, 29, 30, dan 40 hari (minus satu jam), plus `.partial-*` berumur 2 hari dan baru.
+
+| Umur folder | Hasil |
+| --- | --- |
+| 0, 1, 27, 28 hari | tetap |
+| 29, 30, 40 hari | dihapus |
+| `.partial-*` 2 hari / baru | dihapus / tetap |
+
+`-mtime +28` menghapus folder yang umurnya ≥ 29 hari penuh. Dengan run harian, salinan tertua sebelum dihapus berumur kurang dari 30 hari. Salinan pertama (`20261017T162948Z`) seharusnya hilang pada run 16 November 2026; penghapusan nyata di server belum teramati.
+
+### p95 hosted
+
+Harness T24 disiapkan untuk staging di branch lokal `claude/t25-perf-staging` (`004ce0d`, di atas `1de7318` yang terpasang; belum di-push): `sql()` dapat memakai `psql` dalam container yang membaca variabel `PG*`, file env dapat dipilih, dan laporan mencatat jalur yang diukur. Satu percobaan 20 Oktober 2026 berhenti pada SQL pertama karena variabel koneksi database belum terisi; tidak ada akun atau data yang dibuat di staging.
+
+Pemilik produk kemudian memutuskan: "tutup T25 sebagai DONE. p95 hosted saya tunda sebagai pengecualian pemilik produk, wajib diukur sebelum production." p95 hosted menjadi BLOCKER di checklist. Pembanding lokal (T24/T25 Fase 8): p95 baca ≤ 206,2 ms terhadap target 2.000 ms, simpan ≤ 198,4 ms terhadap target 1.000 ms, di satu mesin pengembangan.
