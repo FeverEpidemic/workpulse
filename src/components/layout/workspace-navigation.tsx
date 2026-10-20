@@ -2,20 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Award,
-  CalendarDays,
-  FileText,
-  FolderKanban,
-  LayoutDashboard,
-  Menu,
-  NotebookTabs,
-  UserRound,
-  X,
-} from "lucide-react";
+import { Menu, UserRound, X } from "lucide-react";
 import { useState } from "react";
 
 import { SignOutForm } from "@/features/auth/sign-out-form";
+import { isCurrent, navigation } from "@/components/layout/navigation-routes";
 import { QuickLogLink } from "@/components/layout/quick-log-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { BrandLogo, BrandSymbol } from "@/components/ui/brand-logo";
@@ -24,21 +15,6 @@ import { Dialog } from "@/components/ui/dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { t, type Locale } from "@/i18n/messages";
 import type { ThemePreference } from "@/domain/theme/theme-preference";
-
-const navigation = [
-  { href: "/dashboard", key: "workspace.dashboard", Icon: LayoutDashboard },
-  { href: "/activity", key: "workspace.activity", Icon: NotebookTabs },
-  { href: "/achievements", key: "workspace.achievements", Icon: Award },
-  { href: "/projects", key: "workspace.projects", Icon: FolderKanban },
-  { href: "/timeline", key: "workspace.timeline", Icon: CalendarDays },
-  { href: "/cv", key: "workspace.cv", Icon: FileText },
-] as const;
-
-function isCurrent(pathname: string, href: string): boolean {
-  return href === "/dashboard"
-    ? pathname === href
-    : pathname === href || pathname.startsWith(href + "/");
-}
 
 function NavigationLinks({ locale, pathname, onNavigate }: {
   locale: Locale;
