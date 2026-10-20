@@ -1,7 +1,7 @@
 # T27 bottom tab bar mobile: ringkasan bukti
 
 - Tanggal: 20 Oktober 2026
-- Branch: `claude/t27-mobile-tab-bar` (dari `ef98935`). Status: implementasi dan gate review selesai; **belum DONE** (menunggu closeout).
+- Branch: `claude/t27-mobile-tab-bar` (dari `ef98935`). Status: **DONE** (acceptance lokal, closeout 21 Oktober 2026).
 - Rencana: [T27-implementation-plan.md](T27-implementation-plan.md). Decision: [0034](../decisions/0034-t27-mobile-tab-bar.md). Gate: [T27-gate-review.md](T27-gate-review.md).
 - Receipt: [Fase 0](T27-phase0-baseline.md), [1](T27-phase1-routes-state.md), [2](T27-phase2-tab-bar.md), [3](T27-phase3-sheets.md), [4](T27-phase4-copy-a11y.md), [5](T27-phase5-e2e-regression.md).
 

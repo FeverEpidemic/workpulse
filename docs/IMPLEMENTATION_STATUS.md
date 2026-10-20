@@ -1,5 +1,22 @@
 # WorkPulse Implementation Status
 
+## T27 Bottom tab bar mobile: DONE lokal, 21 Oktober 2026
+
+Status T27: **DONE** (acceptance lokal). Di ≤ 880 px, hamburger + drawer diganti header ringkas dan bottom tab bar lima slot (Dashboard, Activity, +, Projects, Profile) yang menyusut menjadi ikon saat scroll ke bawah. + membuka sheet composer dengan catatan langsung terfokus, menyimpan di tempat dengan toast, dan berbagi draft `quick-log-note` dengan `/activity/new`. Achievements, Timeline, CV, tema, dan keluar pindah ke sheet Menu lainnya dari header Profile. Desktop tidak berubah.
+
+- Pelaksana Fase 0-6 dan gate review: Claude (Opus 5.5), atas permintaan pengguna; independensi review terbatas. Gate di worktree bersih pada `971e618`: **PASS**, tiga P2 ditemukan dan diperbaiki sebelum gate selesai (toast ganda, label tab aktif terpotong di 360 px, header tertahan setelah navigasi dari Menu lainnya), empat P3 (G4-G7).
+- Dependensi: T04, T07 **DONE**; T25 aksesibilitas lokal selesai (T25 tetap PARTIAL karena staging, tidak disentuh). T27 adalah permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5.
+- Scope: navigasi mobile, composer sheet, Menu lainnya, inisial di tab Profile. Foto profil, back stack, gesture, dan desktop di luar scope.
+- File: `src/components/layout/{navigation-routes.ts,use-scroll-chrome.ts,mobile-tab-bar.tsx,mobile-header.tsx,mobile-sheets.tsx,mobile-chrome.tsx}`, `src/components/ui/initials-avatar.tsx`; varian `sheet` di `activity-capture-form.tsx`; opsi `merge` di `useSessionDraft`; `viewport-fit=cover` di root layout; CSS dan copy en/id; `tests/e2e/mobile-tab-bar.spec.ts` masuk config release; langkah drawer di `app-frame` dan `release-keyboard` diganti.
+- Keputusan: [decision 0034](decisions/0034-t27-mobile-tab-bar.md) mengganti Design.md §4.3 (drawer) dengan bottom tab bar. Tanpa migration (parity tetap 38), tanpa route API atau dependency baru.
+- Checks (20 Oktober 2026): lint, typecheck, build exit 0; unit 134/1261; E2E `release` 21 (termasuk 6 dari spec T27), `ui`, `auth`, `activity`, `m2`, `dashboard` masing-masing 1. Ulang di worktree bersih: lint, typecheck, unit 134/1261, `ui` 1, `release` 21.
+- Belum dijalankan: `test:e2e:evidence`, `projects`, `achievements`, `cv*`, `import*`, `ai*` (tidak menyentuh domain itu; app frame diuji oleh `ui`, `release`, `m2`); WebKit/Safari iOS (tidak ada di config, browser tidak terpasang); NVDA manusia.
+- Risiko: keyboard iOS Safari saat composer dibuka hanya dibuktikan lewat desain (fokus sinkron di handler tap) dan Chromium (G4). Branch dibuat dari `ef98935`, sehingga PR ikut membawa commit Storybook/docs yang belum di `main`.
+
+Berikutnya: push dan PR `claude/t27-mobile-tab-bar`, uji composer di iPhone nyata, lalu follow-up foto profil (migration + storage) bila diinginkan.
+
+[Rencana](verification/T27-implementation-plan.md), [bukti](verification/T27-mobile-tab-bar.md), [gate review](verification/T27-gate-review.md), receipt [Fase 0](verification/T27-phase0-baseline.md) sampai [5](verification/T27-phase5-e2e-regression.md).
+
 ## T26 Import CV tanpa AI (parser aturan): DONE lokal, 20 Oktober 2026
 
 Status T26: **DONE** (acceptance lokal). Pengguna tanpa consent AI kini dapat mengimpor CV PDF/DOCX: dialog pilihan netral (*Pakai AI* / *Baca tanpa AI*, fokus awal di judul) menentukan `extraction_mode` batch saat upload. Batch `rules` dibaca parser aturan di parser thread yang terisolasi, divalidasi dengan grounding yang sama dengan AI, lalu di-stage dan dibuka untuk review S03 dalam satu transaksi, tanpa `ai_jobs`, tanpa consent, dan tanpa unit AI.
@@ -1183,6 +1200,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T24 | Instrumentation dan performance | DONE |
 | T25 | Regression dan release handoff | PARTIAL |
 | T26 | Import CV tanpa AI (parser aturan) | DONE |
+| T27 | Bottom tab bar mobile | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

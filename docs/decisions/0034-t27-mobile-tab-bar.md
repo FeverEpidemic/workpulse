@@ -1,8 +1,8 @@
 # Decision 0034: T27 bottom tab bar mobile
 
-Date: 20 Oktober 2026
+Date: 20 Oktober 2026 (final 21 Oktober 2026)
 
-Status: Draft. Desain disetujui pengguna di chat pada 20 Oktober 2026 (interview T27); gate review 20 Oktober 2026 PASS tanpa P0-P2 terbuka; menunggu closeout. Task: T27 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T27-implementation-plan.md), [bukti](../verification/T27-mobile-tab-bar.md), [gate review](../verification/T27-gate-review.md). Tanpa migration (parity tetap 38).
+Status: Accepted. Desain disetujui pengguna di chat pada 20 Oktober 2026 (interview T27); gate review 20 Oktober 2026 PASS tanpa P0-P2 terbuka (independensi terbatas: reviewer sama dengan eksekutor); closeout 21 Oktober 2026. Task: T27 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T27-implementation-plan.md), [bukti](../verification/T27-mobile-tab-bar.md), [gate review](../verification/T27-gate-review.md). Tanpa migration (parity tetap 38).
 
 ## References
 

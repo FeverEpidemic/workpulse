@@ -4,6 +4,7 @@
 
 - Tanggal: 20 Oktober 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE** 21 Oktober 2026 (acceptance lokal; [bukti](T27-mobile-tab-bar.md), [gate review](T27-gate-review.md)).
 - Dependensi: T04 (app frame), T07 (Quick log), T25 aksesibilitas **selesai secara lokal** (T25 masih PARTIAL hanya karena staging; T27 tidak menyentuh staging). T26 dan batas pemakaian AI sudah ada di branch; T27 tidak menyentuh import atau AI.
 - Asal task: permintaan terarah pengguna pada 20 Oktober 2026 ("Navigation Bar untuk mobile seperti Instagram iOS"). T27 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Semua keputusan §2.2 berasal dari interview di chat dan sudah dijawab pengguna.
 - Eksekutor: satu agent **Claude**. Semua fase berurutan tanpa delegasi.
