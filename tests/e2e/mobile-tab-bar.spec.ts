@@ -294,6 +294,10 @@ test("the More menu holds Achievements, Timeline, CV, theme and sign out", async
   await expect(sheet).toBeHidden();
   await expect(tabBar(page).getByRole("link", { name: "Profile", exact: true })).toHaveAttribute("aria-current", "true");
   await expect(header(page)).toContainText("Timeline");
+  // Focus came back to the More button before it left with the old route; the new header still hides on scroll.
+  await page.evaluate(() => document.body.style.setProperty("min-height", "3000px"));
+  await scrollBy(page, 600);
+  await expect(header(page)).toHaveAttribute("data-hidden", "true");
 });
 
 test("controls are at least 44 px, reduced motion turns transitions off, and 1440 px keeps the sidebar", async ({ page }) => {

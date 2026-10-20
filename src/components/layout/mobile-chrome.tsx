@@ -79,7 +79,9 @@ export function MobileChrome({
 
   return (
     <>
+      {/* Keyed by route: the More button can leave the DOM while focused, and not every browser fires blur then. */}
       <MobileHeader
+        key={pathname}
         locale={locale}
         pathname={pathname}
         compact={compact}
