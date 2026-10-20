@@ -48,6 +48,22 @@ describe("T15 import service boundary", () => {
     expect(storage.uploadObject).not.toHaveBeenCalled();
   });
 
+  it("T26: rejects an unknown extraction mode before any RPC and forwards a known one", async () => {
+    const pdf = cvPdf();
+    const base = { idempotencyKey: "8f14e45f-ea5e-4a0b-9c2b-000000000001", filename: "cv.pdf", contentType: PDF_MIME, contentLength: String(pdf.length) };
+    for (const bad of ["ocr", "AI", "", " rules"]) {
+      const { client, storage, service: s } = service();
+      expect(await code(s.upload({ ...base, extractionMode: bad, body: stream(pdf) }))).toBe("VALIDATION");
+      expect(client.rpc).not.toHaveBeenCalled();
+      expect(storage.uploadObject).not.toHaveBeenCalled();
+    }
+    for (const [header, mode] of [["rules", "rules"], ["ai", "ai"], [null, "ai"], [undefined, "ai"]] as const) {
+      const { client, service: s } = service();
+      await code(s.upload({ ...base, extractionMode: header, body: stream(pdf) }));
+      expect(client.rpc).toHaveBeenCalledWith("begin_import_batch", expect.objectContaining({ p_extraction_mode: mode }));
+    }
+  });
+
   it("rejects malformed batch ids as not found without querying", async () => {
     const { client, service: s } = service();
     expect(await code(s.getView("../etc"))).toBe("NOT_FOUND");

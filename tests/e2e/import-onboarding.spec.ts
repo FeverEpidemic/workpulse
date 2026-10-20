@@ -5,7 +5,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 import type { Database } from "../../src/server/supabase/database.types";
-import { CV_LINES, cvPdf, DOCX_MIME, emptyDocx, pdfFixture } from "../import-fixtures";
+import { CV_LINES, cvPdf, DOCX_MIME, emptyDocx, pdfFixture, rulesCvPdf } from "../import-fixtures";
 import { expectNoWcagViolations } from "./helpers/accessibility";
 import { drainImportWorker } from "./helpers/import-worker";
 import { assignAiPlan } from "../integration/ai-usage-support";
@@ -99,7 +99,7 @@ test.afterAll(async () => {
   }
 });
 
-test("S02 consent declined keeps the manual path and uploads nothing", async ({ page }, testInfo) => {
+test("S02 closing the read-mode choice keeps the manual path and uploads nothing", async ({ page }, testInfo) => {
   const user = await createUser();
   await signIn(page, user);
   await expect(page.getByText("PDF or DOCX, up to 10 MiB and 20 pages")).toBeVisible();
@@ -108,11 +108,11 @@ test("S02 consent declined keeps the manual path and uploads nothing", async ({ 
   await chooseWithKeyboard(page, pdf());
   await expect(page.getByText("Selected: cv.pdf")).toBeVisible();
   await page.getByRole("button", { name: "Upload and extract" }).click();
-  const dialog = page.getByRole("dialog", { name: "Allow AI processing?" });
+  // T26: without consent the neutral choice opens instead of the consent dialog (intended change).
+  const dialog = page.getByRole("dialog", { name: "How should we read your CV?" });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Only the text read from the CV you upload.");
-  await expect(dialog.getByRole("button", { name: "Continue manually" })).toBeFocused();
-  await snapshot(page, testInfo, "s02-consent");
+  await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+  await snapshot(page, testInfo, "s02-mode-choice");
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("button", { name: "CV file. Press Enter or Space to choose a file." })).toBeFocused();
@@ -128,9 +128,12 @@ test("S02 allow, upload, leave and return, session expiry, then extraction finis
   await signIn(page, user);
   await chooseWithKeyboard(page, pdf());
   await page.getByRole("button", { name: "Upload and extract" }).click();
-  await page.getByRole("dialog", { name: "Allow AI processing?" }).getByRole("button", { name: "Allow AI" }).click();
+  await page.getByRole("dialog", { name: "How should we read your CV?" }).getByRole("button", { name: "Use AI" }).click();
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   await expect(page.getByText("You can leave this page")).toBeVisible();
+  const consented = await admin.from("profiles").select("ai_consent_version").eq("id", user.id).single();
+  expect(consented.data?.ai_consent_version).toBe(CONSENT_VERSION);
+  expect(await admin.from("import_batches").select("extraction_mode").eq("user_id", user.id).then((r) => r.data)).toEqual([{ extraction_mode: "ai" }]);
   await snapshot(page, testInfo, "s02-waiting");
 
   // Leave and return: the same saved batch, no new one.
@@ -275,4 +278,199 @@ test("S02 layouts at 360 and 1440 in light and dark stay within the viewport", a
       await snapshot(page, testInfo, `s02-${width}-${theme}`);
     }
   }
+});
+
+// T26: reading a CV without AI (decision 0033).
+const RULES_SENTINEL = "WP-RULES-PRIVATE-SENTINEL";
+const RULES_NOTE = "These records were read without AI. Check employers, job titles and dates before you confirm.";
+
+function modeDialog(page: Page) {
+  return page.getByRole("dialog", { name: "How should we read your CV?" });
+}
+
+async function profileConsent(userId: string) {
+  const { data } = await admin.from("profiles").select("ai_consent_at, ai_consent_version").eq("id", userId).single();
+  return data;
+}
+
+test("T26 a new user reads the CV without AI, reviews, confirms and sees the records (keyboard)", async ({ page }, testInfo) => {
+  const user = await createUser();
+  const seen: string[] = [];
+  page.on("console", (message) => seen.push(message.text()));
+  page.on("pageerror", (error) => seen.push(String(error)));
+  const fileName = `cv-${randomUUID()}-WP-RULES-FILENAME.pdf`;
+  await signIn(page, user);
+  await expect(page.getByText("If you allow AI, your CV text is sent to an external AI provider.")).toBeVisible();
+
+  await chooseWithKeyboard(page, pdf(fileName, rulesCvPdf()));
+  const upload = page.getByRole("button", { name: "Upload and extract" });
+  await upload.focus();
+  await page.keyboard.press("Enter");
+  const dialog = modeDialog(page);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+
+  // A stray Enter on the title chooses nothing and gives no consent.
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+  expect(await batches(user.id)).toEqual([]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+
+  // Two labelled cards; from the title, Tab reaches Use AI and then Read without AI.
+  await expect(dialog.getByRole("region", { name: "With AI" })).toContainText("sent to an external AI provider");
+  await expect(dialog.getByRole("region", { name: "With AI" })).toContainText("also covers activity analysis");
+  await expect(dialog.getByRole("region", { name: "Without AI" })).toContainText("using fixed rules");
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Use AI" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Read without AI" })).toBeFocused();
+  await snapshot(page, testInfo, "t26-mode-dialog");
+
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+  const { data: created } = await admin.from("import_batches").select("id, extraction_mode").eq("user_id", user.id);
+  expect(created).toEqual([expect.objectContaining({ extraction_mode: "rules" })]);
+
+  const { claimed, output } = await drainImportWorker("valid");
+  expect(claimed).toBeGreaterThan(0);
+  expect(output).not.toContain(RULES_SENTINEL);
+  expect(output).not.toContain(fileName);
+  expect(output).not.toContain("PT Contoh Rekaan");
+  await expect(page.getByRole("status")).toHaveText("Extraction finished", { timeout: 30_000 });
+  await expect(page.getByText(RULES_NOTE)).toBeVisible();
+  await snapshot(page, testInfo, "t26-s02-ready");
+  expect((await admin.from("ai_jobs").select("id").eq("import_batch_id", created![0]!.id)).data).toEqual([]);
+
+  const review = page.getByRole("link", { name: "Review candidates" });
+  await review.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Review imported data", level: 1 })).toBeVisible();
+  await expect(page.getByText(RULES_NOTE)).toBeVisible();
+
+  // Rules never guess the type of a job, so the user chooses it.
+  const job = page.locator("article.import-candidate").filter({ hasText: "Senior Data Analyst at PT Contoh Rekaan" });
+  await expect(job.getByLabel("Role")).toHaveValue("Senior Data Analyst");
+  await job.getByLabel("Type").selectOption("employment");
+  const save = job.getByRole("button", { name: "Save changes" });
+  await save.focus();
+  await page.keyboard.press("Enter");
+  await expect(job.locator(".import-persistence")).toHaveText("Saved");
+  await expect(page.locator("#import-onboarding-name")).toHaveValue("Rina Fiktif");
+  await page.locator("#import-onboarding-timezone").fill("Asia/Jakarta");
+  const confirm = page.getByRole("button", { name: /^Confirm import$/ });
+  await expect(confirm).toBeEnabled();
+  await snapshot(page, testInfo, "t26-s03-review");
+  await confirm.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Import saved" })).toBeVisible({ timeout: 30_000 });
+
+  const open = page.getByRole("link", { name: "Open dashboard" });
+  await open.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/timeline");
+  await expect(page.getByText("Senior Data Analyst").first()).toBeVisible();
+  const { data: experiences } = await admin.from("experiences").select("role_title, organization, kind").eq("user_id", user.id);
+  expect(experiences).toEqual([{ role_title: "Senior Data Analyst", organization: "PT Contoh Rekaan", kind: "employment" }]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+
+  const browserText = seen.join("\n");
+  expect(browserText).not.toContain(RULES_SENTINEL);
+  expect(browserText).not.toContain(fileName);
+});
+
+test("T26 Escape and Cancel close the choice without uploading or giving consent", async ({ page }) => {
+  const user = await createUser();
+  await signIn(page, user);
+  await chooseFile(page, pdf("rules.pdf", rulesCvPdf()));
+  const upload = page.getByRole("button", { name: "Upload and extract" });
+  await upload.click();
+  await expect(modeDialog(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(modeDialog(page)).toBeHidden();
+  await upload.click();
+  await modeDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modeDialog(page)).toBeHidden();
+  await expect(page.getByRole("button", { name: "CV file. Press Enter or Space to choose a file." })).toBeFocused();
+  expect(await batches(user.id)).toEqual([]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+  // Both choices look the same: same class, same size.
+  await upload.click();
+  const ai = modeDialog(page).getByRole("button", { name: "Use AI" });
+  const rules = modeDialog(page).getByRole("button", { name: "Read without AI" });
+  expect(await ai.getAttribute("class")).toBe(await rules.getAttribute("class"));
+  const [aiCard, rulesCard] = await Promise.all([
+    modeDialog(page).getByRole("region", { name: "With AI" }).boundingBox(),
+    modeDialog(page).getByRole("region", { name: "Without AI" }).boundingBox(),
+  ]);
+  expect(Math.abs(aiCard!.width - rulesCard!.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(aiCard!.height - rulesCard!.height)).toBeLessThanOrEqual(1);
+});
+
+test("T26 choice, S02 and S03 for a rules batch at 360 and 1440 in light and dark", async ({ page }, testInfo) => {
+  const user = await createUser();
+  await signIn(page, user);
+  await chooseFile(page, pdf("layout.pdf", rulesCvPdf()));
+  for (const [width, height] of [[360, 800], [1440, 900]] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize({ width, height });
+      await page.context().addCookies([{ name: "wp-theme", value: theme, url: BASE_URL }]);
+      await page.goto("/onboarding/import");
+      await chooseFile(page, pdf("layout.pdf", rulesCvPdf()));
+      await page.getByRole("button", { name: "Upload and extract" }).click();
+      const dialog = modeDialog(page);
+      await expect(dialog).toBeVisible();
+      const [aiCard, rulesCard] = await Promise.all([
+        dialog.getByRole("region", { name: "With AI" }).boundingBox(),
+        dialog.getByRole("region", { name: "Without AI" }).boundingBox(),
+      ]);
+      if (width === 1440) expect(Math.abs(aiCard!.y - rulesCard!.y), "cards side by side").toBeLessThanOrEqual(1);
+      else expect(rulesCard!.y, "cards stacked").toBeGreaterThan(aiCard!.y + aiCard!.height - 1);
+      const panel = await dialog.evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
+      expect(panel.scroll, `t26-dialog-${width}-${theme} should not overflow`).toBeLessThanOrEqual(panel.client);
+      await expectNoOverflow(page, `t26-dialog-${width}-${theme}`);
+      await snapshot(page, testInfo, `t26-dialog-${width}-${theme}`);
+      await page.keyboard.press("Escape");
+    }
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await modeDialog(page).getByRole("button", { name: "Read without AI" }).click();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  await drainImportWorker("valid");
+  await expect(page.getByRole("status")).toHaveText("Extraction finished", { timeout: 30_000 });
+  const href = await page.getByRole("link", { name: "Review candidates" }).getAttribute("href");
+  for (const [width, height] of [[360, 800], [1440, 900]] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize({ width, height });
+      await page.context().addCookies([{ name: "wp-theme", value: theme, url: BASE_URL }]);
+      await page.goto("/onboarding/import");
+      await expect(page.getByText(RULES_NOTE)).toBeVisible();
+      await expectNoOverflow(page, `t26-s02-${width}-${theme}`);
+      await snapshot(page, testInfo, `t26-s02-${width}-${theme}`);
+      await page.goto(href!);
+      await expect(page.getByText(RULES_NOTE)).toBeVisible();
+      await expectNoOverflow(page, `t26-s03-${width}-${theme}`);
+      await snapshot(page, testInfo, `t26-s03-${width}-${theme}`);
+    }
+  }
+});
+
+test("T26 an empty rules result uses its own copy, in Indonesian too", async ({ page }) => {
+  const user = await createUser({ locale: "id" });
+  await page.context().addCookies([{ name: "wp-locale", value: "id", url: BASE_URL }]);
+  await signIn(page, user);
+  const lines = ["Saya bekerja sebagai analis selama beberapa tahun di berbagai perusahaan rekaan dan tim produk.",
+    "Saya suka belajar hal baru dan bekerja dengan tim lintas fungsi di banyak proyek internal yang berbeda.",
+    "Kontak saya tersedia atas permintaan melalui email kantor yang tidak dicantumkan di dokumen ini."];
+  await chooseFile(page, pdf("kosong.pdf", rulesCvPdf(lines)));
+  await page.getByRole("button", { name: "Unggah dan ekstrak" }).click();
+  const dialog = page.getByRole("dialog", { name: "Bagaimana CV Anda dibaca?" });
+  await expect(dialog.getByRole("heading", { name: "Bagaimana CV Anda dibaca?" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Baca tanpa AI" }).click();
+  await expect(page.getByRole("status")).toHaveText("Menunggu dimulai");
+  await drainImportWorker("valid");
+  await expect(page.getByText("CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI.", { exact: false })).toBeVisible({ timeout: 30_000 });
 });

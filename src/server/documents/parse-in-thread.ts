@@ -7,10 +7,19 @@ import { IMPORT_PARSE_TIMEOUT_MS, IMPORT_PERMANENT_ERROR_CODES, type ImportFileE
 export type ParseKind = "pdf" | "docx" | "pdf-pages" | "pdf-export";
 
 export type ParseResult =
-  | { status: "ok"; text: string | null; pageCount: number | null }
+  | {
+    status: "ok";
+    text: string | null;
+    pageCount: number | null;
+    /** T26, only with `extract`: raw import.v1 candidates from the rule extractor; the caller validates them. */
+    extraction?: unknown;
+    extractionFailed?: boolean;
+  }
   | { status: "error"; code: ImportFileErrorCode };
 
 export type ParseOptions = {
+  /** T26: also run the rule extractor on the final text inside the thread. */
+  extract?: boolean;
   timeoutMs?: number;
   maxOldGenerationSizeMb?: number;
   /** Test seam only: an alternative thread entry. */
@@ -27,7 +36,8 @@ function isResult(value: unknown): value is ParseResult {
   }
   return row.status === "ok"
     && (row.text === null || typeof row.text === "string")
-    && (row.pageCount === null || (typeof row.pageCount === "number" && Number.isInteger(row.pageCount) && row.pageCount >= 1));
+    && (row.pageCount === null || (typeof row.pageCount === "number" && Number.isInteger(row.pageCount) && row.pageCount >= 1))
+    && (row.extractionFailed === undefined || typeof row.extractionFailed === "boolean");
 }
 
 /**
@@ -41,7 +51,7 @@ export function parseInThread(kind: ParseKind, bytes: Uint8Array, options: Parse
   return new Promise<ParseResult>((resolve) => {
     let settled = false;
     const worker = new Worker(options.entry ?? PARSER_THREAD_ENTRY, {
-      workerData: { kind, bytes: copy },
+      workerData: { kind, bytes: copy, extract: options.extract === true },
       transferList: [copy.buffer],
       env: {},
       stdout: true,

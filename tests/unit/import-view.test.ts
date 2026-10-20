@@ -61,3 +61,24 @@ describe("T15 S02 import view model", () => {
     expect(toImportView({ batch: batch(), consent: true, duplicate, now }).duplicate).toEqual(duplicate);
   });
 });
+
+describe("T26 S02 import view model: extraction mode", () => {
+  it("reads a batch without an explicit mode as ai and carries rules", () => {
+    expect(toImportView({ batch: batch(), consent: true, now }).extractionMode).toBe("ai");
+    expect(toImportView({ batch: batch({ extraction_mode: "rules" }), consent: false, now }).extractionMode).toBe("rules");
+    expect(toImportView({ batch: null, consent: false }).extractionMode).toBeNull();
+  });
+
+  it("offers retry of a transient rules failure without consent", () => {
+    const failed = { status: "failed" as const, stage: "screening" as const, error_code: "SCANNER_UNAVAILABLE", expires_at: "2026-09-30T08:00:00Z" };
+    expect(toImportView({ batch: batch({ ...failed, extraction_mode: "rules" }), consent: false, now }))
+      .toMatchObject({ canRetry: true, retryBlockReason: null });
+    expect(toImportView({ batch: batch({ ...failed, extraction_mode: "ai" }), consent: false, now }))
+      .toMatchObject({ canRetry: false, retryBlockReason: "consent" });
+  });
+
+  it("treats IMPORT_RULES_FAILED as permanent", () => {
+    const view = toImportView({ batch: batch({ status: "failed", stage: "parsing", error_code: "IMPORT_RULES_FAILED", extraction_mode: "rules" }), consent: false, now });
+    expect(view).toMatchObject({ state: "failed_permanent", canRetry: false, errorCode: "IMPORT_RULES_FAILED" });
+  });
+});

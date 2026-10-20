@@ -977,6 +977,7 @@ export type Database = {
           error_code: string | null
           expires_at: string | null
           extracted_text: string | null
+          extraction_mode: string
           failed_at: string | null
           file_key: string | null
           filename: string
@@ -1003,6 +1004,7 @@ export type Database = {
           error_code?: string | null
           expires_at?: string | null
           extracted_text?: string | null
+          extraction_mode?: string
           failed_at?: string | null
           file_key?: string | null
           filename: string
@@ -1029,6 +1031,7 @@ export type Database = {
           error_code?: string | null
           expires_at?: string | null
           extracted_text?: string | null
+          extraction_mode?: string
           failed_at?: string | null
           file_key?: string | null
           filename?: string
@@ -1330,6 +1333,7 @@ export type Database = {
       begin_import_batch: {
         Args: {
           p_bytes: number
+          p_extraction_mode?: string
           p_filename: string
           p_idempotency_key: string
           p_mime_type: string
@@ -1453,6 +1457,7 @@ export type Database = {
           attempt_token: string
           batch_id: string
           expected_bytes: number
+          extraction_mode: string
           id: string
           lease_expires_at: string
           mime_type: string
@@ -1516,6 +1521,7 @@ export type Database = {
       complete_import_parse: {
         Args: {
           p_attempt_token: string
+          p_items?: Json
           p_job_id: string
           p_page_count: number
           p_text: string

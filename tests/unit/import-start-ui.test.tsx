@@ -5,7 +5,8 @@ vi.mock("@/features/import/actions", () => ({ cancelImportAction: vi.fn(), retry
 vi.mock("@/features/ai/actions", () => ({ setAiConsentAction: vi.fn() }));
 
 import { toImportView, type ImportBatchRow } from "@/domain/import/import-view";
-import { ImportStart, importFailureKey } from "@/features/import/import-start";
+import { chooseImportMode, ImportStart, importFailureKey, importUploadHeaders } from "@/features/import/import-start";
+import { t } from "@/i18n/messages";
 
 const consent = { granted: true, profileRevision: 2 };
 const now = new Date("2026-09-29T10:00:00Z");
@@ -140,5 +141,90 @@ describe("T15 S02 import screen", () => {
     expect(id).not.toContain("tidak dikirim");
     const before = render(batch({ ...failed, error_code: "CONSENT_REQUIRED" }), { consent: false });
     expect(before).toContain("AI processing is not allowed, so the text was not sent.");
+  });
+});
+
+describe("T26 S02 import screen: reading without AI", () => {
+  const noConsent = { granted: false, profileRevision: 2 };
+  const renderWith = (view: ReturnType<typeof toImportView>, grant: typeof consent, extra: Record<string, unknown> = {}, locale: "en" | "id" = "en") =>
+    renderToStaticMarkup(<ImportStart locale={locale} initialView={view} consent={grant} {...extra} />);
+
+  it("explains both paths to a user without consent and offers the neutral choice, not the consent dialog", () => {
+    const html = renderWith(toImportView({ batch: null, consent: false, now }), noConsent);
+    expect(html).toContain("If you allow AI, your CV text is sent to an external AI provider. If you don&#x27;t, WorkPulse reads it itself using fixed rules.");
+    expect(html).toContain("How should we read your CV?");
+    expect(html).not.toContain(t("en", "ai.consent.dialogTitle"));
+    const id = renderWith(toImportView({ batch: null, consent: false, now }), noConsent, {}, "id");
+    expect(id).toContain("Kalau Anda mengizinkan AI, teks CV dikirim ke penyedia AI eksternal.");
+  });
+
+  it("keeps the AI disclosure and no mode dialog for a user who already consented", () => {
+    const html = renderWith(toImportView({ batch: null, consent: true, now }), consent);
+    expect(html).toContain(t("en", "import.disclosure"));
+    expect(html).not.toContain("How should we read your CV?");
+    expect(html).not.toContain("fixed rules");
+  });
+
+  it("keeps the upload open without consent even when the AI import limit is reached", () => {
+    const usage = { bucket: "import", dayUsed: 3, dayLimit: 3, monthUsed: 3, monthLimit: 5, limitReason: "daily", resetsAt: "2026-09-30T00:00:00Z" };
+    const html = renderWith(toImportView({ batch: null, consent: false, now }), noConsent, { usage, timeZone: "UTC" });
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Upload and extract/);
+    expect(html).toContain("Read without AI");
+    const consented = renderWith(toImportView({ batch: null, consent: true, now }), consent, { usage, timeZone: "UTC" });
+    expect(consented).not.toContain("Upload and extract");
+  });
+
+  it("notes a rules result and uses the rules copy for an empty result, only for rules batches", () => {
+    const ready = { status: "review" as const, stage: "done" as const, page_count: 1 };
+    const rules = render(batch({ ...ready, extraction_mode: "rules" }), { counts: { experience: 1 } });
+    expect(rules).toContain("These records were read without AI. Check employers, job titles and dates before you confirm.");
+    const ai = render(batch(ready), { counts: { experience: 1 } });
+    expect(ai).not.toContain("read without AI");
+    const emptyRules = render(batch({ ...ready, extraction_mode: "rules" }));
+    expect(emptyRules).toContain("Two-column or table-based CVs often can&#x27;t be read without AI.");
+    expect(render(batch(ready))).toContain(t("en", "import.emptyBody"));
+  });
+
+  it("names IMPORT_RULES_FAILED without a retry, and lets a rules retry through when the AI limit is reached", () => {
+    expect(importFailureKey("IMPORT_RULES_FAILED")).toBe("import.failed.IMPORT_RULES_FAILED");
+    const failed = render(batch({ status: "failed", stage: "parsing", error_code: "IMPORT_RULES_FAILED", extraction_mode: "rules" }), { consent: false });
+    expect(failed).toContain("We couldn&#x27;t read this CV without AI. Try another file or start manually.");
+    expect(failed).not.toContain(">Retry<");
+    const usage = { bucket: "import", dayUsed: 3, dayLimit: 3, monthUsed: 3, monthLimit: 5, limitReason: "daily", resetsAt: "2026-09-30T00:00:00Z" };
+    const transient = toImportView({ batch: batch({ status: "failed", stage: "screening", error_code: "SCANNER_UNAVAILABLE", extraction_mode: "rules", expires_at: "2026-09-30T00:00:00Z" }), consent: false, now });
+    const html = renderWith(transient, noConsent, { usage, timeZone: "UTC" });
+    expect(html).toMatch(/<button[^>]*>Retry<\/button>/);
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>Retry/);
+  });
+});
+
+describe("T26 S02 upload steps", () => {
+  it("sends the mode as x-extraction-mode", () => {
+    expect(importUploadHeaders("application/pdf", "k", "cv a.pdf", "rules")).toEqual({
+      "content-type": "application/pdf", "x-idempotency-key": "k", "x-file-name": "cv%20a.pdf", "x-extraction-mode": "rules",
+    });
+  });
+
+  it("saves consent before an ai upload, never uploads when that fails, and uploads rules without consent", async () => {
+    const calls: string[] = [];
+    const steps = (consentError: string | null) => ({
+      saveConsent: vi.fn(async () => { calls.push("consent"); return consentError; }),
+      upload: vi.fn(async (mode: "ai" | "rules") => { calls.push(`upload:${mode}`); }),
+    });
+    const ok = steps(null);
+    expect(await chooseImportMode("ai", ok)).toBeNull();
+    expect(calls).toEqual(["consent", "upload:ai"]);
+
+    calls.length = 0;
+    const refused = steps("Could not save.");
+    expect(await chooseImportMode("ai", refused)).toBe("Could not save.");
+    expect(calls).toEqual(["consent"]);
+    expect(refused.upload).not.toHaveBeenCalled();
+
+    calls.length = 0;
+    const rules = steps(null);
+    expect(await chooseImportMode("rules", rules)).toBeNull();
+    expect(calls).toEqual(["upload:rules"]);
+    expect(rules.saveConsent).not.toHaveBeenCalled();
   });
 });

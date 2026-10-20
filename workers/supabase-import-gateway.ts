@@ -124,14 +124,17 @@ export function createSupabaseImportWorkerGateway(
         id: text(row.id), user_id: text(row.user_id), batch_id: text(row.batch_id), object_key: text(row.object_key),
         expected_bytes: integer(row.expected_bytes), mime_type: text(row.mime_type), sha256: text(row.sha256),
         attempt_count: integer(row.attempt_count), attempt_token: text(row.attempt_token),
+        // Anything but the two known modes fails validJob as INVALID_IMPORT_JOB.
+        extraction_mode: text(row.extraction_mode) as ImportJob["extraction_mode"],
       }));
     },
     async advanceImportJob(jobId, attemptToken) {
       return bool(await rpc("advance_import_job", { p_job_id: jobId, p_attempt_token: attemptToken }));
     },
-    async completeImportParse(jobId, attemptToken, extracted, pageCount) {
+    async completeImportParse(jobId, attemptToken, extracted, pageCount, items) {
       const data = await rpc("complete_import_parse", {
         p_job_id: jobId, p_attempt_token: attemptToken, p_text: extracted, p_page_count: pageCount,
+        ...(items === undefined ? {} : { p_items: items }),
       });
       if (typeof data !== "string") throw new ImportWorkerGatewayError("WORKER_BACKEND_UNAVAILABLE");
       return data;

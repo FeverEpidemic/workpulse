@@ -3,6 +3,7 @@ import * as z from "zod";
 
 import {
   IMPORT_ENTITY_TYPES,
+  IMPORT_EXTRACTION_MODES,
   IMPORT_MAX_BYTES,
   IMPORT_MIME_TYPES,
   ImportFileError,
@@ -19,7 +20,7 @@ import { ImportServiceError, mapImportDatabaseError, toImportServiceError } from
 
 type Client = SupabaseClient<Database>;
 
-const BATCH_COLUMNS = "id, filename, status, stage, error_code, retry_count, page_count, expires_at, purged_at, created_at, revision, sha256";
+const BATCH_COLUMNS = "id, filename, status, stage, error_code, retry_count, page_count, expires_at, purged_at, created_at, revision, sha256, extraction_mode";
 
 const batchRowSchema = z.object({
   id: z.uuid(),
@@ -34,6 +35,7 @@ const batchRowSchema = z.object({
   created_at: z.string(),
   revision: z.number().int(),
   sha256: z.string(),
+  extraction_mode: z.enum(IMPORT_EXTRACTION_MODES).default("ai"),
 });
 
 const beginReceiptSchema = z.object({
@@ -49,6 +51,8 @@ export type ImportUploadRequest = {
   contentType: string | null;
   contentLength: string | null;
   body: ReadableStream<Uint8Array> | null;
+  /** T26 `x-extraction-mode`; missing means ai (older clients). */
+  extractionMode?: string | null;
 };
 
 export type ImportServiceDependencies = {
@@ -165,6 +169,8 @@ export function createImportService(deps: ImportServiceDependencies) {
       try {
         const key = z.uuid().safeParse(request.idempotencyKey ?? "");
         if (!key.success) throw new ImportServiceError("VALIDATION");
+        const mode = request.extractionMode ?? "ai";
+        if (!(IMPORT_EXTRACTION_MODES as readonly string[]).includes(mode)) throw new ImportServiceError("VALIDATION");
         const filename = cleanFilename(request.filename);
         const contentType = (request.contentType ?? "").split(";")[0]!.trim();
         if (!(IMPORT_MIME_TYPES as readonly string[]).includes(contentType)) throw new ImportServiceError("UNSUPPORTED_FORMAT");
@@ -186,6 +192,7 @@ export function createImportService(deps: ImportServiceDependencies) {
 
         const { data, error } = await client.rpc("begin_import_batch", {
           p_idempotency_key: key.data, p_filename: filename, p_bytes: bytes.length, p_mime_type: mime, p_sha256: sha256,
+          p_extraction_mode: mode,
         });
         if (error) throw mapImportDatabaseError(error);
         const receipt = beginReceiptSchema.safeParse(Array.isArray(data) ? data[0] : data);

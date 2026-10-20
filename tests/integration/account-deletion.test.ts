@@ -28,6 +28,7 @@ import {
   getPublicConfig,
   objectCount,
   profileExists,
+  putObject,
   receipt,
   registerAgain,
   required,
@@ -101,6 +102,27 @@ describe("T23 account deletion: full path with real Auth, Storage and workers", 
     expect(objectCount(b.id)).toBe(bObjectsBefore);
     expect(sql(`select count(*) from public.activities where user_id = '${b.id}' and raw_text like '%${SENTINEL}%'`)).toBe("1");
     expect((await b.client.auth.getUser()).data.user?.id).toBe(b.id);
+  }, LONG);
+
+  it("T26: deletes a rules batch, its items and its object like any other import", async () => {
+    const a = await createAccount("rules");
+    const batchId = randomUUID();
+    const key = `${a.id}/import/${batchId}`;
+    sql(
+      `insert into public.import_batches (id, user_id, idempotency_key, payload_hash, file_key, filename, mime_type, bytes, sha256, status, stage, page_count, extracted_text, extraction_mode) ` +
+      `values ('${batchId}', '${a.id}', gen_random_uuid(), decode(repeat('ab', 32), 'hex'), '${key}', 'cv.pdf', 'application/pdf', 10, repeat('b', 64), 'review', 'done', 1, '${SENTINEL} rules', 'rules')`,
+    );
+    sql(
+      `insert into public.import_items (user_id, batch_id, entity_type, ordinal, payload, source_excerpt) ` +
+      `values ('${a.id}', '${batchId}', 'skill', 0, '{"name":"SQL"}'::jsonb, '${SENTINEL} rules')`,
+    );
+    await putObject(key);
+    expect(rowsLeft(a.id)).toMatchObject({ "public.import_batches": 1, "public.import_items": 1 });
+    await deleteThroughService(a);
+    await runUntilCompleted(a.id);
+    expect(receipt(a.id)?.status).toBe("completed");
+    expect(rowsLeft(a.id)).toEqual({});
+    expect(objectCount(a.id)).toBe(0);
   }, LONG);
 
   it("never marks a receipt completed while an object or an open cleanup job is left", async () => {

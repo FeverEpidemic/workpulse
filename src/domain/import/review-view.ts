@@ -2,6 +2,7 @@
 import {
   IMPORT_ENTITY_TYPES,
   type ImportEntityType,
+  type ImportExtractionMode,
   type ImportStatus,
 } from "./contracts.ts";
 import type {
@@ -47,6 +48,8 @@ export type ReviewBatch = {
   error_code: string | null;
   revision: number;
   commit_result: StoredImportCommitResult | null;
+  /** T26; absent means ai (the column default). */
+  extraction_mode?: ImportExtractionMode;
   /** Later of the batch update and the latest item update; drives the automatic cancel notice. */
   last_activity_at?: string | null;
 };
@@ -205,6 +208,7 @@ export type ImportReviewView = {
   filename: string;
   revision: number;
   errorCode: string | null;
+  extractionMode: ImportExtractionMode;
   groups: ReviewGroup[];
   summary: ReviewSummary;
   errorSummary: { itemId: string; type: ImportEntityType; ordinal: number; field: string; code: ImportFieldErrorCode }[];
@@ -316,6 +320,7 @@ export function toImportReviewView(snapshot: ImportReviewSnapshot, local: Review
   const summary: ReviewSummary = { total: snapshot.items.length, byType, confirmedAchievements: 0, draftAchievements: 0 };
   const base = {
     batchId: batch.id, filename: batch.filename, revision: batch.revision, errorCode: batch.status === "failed" ? batch.error_code : null,
+    extractionMode: batch.extraction_mode ?? "ai",
     result: batch.status === "committed" ? batch.commit_result : null,
   };
   if (state !== "review") {
