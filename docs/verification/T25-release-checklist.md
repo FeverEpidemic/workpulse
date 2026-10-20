@@ -5,22 +5,23 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 - Item yang selesai dicentang dan punya bukti yang ditautkan.
 - Item berlabel **BLOCKER** menghalangi publish production dan tidak boleh dicentang tanpa bukti dari lingkungan yang dimaksud.
 
-- Tanggal: 10 Oktober 2026; diperbarui 11 Oktober 2026 setelah regresi Fase 8 dan gate review.
-- Status: **tidak siap untuk production**. Sembilan BLOCKER terbuka. Status T25 yang direkomendasikan reviewer: **PARTIAL** (staging belum tersedia, retensi backup belum terverifikasi).
+- Tanggal: 10 Oktober 2026; diperbarui 11 Oktober 2026 setelah regresi Fase 8 dan gate review, dan 20 Oktober 2026 saat T25 ditutup.
+- Status: **tidak siap untuk production**. Sepuluh BLOCKER terbuka. T25 **DONE** (20 Oktober 2026) atas bukti lokal dan staging; bukti staging di kolom kanan tidak menutup BLOCKER, karena BLOCKER hanya ditutup dengan bukti lingkungan production.
 - Pemilik: pelaksana (agen T25), reviewer (Claude), operator (menjalankan host), pemilik produk (keputusan dan otorisasi).
 
 ## 1. BLOCKER production
 
 | Status | Item | Pemilik | Bukti yang dibutuhkan |
 | --- | --- | --- | --- |
-| [ ] | **BLOCKER** staging: proyek Supabase hosted, host web, dan host worker tersedia dan smoke §5 Fase 7 lulus | pemilik produk, operator | `T25-phase7-staging.md` dengan hasil nyata; sekarang berstatus BLOCKED |
-| [ ] | **BLOCKER** retensi backup ≤ 30 hari diverifikasi pada paket hosted | operator | paket, retensi, tautan dokumentasi resmi, tanggal akses, pemeriksa (T23 §3); copy S12 menjanjikan 30 hari. Staging Workpulse (Free): tanpa backup proyek dan tanpa PITR, retensi **tidak dapat dipastikan**, dan restore runbook §7 tidak dapat dijalankan; paket production harus diputuskan pemilik produk |
+| [ ] | **BLOCKER** staging: proyek Supabase hosted, host web, dan host worker tersedia dan smoke §5 Fase 7 lulus | pemilik produk, operator | Staging terbukti 17-20 Oktober 2026 ([Fase 7](T25-phase7-staging.md)), kecuali p95. Production: lingkungannya sendiri, smoke yang sama |
+| [ ] | **BLOCKER** p95 baca dan simpan pada layanan hosted di bawah target (2.000 / 1.000 ms) | operator | Ditunda pemilik produk 20 Oktober 2026, wajib sebelum production. Harness: branch `claude/t25-perf-staging`; lokal sudah di bawah target (T24) |
+| [ ] | **BLOCKER** retensi backup ≤ 30 hari diverifikasi pada paket hosted | operator | paket, retensi, tautan dokumentasi resmi, tanggal akses, pemeriksa (T23 §3); copy S12 menjanjikan 30 hari. Staging (Free, tanpa backup proyek): backup sendiri `pg_dump` harian, dua run cron dan uji prune 20 Oktober 2026, restore 17 Oktober ([runbook backup](T25-backup-runbook.md)). Production: paket dan cara backup diputuskan pemilik produk |
 | [ ] | **BLOCKER** otorisasi deploy tertulis untuk lingkungan production | pemilik produk | pesan tertulis yang menyebut lingkungan itu |
 | [ ] | **BLOCKER** domain production dan `WORKPULSE_SITE_URL` diisi domain sebenarnya (https) | operator | nilai terpasang di host web, redirect Auth berfungsi |
-| [ ] | **BLOCKER** SMTP Auth nyata: email verifikasi dan recovery terkirim ke kotak masuk sungguhan | operator | bukti pengiriman pada staging (Fase 7) |
-| [ ] | **BLOCKER** konfigurasi Auth hosted di luar migration: template email konfirmasi dan recovery terpasang, Site URL dan redirect `/auth/confirm` domain sebenarnya, tanpa nilai lokal dari `config.toml`; bucket `workpulse-private` privat sesuai `config.toml` | operator | runbook §3 langkah 2–3. Staging ([Fase 7a](T25-phase7-staging.md), [review](T25-phase7a-review.md)): bucket, Site URL, dan redirect terbukti; dua template **belum** (paket Free butuh SMTP kustom) |
-| [ ] | **BLOCKER** scanner nyata di host worker: `WORKPULSE_SCANNER_MODE=clamav` dan EICAR ditolak | operator | satu run `evidence-scanner-real` atau smoke staging |
-| [ ] | **BLOCKER** renderer nyata (DOCX dan PDF) di host worker; PDF diunduh dan teksnya cocok | operator | smoke staging: export, unduh, ekstraksi teks |
+| [ ] | **BLOCKER** SMTP Auth nyata: email verifikasi dan recovery terkirim ke kotak masuk sungguhan | operator | bukti pengiriman pada staging (Fase 7): MXroute, konfirmasi dan recovery diterima di Gmail 16-17 Oktober 2026, DKIM/SPF/DMARC terpasang. Production: domain pengirim production |
+| [ ] | **BLOCKER** konfigurasi Auth hosted di luar migration: template email konfirmasi dan recovery terpasang, Site URL dan redirect `/auth/confirm` domain sebenarnya, tanpa nilai lokal dari `config.toml`; bucket `workpulse-private` privat sesuai `config.toml` | operator | runbook §3 langkah 2–3. Staging ([Fase 7a](T25-phase7-staging.md), [review](T25-phase7a-review.md)): bucket, Site URL, redirect, dan dua template terbukti (template 16 Oktober 2026) |
+| [ ] | **BLOCKER** scanner nyata di host worker: `WORKPULSE_SCANNER_MODE=clamav` dan EICAR ditolak | operator | satu run `evidence-scanner-real` atau smoke staging. Staging: evidence PDF sampai `ready` dengan ClamAV 1.5.4; EICAR belum diuji di host |
+| [ ] | **BLOCKER** renderer nyata (DOCX dan PDF) di host worker; PDF diunduh dan teksnya cocok | operator | smoke staging: export, unduh, ekstraksi teks. Staging: impor DOCX dan export PDF diunduh; pencocokan teks tidak dicatat |
 | [ ] | **BLOCKER** mode AI dan wording persetujuan diputuskan pemilik produk (aktif dengan key, atau tetap `unavailable`) | pemilik produk | keputusan tertulis; bila aktif, smoke dengan key staging yang disetujui |
 
 ## 2. Bukti lokal yang sudah ada
@@ -46,8 +47,7 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 | --- | --- | --- | --- |
 | [ ] | Setelah restore hosted pertama: cleanup dan penghapusan akun untuk objek Storage yang tidak ikut restore (`storage_cleanup_failed`, `account_deletion_overdue` tetap 0) | operator | runbook §7; belum diuji terhadap restore hosted |
 | [ ] | Pemeriksaan **screen reader nyata** (NVDA + Chrome atau Edge) mengikuti checklist plan §6.4 | pengguna atau penguji manusia | belum dijalankan; hanya proxy snapshot aria otomatis yang ada |
-| [ ] | Ukuran p95 baca dan simpan pada dataset staging | operator | tergantung staging; lokal sudah di bawah target (T24) |
-| [ ] | Pasang CI (GitHub Actions) | pelaksana task CI01 | di luar T25; direkomendasikan sebelum pilot |
+| [x] | Pasang CI (GitHub Actions) | pelaksana task CI01 | `checks` dan `database` di `main` sejak PR #17 ([ci-github-actions](ci-github-actions.md)) |
 | [ ] | Kanal notifikasi untuk exit `ops:check` ≠ 0 (email atau chat) | operator | di luar aplikasi; jadwalkan cron setiap 5 menit |
 | [ ] | Evaluasi target pilot 60% / 40% / 30% / 98% | pemilik produk | pasca-pilot dari 20 pengguna (runbook T24); bukan syarat sebelum pilot |
 

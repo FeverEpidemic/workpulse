@@ -1,7 +1,7 @@
 # T25 Backup database staging (opsi B)
 
 - Tanggal: 17 Oktober 2026
-- Status: **terpasang di server staging 17 Oktober 2026** (run manual pertama lulus, cron harian dipasang). Latihan restore §5 lulus pada hari yang sama untuk backup `20261017T162948Z`; hasilnya ada di receipt Fase 7. Klaim retensi ≤ 30 hari baru dianggap terverifikasi setelah §4 dan §5 dicatat di [receipt Fase 7](T25-phase7-staging.md).
+- Status: **terpasang di server staging 17 Oktober 2026** (run manual pertama lulus, cron harian dipasang). Latihan restore §5 lulus pada hari yang sama untuk backup `20261017T162948Z`; hasilnya ada di receipt Fase 7. Klaim retensi ≤ 30 hari baru dianggap terverifikasi setelah §4 dan §5 dicatat di [receipt Fase 7](T25-phase7-staging.md). Keduanya tercatat 20 Oktober 2026 (dua run cron dan uji aturan prune), jadi retensi staging terverifikasi; penghapusan pertama di server diharapkan pada run 16 November 2026.
 - Keputusan pemilik produk (17 Oktober 2026): paket Supabase Free tetap dipakai, dan backup dibuat sendiri dengan `pg_dump` terjadwal di server pribadi, retensi di bawah 30 hari ("Retensi Backup kayaknya better di B deh").
 - Script: [`deploy/staging/backup.sh`](../../deploy/staging/backup.sh).
 
