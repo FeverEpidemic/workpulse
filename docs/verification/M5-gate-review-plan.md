@@ -30,6 +30,8 @@ Setiap task M5 sudah lulus per lapis, dan Gate M2–M4 sudah PASSED. Gate ini me
 - pekerjaan pasca-rencana (0032, 0033) tidak merusak invariant R01–R10 yang sudah dibuktikan T25: isolasi, katalog, penghapusan, dan aksesibilitas;
 - lingkungan pilot memenuhi syarat yang hanya bisa dibuktikan di sana: migration hosted, adapter nyata, dan retensi backup ≤ 30 hari.
 
+**Lingkungan pilot** (dilaporkan pemilik produk, 20 Oktober 2026): terpisah dari staging dan sudah berjalan. Domain `myworkpulse.my.id`. Proyek Supabase hosted paket Free, migration dilaporkan sudah sampai yang terakhir. Web dan worker di server pribadi lain (bukan server staging), deploy dari image GHCR hasil CI. ClamAV, Gotenberg DOCX, dan renderer PDF berjalan di host worker. SMTP sama dengan staging (MXroute). Backup memakai `backup.sh` dengan salinan dihapus pada umur 29 hari; log cron menunjukkan `backup: ok` pada 18 dan 19 Oktober 2026. Staging tetap dipakai sebagai tempat uji sebelum perubahan naik ke pilot.
+
 ---
 
 ## 0. Cara memakai handoff ini
@@ -71,14 +73,25 @@ Gate M5 **lulus** hanya jika semua poin berikut terbukti. Poin 1–10 dibuktikan
 8. **Aksesibilitas dan usability.** `test:e2e:release` lulus (matriks 20 keadaan × 360/1440 × light/dark, teks 200%, keyboard, aria snapshot). Dialog pilihan mode import (T26) dan banner batas AI (0032) diperiksa Axe dan keyboard di 360 px dark. Form yang gagal simpan mempertahankan isi.
 9. **Performance lokal.** `pnpm test:perf` dijalankan sendirian dan p95 baca < 2 detik, simpan < 1 detik. Catat lingkungan, sample count, dan warm/cold.
 10. **Regresi penuh hijau.** Seluruh suite §7 lulus dengan ClamAV, Gotenberg, dan renderer PDF nyata, clean rebuild 38 migration lulus, tanpa melemahkan assertion. Flaky dicatat dengan bukti rerun dan penyebab.
-11. **Lingkungan pilot sejalan dengan HEAD gate.** Parity migration hosted **38/38**; web dan worker memakai image dengan tag `sha-<commit>` yang memuat HEAD gate (bukan tag `main` yang dapat berubah); smoke §8 runbook diulang termasuk import mode `rules`; scanner dan renderer nyata.
-12. **Retensi backup ≤ 30 hari terverifikasi.** `backup.sh` hasil RV-B1 terpasang; dua baris `backup: ok` dari cron pada dua hari berbeda tercatat ([runbook backup](T25-backup-runbook.md) §4 langkah 4); BLOCKER retensi di checklist dinilai ulang. Tanpa ini Gate M5 **tidak boleh** PASSED (`IMPLEMENTATION_STATUS.md`, entry T25).
+11. **Lingkungan pilot sejalan dengan HEAD gate.** Berlaku untuk lingkungan pilot `myworkpulse.my.id`, bukan staging:
+    - parity migration hosted **38/38** dari `migration list` proyek pilot, dibaca balik (bukan hanya dilaporkan);
+    - web dan worker memakai image dengan tag `sha-<commit>` yang memuat HEAD gate (bukan tag `main` yang dapat berubah), dibaca balik dari host;
+    - perubahan yang sama lebih dulu lulus smoke di staging;
+    - smoke §8 runbook di pilot dengan akun uji khusus: evidence sampai `ready` dan EICAR ditolak, import DOCX mode `rules`, export PDF dan ekstraksi teks, penghapusan akun sampai hitungan nol, serta satu klik recovery dari kotak masuk nyata ke `myworkpulse.my.id/update-password`;
+    - konfigurasi Auth proyek pilot: Site URL dan redirect `/auth/confirm` memakai `https://myworkpulse.my.id`, dua template email terpasang, SMTP kustom aktif, bucket `workpulse-private` privat.
+12. **Retensi backup ≤ 30 hari terverifikasi di lingkungan pilot.** Semua butir berikut wajib:
+    - `backup.sh` di host pilot identik dengan versi RV-B1 (commit `6e35778`): sha256 file di server sama dengan `git show 6e35778:deploy/staging/backup.sh | sha256sum` (saat plan ditulis `e8e6dd099bc37293fda916187fbc1227ed4b48391439d5d42813e8c9ca7b3ad1`);
+    - `--db-url` script menunjuk proyek pilot, bukan staging (diperiksa operator tanpa menempel URL; cukup project ref);
+    - minimal dua baris `backup: ok` dari **cron** pada dua hari berbeda, dari host pilot, **setelah** versi RV-B1 terpasang ([runbook backup](T25-backup-runbook.md) §4 langkah 4). Dua baris yang dilaporkan (18 dan 19 Oktober 2026, `copies=2` dan `copies=3`) memenuhi butir ini hanya bila operator menunjukkan bahwa keduanya berasal dari host pilot dan script RV-B1 sudah terpasang sebelum run 18 Oktober. Bila tidak, dua run cron berikutnya yang dipakai;
+    - daftar direktori backup beserta umurnya: tidak ada salinan atau `.partial-*` yang lebih tua dari 29 hari.
+
+    Penghapusan nyata pertama baru terjadi saat salinan tertua berumur 29 hari (sekitar pertengahan November 2026). Logika prune sudah dibuktikan harness pada review Fase 7b, jadi pengamatan prune pertama di host pilot dicatat sebagai follow-up P3, bukan syarat gate. Tanpa butir 12, Gate M5 **tidak boleh** PASSED (`IMPLEMENTATION_STATUS.md`, entry T25).
 13. **Tidak ada temuan P0–P2 terbuka**, lokal maupun lingkungan pilot. P3 dicatat sebagai follow-up.
 
 Gate M5 **tidak** mencakup:
 
 - Evaluasi target pilot 60/40/30/98%. Itu pasca-pilot dari 20 pengguna consenting (`T24-pilot-metrics-runbook.md`).
-- Publish production: otorisasi deploy tertulis, domain production, paket hosted production. Item BLOCKER production di `T25-release-checklist.md` §1 yang khusus production tetap terbuka dan tidak menghalangi verdict gate, tetapi wajib disebut di laporan.
+- Rilis umum di luar pilot 20 pengguna: paket hosted berbayar, PITR, dan skala di atas kuota paket Free. Item BLOCKER di `T25-release-checklist.md` §1 yang dipenuhi lingkungan pilot (domain, SMTP, Auth hosted, scanner, renderer, retensi, mode AI) dinilai lewat kriteria §1.11–§1.12. Item yang hanya relevan untuk rilis umum tetap terbuka, tidak menghalangi verdict gate, dan wajib disebut di laporan.
 - Pemeriksaan NVDA oleh manusia. Dicatat sebagai keterbatasan bila belum ada; menjadi P2 hanya jika pengguna menjalankannya dan menemukan pelanggaran.
 - T27, kecuali T27 sudah DONE dan di-merge ke `main` sebelum Fase 0 (§2.2 butir 2).
 
@@ -99,7 +112,7 @@ Gate M5 **tidak** mencakup:
 1. **Gate dijalankan di worktree baru dari `origin/main`.** Alasan: checkout utama berisi T27 yang sedang dikerjakan dan test yang belum di-commit; gate tidak boleh menyentuhnya.
 2. **T27 di luar gate secara default.** Bila T27 sudah DONE dan di-merge sebelum Fase 0, pelaksana menambahkannya ke tabel §3 sebagai pasca-rencana dan baseline unit berubah sesuai receipt T27. Bila belum, gate tetap jalan; T27 nanti cukup lulus `test:e2e:release` dan `test:e2e:m5` sebelum merge.
 3. **Verdict dua tingkat tidak dipakai.** Hanya **PASSED** atau **BLOCKED**. Bila poin 1–10 dan 13 lulus tetapi 11 atau 12 belum, verdict **BLOCKED** dengan satu-satunya daftar kerja berupa item lingkungan pilot. Alasan: kalimat status T25 sudah menetapkan retensi backup sebagai syarat.
-4. **Lingkungan pilot = staging server pribadi (T25 Fase 7b).** Pendaftaran pilot terbuka di sana (decision 0032). Bila pemilik produk memindahkan pilot ke lingkungan lain, poin 11–12 dibuktikan ulang di lingkungan baru.
+4. **Lingkungan pilot = `myworkpulse.my.id`, terpisah dari staging.** Proyek Supabase hosted Free dan server pribadi sendiri. Bukti T25 Fase 7a/7b berlaku untuk staging saja dan **tidak** dipindahkan ke pilot; poin 11–12 dibuktikan di pilot. Staging tetap menjadi langkah uji pertama untuk setiap perubahan yang naik ke pilot. Bila pilot pindah lagi, poin 11–12 dibuktikan ulang di lingkungan baru.
 5. **Mode AI di lingkungan pilot tidak diuji live.** Smoke memakai `WORKPULSE_AI_MODE=unavailable` atau mode yang sudah diputuskan tertulis oleh pemilik produk. Bila aktif, satu smoke `analysis` dengan key staging yang disetujui dan unit terbebankan; selain itu tidak ada panggilan provider.
 6. **Port E2E gate: 3018.** 3000–3017 terpakai (`playwright.release.config.ts` memakai 3017).
 
@@ -253,17 +266,21 @@ Baca kode nyata, bukan hanya test. Checklist minimum:
 
 ### Fase 6 — Daftar periksa lingkungan pilot (kriteria §1.11, §1.12)
 
-Pelaksana **tidak** mengakses server atau proyek hosted. Fase ini menyiapkan instruksi untuk operator.
+Pelaksana **tidak** mengakses server, proyek hosted staging, atau proyek hosted pilot. Lingkungan pilot sudah berjalan, jadi fase ini menyiapkan pemeriksaan atas lingkungan yang ada, bukan provisioning.
 
-- [ ] Tulis `docs/verification/M5-gate-pilot-environment.md` berisi langkah yang dijalankan operator dan bentuk bukti yang diminta:
-  1. Urutan deploy migration 37–38 dan worker bersamaan (T26 N2, decision 0032/0033), dengan runbook §3 sebagai acuan; parity hosted 38/38 dari `migration list`.
-  2. Tag image web dan worker `sha-<commit>` yang memuat HEAD gate; cara membacanya balik dari host.
-  3. Smoke §8 runbook diulang: evidence sampai `ready` dan EICAR ditolak, import DOCX mode `rules` dan (bila AI aktif) mode `ai`, export PDF dan ekstraksi teks, penghapusan akun sampai hitungan nol. Satu klik recovery dari Gmail pada image terpasang (menutup B6).
-  4. `backup.sh` hasil RV-B1 terpasang; dua baris `backup: ok` pada dua hari berbeda; daftar direktori backup dengan umur tertua < 30 hari.
-  5. p95 baca/simpan di staging dengan dataset T24 (opsional bagi verdict; wajib dicatat bila tidak dijalankan).
-  6. Keputusan tertulis pemilik produk tentang mode AI pilot.
-  7. Query read-only yang boleh dijalankan reviewer untuk memeriksa ulang hitungan (tanpa key di dokumen; hanya nama variabel).
-- [ ] Receipt `M5-gate-phase6-pilot-environment.md` hanya mencatat bahwa daftar periksa siap dan item mana yang sudah punya bukti sebelumnya (`T25-phase7-staging.md`, `T25-phase7b-review.md`).
+- [ ] Tulis `docs/verification/M5-gate-pilot-environment.md` berisi langkah yang dijalankan operator dan bentuk bukti yang diminta. Setiap bukti diberi label **dibaca balik** (keluaran command atau query yang ditempel tanpa rahasia) atau **dilaporkan**.
+  1. **Urutan rilis.** Staging lebih dulu, lalu pilot. Migration 37–38 dan worker baru naik bersamaan (T26 N2, decision 0032/0033), dengan runbook §3 sebagai acuan. Karena pilot dilaporkan sudah di migration terakhir, catat kapan migration 37–38 diterapkan dan kapan worker dengan T26 terpasang; job import yang dibuat di antara keduanya diperiksa.
+  2. **Parity.** `migration list` proyek pilot 38/38. Project ref pilot dan staging dicatat agar tidak tertukar.
+  3. **Image.** Tag `sha-<commit>` web dan worker dibaca dari host (`docker ps --format` atau setara) dan memuat HEAD gate.
+  4. **Auth proyek pilot.** Site URL, redirect `/auth/confirm`, dua template email, SMTP kustom MXroute dengan pengirim untuk domain pilot, bucket privat. Paket Free tetap butuh SMTP kustom untuk template (`T25-phase7a-review.md`).
+  5. **Smoke §8 di pilot.** Dengan akun uji khusus (bukan akun pribadi): evidence sampai `ready` dan EICAR ditolak; import DOCX mode `rules` (dan mode `ai` hanya bila AI aktif per butir 7); export PDF dan ekstraksi teks; penghapusan akun sampai `auth.users`, `profiles`, `storage.objects`, `internal.ai_usage`, dan `internal.product_events` akun itu nol; satu klik recovery dari kotak masuk nyata. Akun uji tidak didaftarkan sebagai peserta pilot (`set_pilot_participant`), agar metrik pilot tetap bersih.
+  6. **Backup.** sha256 `backup.sh` di host pilot dibanding versi `6e35778`; project ref di `--db-url` (tanpa password); `crontab -l` baris backup; kutipan `backup.log` dengan baris `backup: ok` dan `dump failed` sejak pemasangan; `ls` direktori backup dengan tanggal. Jelaskan asal salinan pertama (run 18 Oktober melaporkan `copies=2`). Catat tanggal perkiraan prune pertama.
+  7. **Mode AI pilot.** Keputusan tertulis pemilik produk: aktif dengan key, atau `unavailable`.
+  8. **Batas paket Free.** Catat batas yang relevan untuk pilot 20 pengguna: ukuran database dan Storage terpakai dibanding kuota paket, perilaku jeda proyek saat tidak aktif, dan tidak adanya backup proyek/PITR (karena itu `backup.sh` satu-satunya backup; objek Storage tidak ikut backup, runbook backup §6). Sumber batas: dokumentasi resmi Supabase dengan tanggal akses.
+  9. **Ops.** Cron `ops:check` di host pilot dan kanal notifikasinya; satu keluaran `status: ok` terbaru.
+  10. **p95 di pilot** dengan dataset T24 tidak dijalankan di proyek pilot (dataset uji akan mencemari data pilot). Bila diukur, lakukan di staging dan catat sebagai bukti staging; opsional bagi verdict.
+  11. **Query read-only** yang boleh dijalankan reviewer terhadap proyek pilot untuk memeriksa ulang butir 2, 4, dan 5 (tanpa key di dokumen; hanya nama variabel).
+- [ ] Receipt `M5-gate-phase6-pilot-environment.md` mencatat bahwa daftar periksa siap, dan memisahkan bukti staging yang sudah ada (`T25-phase7-staging.md`, `T25-phase7b-review.md`) dari bukti pilot yang masih ditunggu.
 
 ### Fase 7 — Perbaikan P0–P2 dan laporan draft
 
@@ -292,7 +309,7 @@ Pelaksana **tidak** mengakses server atau proyek hosted. Fase ini menyiapkan ins
   - baca diff test gate dan perbaikan;
   - jalankan ulang minimal `test:e2e:m5`, `test:integration:m5`, `test:integration:release`, `test:integration:account-deletion`, `test:e2e:release`, gate dasar, dan suite yang disentuh perbaikan;
   - buka sendiri screenshot journey;
-  - periksa bukti operator Fase 6 dan jalankan query read-only yang diizinkan terhadap hosted.
+  - periksa bukti operator Fase 6 dan jalankan query read-only yang diizinkan terhadap proyek pilot (bukan staging); pastikan project ref di bukti backup, parity, dan smoke sama.
 - [ ] Tetapkan verdict di `M5-gate-review.md`: **PASSED** hanya bila semua kriteria §1 PASS dan tidak ada P0–P2 terbuka. Selain itu **BLOCKED**, disertai daftar kerja konkret (§2.2 butir 3).
 - [ ] Bila PASSED: T25 dinilai ulang ke DONE bila kalimat selesainya kini terpenuhi; perbarui `T25-release-checklist.md` (baris basi, BLOCKER retensi dan staging) dan `T25-release-handoff.md`.
 - [ ] Update `IMPLEMENTATION_STATUS.md`: tambahkan bagian "Gate M5" di atas dengan verdict, bukti, dan langkah berikutnya (pilot berjalan dan evaluasi metrik setelah 20 pengguna bila PASSED). Perbarui snapshot di `AGENTS.md` dan `docs/AGENTS.md` (keduanya harus identik). Riwayat lama dibiarkan.
@@ -382,8 +399,8 @@ git diff --check
 1. **Tabel pasca-T23 lolos dari purge.** `internal.ai_usage` dan `internal.ai_plan_assignments` dibuat setelah `purge_account_data` ditulis. Bila tidak ikut dihapus, jejak pemakaian akun terhapus bertahan. Dijaga oleh Fase 2 butir 1, Fase 3 langkah 8, dan Fase 4 skenario 4.
 2. **Jalur parser aturan melewati guard `deleting`.** T26 menambah jalur worker yang tidak melewati `ai_jobs`; guard yang selama ini menempel di jalur AI bisa tidak terpanggil. Dijaga oleh Fase 2 butir 2 dan Fase 4 skenario 3.
 3. **Metrik pilot salah hitung untuk aktivasi lewat import `rules`.** Activation PRD mencakup "confirm imported records"; event commit import mode baru bisa tidak memicu event yang sama. Dijaga oleh Fase 2 butir 4 dan Fase 4 skenario 1.
-4. **Lingkungan pilot tertinggal dari `main`.** Staging tercatat di parity 36; migration 37–38 dan worker baru harus naik bersamaan (T26 N2). Image `main` yang dapat berubah membuat bukti smoke tidak terikat commit. Dijaga oleh kriteria §1.11 dan daftar periksa Fase 6.
-5. **Retensi backup "lulus" tanpa bukti cron.** Satu run manual bukan bukti retensi; prune lama tidak berjalan saat dump gagal (B1). Dijaga oleh kriteria §1.12 dan §2.2 butir 3.
+4. **Bukti staging dipakai untuk pilot.** Pilot dan staging adalah dua proyek Supabase dan dua server berbeda. Smoke, parity, atau log backup dari staging mudah tertukar, dan migration 37–38 serta worker baru harus naik bersamaan di masing-masing (T26 N2). Image `main` yang dapat berubah membuat bukti tidak terikat commit. Dijaga oleh kriteria §1.11, project ref di setiap bukti Fase 6, dan pemeriksaan reviewer di Fase 8.
+5. **Retensi backup "lulus" dengan script lama atau host yang salah.** Log 18–19 Oktober bisa berasal dari script sebelum RV-B1, yang tidak mem-prune saat dump gagal (B1), atau dari host staging. Dijaga oleh sha256 script, project ref `--db-url`, dan asal salinan pertama di kriteria §1.12.
 6. **Gate "lulus" karena katalog statis.** Test isolasi yang memakai daftar tabel tetap tidak akan gagal untuk tabel baru. `release-ownership.test.ts:252` membaca `pg_class` secara dinamis untuk skema `public`, tetapi tabel baru 0032 ada di skema `internal`. Dijaga oleh Fase 2 butir 5 dan Fase 4 skenario 7.
 
 ## 9. Prompt untuk memulai sesi baru
