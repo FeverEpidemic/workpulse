@@ -1,9 +1,9 @@
-# Gate M5: integration review Pilot readiness (laporan draft)
+# Gate M5: integration review Pilot readiness
 
-- Tanggal: 21 Oktober 2026 (Fase 0–7).
+- Tanggal: 21 Oktober 2026 (Fase 0–7 pelaksana, Fase 8 reviewer).
 - Branch: `claude/m5-gate-review`, basis `origin/main` `973e886` (PR #31). Tidak di-push.
-- Pelaksana: Claude (Opus 5.5), satu sesi tanpa sub-agent, mode antislop *during*. Fase 0–7 dari [`M5-gate-review-plan.md`](M5-gate-review-plan.md).
-- **Verdict: belum ditulis.** Verdict Gate M5 dan status authoritative ditulis reviewer di Fase 8. Laporan ini tidak mengubah `IMPLEMENTATION_STATUS.md`, `AGENTS.md`, atau `T25-release-checklist.md`.
+- Pelaksana: Claude (Opus 5.5), satu sesi tanpa sub-agent, mode antislop *during*. Fase 0–7 dari [`M5-gate-review-plan.md`](M5-gate-review-plan.md). Reviewer Fase 8: Claude (Opus 5.5), sesi terpisah.
+- **Verdict: BLOCKED** (21 Oktober 2026, HEAD gate `a9e5ac4`). Kriteria 1–10 dan 13 lulus lokal. Kriteria 11 dan 12 (lingkungan pilot) belum punya bukti yang dibaca balik, dan menurut §2.2 butir 3 handoff, gate tidak boleh PASSED tanpa keduanya. Daftar kerja di [§8](#8-verdict-reviewer-fase-8) hanya berisi item lingkungan pilot.
 - Kalimat gate (`IMPLEMENTATION_PLAN.md:299`): *Gate M5: seluruh acceptance lulus. Target pilot 60% activation, 40% value completion, 30% return capture dan 98% export reliability baru dievaluasi dari 20 consenting pilot users; bukan syarat metrik yang bisa dibuktikan sebelum pilot berjalan.*
 - Receipt: [Fase 0](M5-gate-phase0-baseline.md), [1](M5-gate-phase1-acceptance-audit.md), [2](M5-gate-phase2-code-review.md), [3](M5-gate-phase3-pilot-journey.md), [4](M5-gate-phase4-cross-domain.md), [5](M5-gate-phase5-regression.md), [6](M5-gate-phase6-pilot-environment.md). Daftar periksa operator: [M5-gate-pilot-environment.md](M5-gate-pilot-environment.md).
 
@@ -103,3 +103,45 @@ Commit gate: `571dd28`, `31712da` (Fase 0), `c575909` (Fase 1–2), `f92cc04` (R
 ## 7. BLOCKER production yang tetap terbuka
 
 Tidak menghalangi verdict gate pilot (§1 handoff, "tidak mencakup"), tetapi wajib disebut. Dari [`T25-release-checklist.md`](T25-release-checklist.md) §1, sepuluh BLOCKER tetap terbuka untuk production: lingkungan production dan smoke-nya, p95 hosted, retensi backup pada paket production, otorisasi deploy tertulis, domain production dan `WORKPULSE_SITE_URL`, SMTP Auth dengan domain pengirim production, konfigurasi Auth hosted production, scanner nyata dengan EICAR di host, renderer nyata dengan pencocokan teks PDF, dan keputusan mode AI. Butir yang dipenuhi lingkungan pilot (domain, SMTP, Auth hosted, scanner, renderer, retensi, mode AI) dinilai lewat kriteria §1.11–§1.12 untuk pilot saja. Juga tetap terbuka: cleanup setelah restore hosted, kanal notifikasi `ops:check`, NVDA manusia, dan evaluasi target pilot setelah 20 pengguna consenting.
+
+## 8. Verdict reviewer (Fase 8)
+
+**BLOCKED.** Bukti lokal cukup untuk PASSED. Yang belum terbukti hanya kesesuaian lingkungan pilot `myworkpulse.my.id` dengan HEAD gate dan retensi backup di host pilot.
+
+### Verifikasi ulang independen
+
+Dijalankan reviewer di worktree gate pada `a9e5ac4`, 21 Oktober 2026 13:04–13:18 WIB. Supabase lokal, ClamAV `workpulse-t10-clamav`, Gotenberg `workpulse-t15-gotenberg`, dan renderer PDF `workpulse-t21-pdf` hidup. `SUPABASE_SECRET_KEY` hanya diset di environment proses, dan variabel AI harness dikosongkan.
+
+| Command | Exit | Hasil |
+| --- | ---: | --- |
+| `pnpm lint` | 0 | bersih |
+| `pnpm typecheck` | 0 | bersih |
+| `pnpm test` | 0 | 129 file / 1181 |
+| `pnpm test:integration:m5` | 0 | 7 |
+| `pnpm test:integration:release` | 0 | 12 |
+| `pnpm test:integration:account-deletion` | 0 | 15 |
+| `pnpm test:e2e:m5` | 0 | 1 (1,5 menit) |
+| `pnpm test:e2e:release` | 0 | 15 (3,7 menit) |
+
+`test:e2e:release` menulis ulang 88 PNG ter-track di `docs/verification/T25-screenshots/`, sama seperti di T25. Reviewer mengembalikannya dengan `git checkout`, sehingga worktree bersih. Regresi penuh 52 command, clean rebuild, dan `test:perf` tidak diulang. Angka pelaksana di Fase 5 dipakai untuk suite yang tidak disentuh perbaikan.
+
+### Penilaian
+
+- **RV-PW (`f92cc04`) diterima.** Diff mengganti `"playwright": "latest"` dengan `1.63.0`, menurunkan `playwright` dan `playwright-core` dari 1.64.0 ke 1.63.0 di lockfile (termasuk peer `@vitest/browser-playwright`), dan menambah unit penjaga yang mewajibkan versi `playwright` sama dengan `@playwright/test`. Gejala yang sama tercatat di catatan lingkungan lokal reviewer sebelum gate. Seluruh E2E yang diulang lulus dengan pin ini.
+- **Screenshot journey** dibuka reviewer: dialog mode import 360 dark (cincin fokus di judul, dua pilihan bertumpuk), S03 dengan banner *Data ini dibaca tanpa AI* dan dua masa kerja, S06 *Analisis tidak selesai* dengan *Coba lagi* dan *Buat pencapaian secara manual*, S08 konflik dengan isi *Judul* lokal tetap ada, dan dialog S12 berisi hitungan data. Header dan tautan lewati yang tampak di tengah S08 dan S12 adalah artefak screenshot *full page* (M5-N5), bukan cacat layout.
+- **Temuan:** tidak ada P0 atau P1. Satu P2 (RV-PW) sudah diperbaiki. P3 M5-N1 sampai M5-N7 diterima sebagai follow-up.
+- **Kriteria 11–12:** reviewer tidak dapat membaca balik proyek pilot. Connector Supabase hanya menampilkan proyek `Workpulse` (`cotmocgufdxjtiuakwdh`, staging), dan pembacaan read-only terhadap proyek hosted ditolak oleh izin sesi. Bukti staging di T25 Fase 7 tidak berlaku untuk pilot (§2.2 butir 4).
+
+### Daftar kerja untuk PASSED
+
+Semuanya dikerjakan operator mengikuti [daftar periksa lingkungan pilot](M5-gate-pilot-environment.md). Bukti ditempel tanpa rahasia, dan setiap bukti mencantumkan project ref pilot.
+
+1. Urutan rilis: tanggal migration 37–38 diterapkan dan tanggal worker T26 terpasang di pilot, serta job import yang dibuat di antara keduanya (butir 1).
+2. `migration list` proyek pilot 38/38, dibaca balik (butir 2).
+3. Tag image web dan worker `sha-<commit>` dari `docker ps` di host pilot. Image harus memuat HEAD gate setelah branch ini di-merge ke `main` (butir 3).
+4. Konfigurasi Auth pilot: Site URL dan redirect `https://myworkpulse.my.id/auth/confirm`, dua template, SMTP kustom, dan bucket `workpulse-private` privat (butir 4).
+5. Smoke pilot dengan akun uji khusus: evidence `ready`, EICAR ditolak, import DOCX mode `rules`, export PDF beserta ekstraksi teks, penghapusan sampai hitungan nol, dan satu klik recovery dari kotak masuk nyata (butir 5).
+6. Backup: sha256 `backup.sh` di host pilot sama dengan `6e35778`, project ref `--db-url` adalah proyek pilot, baris cron, dua `backup: ok` dari cron pada dua hari berbeda setelah RV-B1 terpasang, dan daftar salinan tanpa yang lebih tua dari 29 hari (butir 6).
+7. Keputusan tertulis pemilik produk tentang mode AI pilot (butir 7).
+
+Setelah bukti masuk, reviewer memeriksa kesamaan project ref di semua bukti. Bila ada izin, reviewer juga menjalankan query read-only butir 11. Verdict lalu ditulis ulang tanpa perlu mengulang suite lokal, kecuali bila `main` sudah berubah.

@@ -1,5 +1,20 @@
 # WorkPulse Implementation Status
 
+## Gate M5 Pilot readiness: BLOCKED (lingkungan pilot), 21 Oktober 2026
+
+Verdict Gate M5: **BLOCKED**. Kriteria 1–10 dan 13 lulus lokal. Yang belum terbukti hanya kriteria 11 (lingkungan pilot `myworkpulse.my.id` sejalan dengan HEAD gate) dan 12 (retensi backup ≤ 30 hari di host pilot), dan keduanya butuh bukti operator yang dibaca balik.
+
+- Pelaksana Fase 0–7: Claude (Opus 5.5), branch `claude/m5-gate-review` dari `973e886`, belum di-push. Reviewer Fase 8: Claude (Opus 5.5) pada `a9e5ac4`.
+- Suite baru: `test:e2e:m5` (satu akun pilot dari daftar sampai login ditolak, semua baris, event, dan objek 0 setelah purge) dan `test:integration:m5` (7 skenario: metrik pilot, `rules` tanpa unit, penghapusan saat semua job aktif, retensi import, penarikan consent, isolasi, `ops:check`).
+- Temuan: tanpa P0/P1. Satu P2 diperbaiki: RV-PW (`f92cc04`), `"playwright": "latest"` dari commit Storybook membuat semua `pnpm test:e2e:*` di `main` gagal sebelum test pertama. Fix-nya mem-pin 1.63.0 dan menambah unit penjaga. P3 M5-N1 sampai M5-N7 dicatat.
+- Checks reviewer: lint, typecheck exit 0; unit 129/1181; integration `m5` 7, `release` 12, `account-deletion` 15; E2E `m5` 1, `release` 15. Pelaksana: regresi 52 command lulus, clean rebuild 38 migration 21/1725 dengan tipe identik, p95 lokal baca ≤ 154,7 ms dan simpan ≤ 91,2 ms.
+- Belum dijalankan: semua butir lingkungan pilot, p95 hosted, NVDA manusia, `test:ai:live`.
+- Risiko: `db:test` di database lokal bersama gagal 3 assertion karena data sisa akun lain (M5-N3), sedangkan clean rebuild lulus.
+
+Berikutnya: merge `claude/m5-gate-review` ke `main` (perlu karena RV-PW). Deploy ke staging lalu pilot, termasuk migration 37–38 bersama worker baru. Operator menjalankan [daftar periksa lingkungan pilot](verification/M5-gate-pilot-environment.md), lalu reviewer menulis ulang verdict. Production tetap terhalang sepuluh BLOCKER di checklist T25.
+
+[Laporan gate](verification/M5-gate-review.md), [rencana](verification/M5-gate-review-plan.md), receipt [Fase 0](verification/M5-gate-phase0-baseline.md) sampai [6](verification/M5-gate-phase6-pilot-environment.md).
+
 ## T25 Regression, aksesibilitas dan release handoff: DONE (lokal dan staging), 20 Oktober 2026
 
 Status T25: **DONE**. Bukti lokal 11 Oktober tetap berlaku (entry T25 di bawah). Staging terverifikasi 16-20 Oktober 2026. Satu pengecualian dari pemilik produk: p95 hosted tidak diukur, ditunda dan wajib sebelum production ("p95 hosted saya tunda sebagai pengecualian pemilik produk, wajib diukur sebelum production"). Release checklist tetap **tidak siap untuk production**, dengan sepuluh BLOCKER terbuka.
