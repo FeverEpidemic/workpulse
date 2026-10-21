@@ -2142,6 +2142,24 @@ a.dashboard-stat-card:hover,
   margin-top: var(--space-4);
 }
 
+/* T28: the confirmation replaces the two cards inside the same dialog. */
+.import-mode-confirm {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.import-mode-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.import-mode-confirm-actions > button {
+  min-height: 44px;
+}
+
 .ai-analysis {
   display: grid;
   gap: var(--space-3);

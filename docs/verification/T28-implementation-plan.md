@@ -162,16 +162,16 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 2: Dialog dan S02 (unit markup)
 
-- [ ] Test (gagal), via `renderToStaticMarkup`:
+- [x] Test (gagal), via `renderToStaticMarkup`:
   - Dialog `step="choose"` dengan `granted` menampilkan `rulesAiOff`; tanpa `granted` tidak.
   - `step="confirm"` menampilkan heading, body, dua tombol bervarian sama dengan urutan §2.2.4, heading dengan `tabindex="-1"`, tanpa `import.mode.shared`.
   - S02 pengguna consent: dropzone tampil, disclosure netral, dialog dirender.
   - S02 pengguna consent dengan kuota habis: dropzone dan Upload tampil, tidak hanya *Start manually*, `aiNotice` diteruskan.
   - Retry batch `ai` dengan `consent: false` menampilkan alasan consent.
-- [ ] Ubah assertion lama yang sengaja berubah: `import-start-ui.test.tsx` "keeps the AI disclosure and no mode dialog for a user who already consented" dan bagian `consented` di "keeps the upload open … limit is reached"; test kuota di `ai-usage-limits.test.tsx` yang mengharapkan hanya *Start manually*. Catat setiap perubahan dan alasannya di receipt.
-- [ ] Test copy: key §2.2.8 ada di en dan id, tanpa karakter em dash; key yang dihapus tidak dirujuk lagi di `src/`.
-- [ ] Implementasi §3.2 dan copy §2.2.8.
-- [ ] Receipt `T28-phase2-dialog-s02.md`, commit.
+- [x] Ubah assertion lama yang sengaja berubah: `import-start-ui.test.tsx` "keeps the AI disclosure and no mode dialog for a user who already consented" dan bagian `consented` di "keeps the upload open … limit is reached"; test kuota di `ai-usage-limits.test.tsx` yang mengharapkan hanya *Start manually*. Catat setiap perubahan dan alasannya di receipt.
+- [x] Test copy: key §2.2.8 ada di en dan id, tanpa karakter em dash; key yang dihapus tidak dirujuk lagi di `src/`.
+- [x] Implementasi §3.2 dan copy §2.2.8.
+- [x] Receipt `T28-phase2-dialog-s02.md`, commit.
 
 ### Fase 3: E2E dan aksesibilitas
 

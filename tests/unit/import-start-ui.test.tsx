@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/features/import/actions", () => ({ cancelImportAction: vi.fn(), retryImportAction: vi.fn() }));
 vi.mock("@/features/ai/actions", () => ({ setAiConsentAction: vi.fn() }));
 
-import { toImportView, type ImportBatchRow } from "@/domain/import/import-view";
+import { toImportView, withConsentWithdrawn, type ImportBatchRow } from "@/domain/import/import-view";
 import { chooseImportMode, ImportStart, importFailureKey, importUploadHeaders } from "@/features/import/import-start";
 import { t } from "@/i18n/messages";
 
@@ -151,27 +151,34 @@ describe("T26 S02 import screen: reading without AI", () => {
 
   it("explains both paths to a user without consent and offers the neutral choice, not the consent dialog", () => {
     const html = renderWith(toImportView({ batch: null, consent: false, now }), noConsent);
-    expect(html).toContain("If you allow AI, your CV text is sent to an external AI provider. If you don&#x27;t, WorkPulse reads it itself using fixed rules.");
+    expect(html).toContain("With AI, your CV text is sent to an external AI provider. Without AI, WorkPulse reads it itself using fixed rules.");
     expect(html).toContain("How should we read your CV?");
     expect(html).not.toContain(t("en", "ai.consent.dialogTitle"));
     const id = renderWith(toImportView({ batch: null, consent: false, now }), noConsent, {}, "id");
-    expect(id).toContain("Kalau Anda mengizinkan AI, teks CV dikirim ke penyedia AI eksternal.");
+    expect(id).toContain("Dengan AI, teks CV dikirim ke penyedia AI eksternal.");
   });
 
-  it("keeps the AI disclosure and no mode dialog for a user who already consented", () => {
+  // T28 (intended change): this test used to assert the AI-only disclosure and no mode dialog for a consented user.
+  it("gives a user who already consented the same disclosure and the same choice on upload", () => {
     const html = renderWith(toImportView({ batch: null, consent: true, now }), consent);
-    expect(html).toContain(t("en", "import.disclosure"));
-    expect(html).not.toContain("How should we read your CV?");
-    expect(html).not.toContain("fixed rules");
+    expect(html).toContain('class="import-dropzone"');
+    expect(html).toContain("With AI, your CV text is sent to an external AI provider. Without AI, WorkPulse reads it itself using fixed rules.");
+    expect(html).toContain("How should we read your CV?");
+    expect(html).toContain("This also turns off AI for activity analysis.");
+    expect(renderWith(toImportView({ batch: null, consent: false, now }), noConsent)).not.toContain("This also turns off AI");
   });
 
-  it("keeps the upload open without consent even when the AI import limit is reached", () => {
+  // T28 (intended change): a consented user at the limit used to get only Start manually.
+  it("keeps the upload open at the AI import limit with or without consent, and disables only Use AI", () => {
     const usage = { bucket: "import", dayUsed: 3, dayLimit: 3, monthUsed: 3, monthLimit: 5, limitReason: "daily", resetsAt: "2026-09-30T00:00:00Z" };
-    const html = renderWith(toImportView({ batch: null, consent: false, now }), noConsent, { usage, timeZone: "UTC" });
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>Upload and extract/);
-    expect(html).toContain("Read without AI");
-    const consented = renderWith(toImportView({ batch: null, consent: true, now }), consent, { usage, timeZone: "UTC" });
-    expect(consented).not.toContain("Upload and extract");
+    for (const [grant, consented] of [[noConsent, false], [consent, true]] as const) {
+      const html = renderWith(toImportView({ batch: null, consent: consented, now }), grant, { usage, timeZone: "UTC" });
+      expect(html).toContain('class="import-dropzone"');
+      expect(html).toMatch(/<button[^>]*disabled[^>]*>Upload and extract/);
+      expect(html).toContain("CV import limit reached");
+      expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Use AI<\/button>/);
+      expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Read without AI<\/button>/);
+    }
   });
 
   it("notes a rules result and uses the rules copy for an empty result, only for rules batches", () => {
@@ -195,6 +202,28 @@ describe("T26 S02 import screen: reading without AI", () => {
     const html = renderWith(transient, noConsent, { usage, timeZone: "UTC" });
     expect(html).toMatch(/<button[^>]*>Retry<\/button>/);
     expect(html).not.toMatch(/<button[^>]*disabled[^>]*>Retry/);
+  });
+});
+
+describe("T28 S02 after consent is withdrawn in the page", () => {
+  const failedAi = batch({ status: "failed", stage: "extracting", error_code: "AI_UNAVAILABLE", expires_at: "2026-09-30T00:00:00Z" });
+
+  it("blocks Retry of a transient ai failure with the consent reason, as a reload would", () => {
+    const before = toImportView({ batch: failedAi, consent: true, now });
+    expect(before.canRetry).toBe(true);
+    const after = withConsentWithdrawn(before);
+    expect(after).toEqual(toImportView({ batch: failedAi, consent: false, now }));
+    expect(after.retryBlockReason).toBe("consent");
+    expect(after.canRetry).toBe(false);
+  });
+
+  it("leaves rules batches, other states and an earlier block reason alone", () => {
+    const rules = toImportView({ batch: batch({ ...failedAi, extraction_mode: "rules", error_code: "SCANNER_UNAVAILABLE" }), consent: true, now });
+    expect(withConsentWithdrawn(rules)).toBe(rules);
+    const waiting = toImportView({ batch: batch(), consent: true, now });
+    expect(withConsentWithdrawn(waiting)).toBe(waiting);
+    const exhausted = toImportView({ batch: batch({ ...failedAi, retry_count: 3 }), consent: true, now });
+    expect(withConsentWithdrawn(exhausted)).toBe(exhausted);
   });
 });
 
