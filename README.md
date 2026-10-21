@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) done: local release evidence complete and staging verified, with hosted p95 deferred by the product owner as a production blocker; not production-ready. Pilot AI usage limits (decision 0032), T26 CV import without AI (decision 0033) and T27 mobile bottom tab bar (decision 0035) done locally.** Auth/profile,
+Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) done: local release evidence complete and staging verified, with hosted p95 deferred by the product owner as a production blocker; not production-ready. Pilot AI usage limits (decision 0032), T26 CV import without AI (decision 0033), T27 mobile bottom tab bar (decision 0035) and T28 import mode choice on every upload (decision 0036) done locally.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size

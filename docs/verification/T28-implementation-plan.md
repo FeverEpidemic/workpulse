@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 21 Oktober 2026
-- Status plan: **siap dieksekusi**. Belum ada kode yang diubah.
+- Status plan: **DONE** (21 Oktober 2026). Fase 0-5 selesai, gate review PASS, remediasi RV1-RV4 selesai; lihat [bukti](T28-import-mode-choice.md) dan [decision 0036](../decisions/0036-t28-import-mode-choice.md).
 - Dependensi: T26 **DONE** (dialog pilihan netral, batch `rules`), batas pemakaian AI (decision 0032) **DONE**, T27 **DONE** dan sudah di `main` (`f9fff79`).
 - Asal task: penambahan scope oleh pengguna pada 21 Oktober 2026, setelah uji import di staging. T28 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Konsep disetujui di chat per bagian: pilihan di setiap import, Tanpa AI mencabut consent AI global, langkah konfirmasi sebelum pencabutan.
 - Eksekutor: satu agent **Claude**. Semua fase dikerjakan berurutan tanpa delegasi.
@@ -194,9 +194,9 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 5: Draft dokumen (setelah gate lulus)
 
-- [ ] Tulis `docs/decisions/0036-t28-import-mode-choice.md`: mengubah 0033 #2 (dialog untuk semua pengguna; Tanpa AI mencabut consent global setelah konfirmasi) dan memperluas 0033 #10 (kuota habis untuk pengguna consent). Sebut perilaku `CONSENT_WITHDRAWN` untuk job yang sedang berjalan.
-- [ ] Tulis `docs/verification/T28-import-mode-choice.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
-- [ ] Commit.
+- [x] Tulis `docs/decisions/0036-t28-import-mode-choice.md`: mengubah 0033 #2 (dialog untuk semua pengguna; Tanpa AI mencabut consent global setelah konfirmasi) dan memperluas 0033 #10 (kuota habis untuk pengguna consent). Sebut perilaku `CONSENT_WITHDRAWN` untuk job yang sedang berjalan.
+- [x] Tulis `docs/verification/T28-import-mode-choice.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
+- [x] Commit.
 
 ## 6. Fixture
 
