@@ -145,13 +145,13 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 0: Baseline (tanpa edit kode)
 
-- [ ] `git status` bersih untuk path T28 (catat file lain yang kotor, jangan disentuh); branch kerja `claude/t28-import-mode-choice` dari `main`.
-- [ ] Parity migration lokal **38/38**, migration terakhir `20261019090000_t26_import_rules_extraction.sql`.
-- [ ] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari entry T27: unit **134/1261**. Catat angka aktual.
-- [ ] Jalankan `pnpm test:e2e:import`, `test:e2e:import-review`, `test:e2e:ai`, `test:e2e:m3`, `test:e2e:release`. Harapan dari entry T26/T27: `import` 11, `import-review` 10, `ai` 2, `m3` 2, `release` 21. Catat angka aktual dan prasyarat container (ClamAV, Gotenberg) di receipt.
-- [ ] Verifikasi rujukan file:baris di §2 dan §3 masih benar; selisih dicatat di receipt.
-- [ ] Hitung ulang test yang meng-upload sebagai pengguna consent (§4) dan daftar assertion yang akan berubah dengan sengaja.
-- [ ] Receipt `T28-phase0-baseline.md`.
+- [x] `git status` bersih untuk path T28 (catat file lain yang kotor, jangan disentuh); branch kerja `claude/t28-import-mode-choice` dari `main`.
+- [x] Parity migration lokal **38/38**, migration terakhir `20261019090000_t26_import_rules_extraction.sql`.
+- [x] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari entry T27: unit **134/1261**. Catat angka aktual.
+- [x] Jalankan `pnpm test:e2e:import`, `test:e2e:import-review`, `test:e2e:ai`, `test:e2e:m3`, `test:e2e:release`. Harapan dari entry T26/T27: `import` 11, `import-review` 10, `ai` 2, `m3` 2, `release` 21. Catat angka aktual dan prasyarat container (ClamAV, Gotenberg) di receipt.
+- [x] Verifikasi rujukan file:baris di §2 dan §3 masih benar; selisih dicatat di receipt.
+- [x] Hitung ulang test yang meng-upload sebagai pengguna consent (§4) dan daftar assertion yang akan berubah dengan sengaja.
+- [x] Receipt `T28-phase0-baseline.md`.
 
 ### Fase 1: Logika pilihan (unit)
 
