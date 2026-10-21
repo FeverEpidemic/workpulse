@@ -40,7 +40,18 @@ Bagian yang dijalankan (tanpa restart stack):
   - `amr` = `[{ "method": "password", "timestamp": <detik epoch> }]`. Bentuknya sama dengan yang dibaca `hasRecentMethod`, jadi `hasRecentOAuthProof` dapat memakai helper yang sama dengan method `oauth`.
   - `user.identities[].provider` = `["email"]` dan `app_metadata.providers` = `["email"]`. Keduanya terisi; plan §3.2 memakai `identities` dengan fallback `app_metadata.providers`, dan itu tetap.
 
-Bagian yang **tertunda**: blok `[auth.external.google]`, restart stack, dan `curl -I /auth/v1/authorize?provider=google`. Stack Supabase lokal dipakai bersama; saat Fase 0 sesi lain sedang menjalankan `playwright.release.config.ts` (proses node dengan `next start --port 3017` dan worker Playwright). Restart akan memutus suite itu. Belum terbukti juga bahwa `amr` login Google berisi `method = oauth`; itu hanya bisa dilihat dengan login Google nyata (smoke staging atau credential lokal).
+Bagian authorize sempat tertunda: stack Supabase lokal dipakai bersama, dan saat itu sesi lain sedang menjalankan `playwright.release.config.ts`. Pengguna meminta menunggu suite itu selesai. Setelah tidak ada proses Playwright/Next yang berjalan:
+
+- Blok `[auth.external.google]` (plan §3.1) ditambahkan ke `config.toml` worktree, belum di-commit (masuk commit Fase 1).
+- `supabase stop` exit 0, `pnpm db:start` exit 0, tanpa `db:reset`. Kedua env Google **tidak diset**: CLI tetap start, jadi placeholder tidak diperlukan.
+- `GET /auth/v1/settings`: `external.google = true`.
+- `GET /auth/v1/authorize?provider=google&redirect_to=http://127.0.0.1:3000/auth/confirm&code_challenge=…&code_challenge_method=s256` (redirect manual): **302** ke `accounts.google.com/o/oauth2/v2/auth`, parameter `client_id` (kosong), `redirect_to`, `redirect_uri`, `response_type`, `scope`, `state`. `redirect_uri` = `http://127.0.0.1:54321/auth/v1/callback`, `scope` = `email profile`.
+
+Temuan untuk plan: `code_challenge` **tidak** diteruskan ke Google. PKCE berlaku antara app dan Supabase; Supabase ke Google memakai `state`. Acceptance 3 dan Fase 5 diperbaiki: E2E memeriksa `code_challenge` pada request ke `/auth/v1/authorize` Supabase, dan memeriksa `redirect_uri` serta `state` pada request ke Google.
+
+Belum terbukti: bahwa `amr` login Google berisi `method = oauth`. Itu hanya bisa dilihat dengan login Google nyata (smoke staging atau credential lokal).
+
+Risiko lingkungan: checkout utama (T28) belum punya blok Google. Bila sesi lain me-restart stack dari checkout itu, provider Google lokal mati lagi sampai T29 di-merge.
 
 ## Acceptance terbukti
 
@@ -53,8 +64,8 @@ Belum ada acceptance T29; Fase 0 hanya baseline.
 
 ## Blocker
 
-Spike authorize Google menunggu jendela restart stack Supabase lokal yang tidak memutus sesi lain. Butuh persetujuan pengguna untuk waktunya.
+Tidak ada. (Sempat menunggu jendela restart stack; selesai setelah suite T28 berhenti.)
 
 ## Langkah berikutnya
 
-Setelah restart disetujui: tambahkan blok Google dengan placeholder env, `supabase stop` lalu `pnpm db:start` (tanpa `db:reset`), catat status dan host `Location` dari authorize, lalu lanjut Fase 1. Bila CLI menolak start, ikuti §8.
+Fase 1: helper `oauth-session.ts`, flag `isGoogleAuthEnabled()`, commit blok `config.toml` dan `.env.example`.
