@@ -244,7 +244,7 @@ Berubah: file di §2.1, `tests/unit/account-reauthenticate.test.ts` atau test se
 
 Yang sudah ada di `package.json`: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm worker:check`, `pnpm db:start`, `pnpm db:test`, `pnpm test:e2e:auth`, `pnpm test:e2e:ui`, `pnpm test:e2e:release` dan `pnpm test:e2e:m5` (cek nama persis di Fase 0), `pnpm test:integration:account-deletion`.
 
-Tidak ada script baru: `auth-google.spec.ts` ditambahkan ke pola file `test:e2e:auth`, sehingga script itu diubah dari satu file menjadi dua file. Catat perubahan itu di receipt.
+Script baru (ditetapkan di Fase 5): `pnpm test:e2e:auth-google` dengan `playwright.auth-google.config.ts` (port 3016, flag menyala). Rencana awal menambah spec ke `test:e2e:auth`, tetapi flag dibaca server dan suite `auth` harus tetap berjalan dengan flag mati; suite itu kini memastikan tombol Google tersembunyi.
 
 ## 8. Stop conditions
 
