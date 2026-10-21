@@ -86,13 +86,17 @@ describe("S02 import under the AI usage limit", () => {
     <ImportStart locale="en" initialView={toImportView({ batch, consent: true, now })} consent={consent} usage={usage} timeZone="Asia/Jakarta" />,
   );
 
-  it("replaces the drop area with the limit and makes manual entry the primary action", () => {
+  // T28 (intended change): this used to replace the drop area with the limit and only Start manually.
+  it("keeps the drop area and shows the limit on the AI card, so reading without AI stays open", () => {
     const html = render(null, limit);
+    expect(html).toContain('class="import-dropzone"');
+    expect(html).toContain("Upload and extract");
     expect(html).toContain("CV import limit reached");
     expect(html).toContain("You&#x27;ve used today&#x27;s 3 CV imports");
     expect(html).toContain("07:00");
-    expect(html).not.toContain("Upload and extract");
-    expect(html).toMatch(/class="button-primary" href="\/settings\/profile\?mode=onboarding"/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Use AI<\/button>/);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>Read without AI<\/button>/);
+    expect(html).not.toMatch(/class="button-primary" href="\/settings\/profile\?mode=onboarding"/);
   });
 
   it("hides Retry on a retriable failure while limited", () => {

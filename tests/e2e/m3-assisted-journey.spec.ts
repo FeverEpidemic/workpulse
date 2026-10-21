@@ -271,12 +271,16 @@ test("M3 malformed and unsupported files are refused in S02 without creating a b
   await page.getByRole("button", { name: /^(Sign in|Masuk)$/ }).click();
   await expect(page).toHaveURL(/\/onboarding\/import$/);
 
+  // T28: with consent the read-mode choice still opens; the server refuses these files after Use AI.
+  const useAi = page.getByRole("dialog", { name: "How should we read your CV?" }).getByRole("button", { name: "Use AI" });
   await page.locator('input[type="file"]').setInputFiles({ name: "cv.pdf", mimeType: "application/pdf", buffer: Buffer.from(`not a pdf ${CONTENT_SENTINEL}`) });
   await page.getByRole("button", { name: "Upload and extract" }).click();
+  await useAi.click();
   await expect(page.locator(".import-start [role='alert']")).toContainText("Only PDF and DOCX files are supported.");
   const docx = cvDocx();
   await page.locator('input[type="file"]').setInputFiles({ name: "cut.docx", mimeType: DOCX_MIME, buffer: docx.subarray(0, docx.length - 10) });
   await page.getByRole("button", { name: "Upload and extract" }).click();
+  await useAi.click();
   await expect(page.locator(".import-start [role='alert']")).toContainText("The file is damaged or could not be read.");
   expect(await batches(user.id)).toEqual([]);
   await expect(page.getByRole("link", { name: "Start manually" })).toBeVisible();

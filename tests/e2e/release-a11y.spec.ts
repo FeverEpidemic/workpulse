@@ -97,6 +97,8 @@ test.beforeAll(async ({ browser }, testInfo) => {
       await page.goto("/onboarding/import");
       await page.locator('input[type="file"]').setInputFiles({ name: "cv-contoh.pdf", mimeType: "application/pdf", buffer: cvPdf(2, CV_LINES) });
       await page.getByRole("button", { name: "Upload and extract" }).click();
+      // T28: the read-mode choice opens on every upload; S03 is checked with an AI batch as before.
+      await page.getByRole("dialog", { name: "How should we read your CV?" }).getByRole("button", { name: "Use AI" }).click();
       await expect(page.getByRole("status")).toHaveText("Waiting to start");
       expect((await drainImportWorker("valid")).claimed).toBeGreaterThan(0);
       await expect(page.getByRole("status")).toHaveText("Extraction finished", { timeout: 30_000 });

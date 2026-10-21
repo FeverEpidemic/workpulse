@@ -1,5 +1,22 @@
 # WorkPulse Implementation Status
 
+## T28 Pilihan Dengan AI / Tanpa AI di setiap import: DONE lokal, 21 Oktober 2026
+
+Status T28: **DONE** (acceptance lokal). Setiap Upload di S02 membuka dialog pilihan (*Pakai AI* / *Baca tanpa AI*) untuk semua pengguna. Pengguna consent yang memilih Pakai AI langsung upload `ai`. *Baca tanpa AI* dengan consent aktif mengganti isi dialog dengan konfirmasi *Matikan AI untuk akun Anda?*; setelah dikonfirmasi, consent AI global dicabut (analisis aktivitas ikut berhenti) lalu batch `rules` di-upload. Kuota import AI habis hanya menonaktifkan *Pakai AI*. Dialog terkunci selama pilihan diproses.
+
+- Pelaksana Fase 0-5: Claude (Opus 5.5). Gate review Claude (Opus 5.5) di sesi dan worktree terpisah pada `de511be`: **PASS**, tanpa P0-P2, empat P3 (G1-G4) diselesaikan di remediasi RV1-RV4 (`1e6ca91`..`bed98db`, di-fast-forward ke branch T28). Independensi terbatas (model sama).
+- Dependensi: T26, T27 **DONE**; batas pemakaian AI (decision 0032) **DONE**. T28 adalah penambahan scope pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5.
+- Scope: dialog di setiap upload, konfirmasi dan pencabutan consent, revisi profil di state, kuota habis, disclosure netral, sinkron Retry. Mengingat pilihan, pilihan mode di Retry, fallback otomatis, dan pengembalian unit AI di luar scope.
+- File: `src/features/import/{import-start.tsx,import-mode-dialog.tsx}`, `withConsentWithdrawn` di `src/domain/import/import-view.ts`, opsi `dismissible` di `src/components/ui/dialog.tsx`, `.import-mode-confirm*` di `globals.css`, 6 key copy en/id baru dan 2 dihapus; test unit dan E2E (`import-onboarding` +7 skenario; langkah *Use AI* di `import-review`, `m3`, `release-a11y`); aturan stack lokal di `README.md`/`AGENTS.md`.
+- Keputusan: [decision 0038](decisions/0038-t28-import-mode-choice.md) mengubah 0033 #2 (dialog untuk semua pengguna; Tanpa AI mencabut consent global setelah konfirmasi) dan memperluas 0033 #10 (kuota habis). Plan menulis 0036, tetapi 0036 dan 0037 dipakai Gate M5 di `main`; T28 dinomori ulang ke 0038 saat merge (receipt Fase 4, gate review, dan remediasi masih menyebut 0036). Tanpa migration (parity tetap 38), tanpa RPC, route, worker, atau dependency baru.
+- Checks: Fase 4 lint, typecheck, build exit 0; unit 134/1270; integration `import` 25, `ai` 13, `ai-usage` 9, `m3` 7; E2E `import` 16, `import-review` 10, `ai` 2, `ai-review` 11, `m2` 1, `m3` 2, `release` 21. Reviewer di worktree bersih: unit 134/1270, E2E `import` 16, `import-review` 10, `m3` 2, `release` 21. Remediasi: unit 134/1271, E2E `import` 18, `import-review` 10, `ai` 2, `release` 21. Setelah fast-forward: E2E `m3` 2, `ai-review` 11, `m2` 1.
+- Belum dijalankan: `test:e2e:evidence`, `account-deletion`, `test:pdf`, `test:perf` (domain tidak disentuh); integration ulang setelah remediasi (hanya client dan test); NVDA manusia; staging.
+- Risiko: Esc kedua yang dipaksa Chromium selama request menutup dialog; pencabutan yang sudah terkirim tetap selesai dan upload dilewati, state tetap jujur (decision 0038 #5, tidak diuji E2E). Rerun `test:e2e:import` setelah merge `main` (M5) gagal 14/18 karena storage lokal bersama kembali ke `v1.72.1` (sesi lain me-restart stack); kode T28 tidak berubah sejak bukti di atas.
+
+Berikutnya: push dan PR `claude/t28-import-mode-choice`, lalu deploy staging lewat alur T25 dan uji kedua jalur dengan CV nyata.
+
+[Rencana](verification/T28-implementation-plan.md), [bukti](verification/T28-import-mode-choice.md), [gate review](verification/T28-gate-review.md), [remediasi](verification/T28-review-remediation.md), receipt [Fase 0](verification/T28-phase0-baseline.md) sampai [4](verification/T28-phase4-regression.md).
+
 ## Gate M5 Pilot readiness: PASSED dengan pengecualian pemilik produk, 21 Oktober 2026
 
 Verdict Gate M5: **PASSED dengan pengecualian pemilik produk** ([decision 0037](decisions/0037-m5-owner-exceptions.md)). Kriteria 1–10 dan 13 lulus lokal. Kriteria 11 dibaca balik untuk parity, Auth, bucket, mode AI, health, dan image. Lima butir (E1 bukti backup lengkap, E2 import `rules` di pilot, E3 EICAR, E4 teks PDF, E5 nilai Auth di dashboard) dikecualikan pemilik produk dan wajib dibuktikan sebelum production. Tanpa pengecualian itu, verdict reviewer adalah BLOCKED. Kutipan pemilik produk: "Catat sebagai pengecualian pemilik produk seperti p95 di 0034, lalu tulis verdict PASSED dengan pengecualian."
@@ -1233,6 +1250,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T25 | Regression dan release handoff | DONE |
 | T26 | Import CV tanpa AI (parser aturan) | DONE |
 | T27 | Bottom tab bar mobile | DONE |
+| T28 | Pilihan Dengan AI / Tanpa AI di setiap import | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

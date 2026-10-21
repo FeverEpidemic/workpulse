@@ -123,3 +123,9 @@ export function toImportView(input: ImportViewInput): ImportView {
     extractionMode,
   };
 }
+
+/** T28: the view after consent is withdrawn in the page, the same as toImportView with consent false would give. */
+export function withConsentWithdrawn(view: ImportView): ImportView {
+  if (view.state !== "failed_retriable" || view.extractionMode === "rules" || view.retryBlockReason !== null) return view;
+  return { ...view, canRetry: false, retryBlockReason: "consent" };
+}
