@@ -1,5 +1,22 @@
 # WorkPulse Implementation Status
 
+## Gate M5 Pilot readiness: PASSED dengan pengecualian pemilik produk, 21 Oktober 2026
+
+Verdict Gate M5: **PASSED dengan pengecualian pemilik produk** ([decision 0037](decisions/0037-m5-owner-exceptions.md)). Kriteria 1–10 dan 13 lulus lokal. Kriteria 11 dibaca balik untuk parity, Auth, bucket, mode AI, health, dan image. Lima butir (E1 bukti backup lengkap, E2 import `rules` di pilot, E3 EICAR, E4 teks PDF, E5 nilai Auth di dashboard) dikecualikan pemilik produk dan wajib dibuktikan sebelum production. Tanpa pengecualian itu, verdict reviewer adalah BLOCKED. Kutipan pemilik produk: "Catat sebagai pengecualian pemilik produk seperti p95 di 0034, lalu tulis verdict PASSED dengan pengecualian."
+
+- Pelaksana Fase 0–7: Claude (Opus 5.5), branch `claude/m5-gate-review` dari `973e886`, PR #33. Reviewer Fase 8: Claude (Opus 5.5) pada `a9e5ac4`.
+- Suite baru: `test:e2e:m5` (satu akun pilot dari daftar sampai login ditolak, semua baris, event, dan objek 0 setelah purge) dan `test:integration:m5` (7 skenario: metrik pilot, `rules` tanpa unit, penghapusan saat semua job aktif, retensi import, penarikan consent, isolasi, `ops:check`).
+- Temuan: tanpa P0/P1. Satu P2 diperbaiki: RV-PW (`f92cc04`), `"playwright": "latest"` dari commit Storybook membuat semua `pnpm test:e2e:*` di `main` gagal sebelum test pertama. Fix-nya mem-pin 1.63.0 dan menambah unit penjaga. P3 M5-N1 sampai M5-N7 dicatat.
+- Checks reviewer: lint, typecheck exit 0; unit 129/1181; integration `m5` 7, `release` 12, `account-deletion` 15; E2E `m5` 1, `release` 15. Setelah merge `main` dengan T27: unit 135/1262, E2E `m5` 1, `release` 21. Pelaksana: regresi 52 command lulus, clean rebuild 38 migration 21/1725 dengan tipe identik, p95 lokal baca ≤ 154,7 ms dan simpan ≤ 91,2 ms.
+- Belum dijalankan: E1–E5 (dikecualikan), p95 hosted, NVDA manusia, `test:ai:live`.
+- Lingkungan pilot, dibaca balik reviewer pada 21 Oktober: proyek hosted `Workpulse` (`cotmocgufdxjtiuakwdh`) melayani `myworkpulse.my.id` dan menurut pemilik produk dipakai bersama staging. Migration 38/38 (termasuk 37 dan 38), signup sampai verify dan login berjalan, bucket privat, satu job AI import `succeeded`, `get_operational_health` semuanya 0. Image web dan worker `sha-f9fff79…` sama dengan ujung `main` (dari `docker ps` host). Backup: hanya baris `backup: ok` 18 dan 19 Oktober yang ditunjukkan. `internal.pilot_participants` masih 0.
+- Keputusan: [decision 0036](decisions/0036-shared-staging-pilot-project.md) menerima satu proyek untuk staging dan pilot 20 pengguna (menutup M5-E1). Syaratnya: migration hanya setelah lulus lokal dan setelah `backup: ok` hari itu, akun uji tidak didaftarkan `set_pilot_participant`, dan akun uji dihapus lewat S12 setelah smoke.
+- Risiko: migration yang lolos uji lokal tetapi salah langsung mengenai pengguna pilot, dan restore `pg_dump` tidak memulihkan Storage. `db:test` di database lokal bersama gagal 3 assertion karena data sisa akun lain (M5-N3), sedangkan clean rebuild lulus.
+
+Berikutnya: merge PR #33 ke `main` (perlu karena RV-PW). Disarankan menutup E1 dan E2 sebelum mendaftarkan peserta pilot pertama. Pilot berjalan, dan target metrik dievaluasi setelah 20 pengguna consenting (`T24-pilot-metrics-runbook.md`). Production tetap terhalang sepuluh BLOCKER di checklist T25 ditambah E1–E5.
+
+[Laporan gate](verification/M5-gate-review.md), decision [0036](decisions/0036-shared-staging-pilot-project.md) dan [0037](decisions/0037-m5-owner-exceptions.md), [rencana](verification/M5-gate-review-plan.md), receipt [Fase 0](verification/M5-gate-phase0-baseline.md) sampai [6](verification/M5-gate-phase6-pilot-environment.md).
+
 ## T27 Bottom tab bar mobile: DONE lokal, 21 Oktober 2026
 
 Status T27: **DONE** (acceptance lokal). Di ≤ 880 px, hamburger + drawer diganti header ringkas dan bottom tab bar lima slot (Dashboard, Activity, +, Projects, Profile) yang menyusut menjadi ikon saat scroll ke bawah. + membuka sheet composer dengan catatan langsung terfokus, menyimpan di tempat dengan toast, dan berbagi draft `quick-log-note` dengan `/activity/new`. Achievements, Timeline, CV, tema, dan keluar pindah ke sheet Menu lainnya dari header Profile. Desktop tidak berubah.
