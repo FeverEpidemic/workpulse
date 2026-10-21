@@ -8,7 +8,7 @@ const PASSWORD = "correct-horse-battery-1A!";
 const INPUT = { password: PASSWORD, confirmation: EMAIL };
 const PREVIEW = { activities: 2, achievements: 1, projects: 1, evidence_files: 3, import_batches: 0, has_cv: true, cv_exports: 1 };
 
-function setup(overrides: { verify?: string; begin?: unknown; ban?: unknown; global?: unknown; user?: unknown } = {}) {
+function setup(overrides: { verify?: string; begin?: unknown; ban?: unknown; global?: unknown; user?: unknown; amr?: unknown } = {}) {
   const calls: string[] = [];
   const verifyPassword = vi.fn(async () => {
     calls.push("verify");
@@ -31,6 +31,10 @@ function setup(overrides: { verify?: string; begin?: unknown; ban?: unknown; glo
     return { error: null };
   });
   const clientRpc = vi.fn(async (): Promise<{ data: unknown; error: unknown }> => ({ data: [PREVIEW], error: null }));
+  const readAmr = vi.fn(async () => {
+    calls.push("amr");
+    return overrides.amr ?? null;
+  });
   const deps = {
     client: {
       auth: { getUser: async () => overrides.user ?? { data: { user: { id: USER, email: EMAIL } }, error: null } },
@@ -39,9 +43,10 @@ function setup(overrides: { verify?: string; begin?: unknown; ban?: unknown; glo
     admin: { rpc: adminRpc, auth: { admin: { updateUserById } } },
     auth: { signOutGlobal, signOutLocal },
     verifyPassword,
+    readAmr,
     correlationId: "11111111-1111-4111-8111-111111111111",
   } as unknown as AccountDeletionDeps;
-  return { service: createAccountDeletionService(deps), calls, verifyPassword, adminRpc, updateUserById, signOutGlobal, signOutLocal, clientRpc };
+  return { service: createAccountDeletionService(deps), calls, verifyPassword, readAmr, adminRpc, updateUserById, signOutGlobal, signOutLocal, clientRpc };
 }
 
 async function codeOf(promise: Promise<unknown>): Promise<string> {
@@ -135,5 +140,57 @@ describe("T23 account deletion service", () => {
       expect((error as AccountDeletionError).messageKey).toBe("account.delete.error.invalidPassword");
       expect((error as AccountDeletionError).correlationId).toBe("11111111-1111-4111-8111-111111111111");
     }
+  });
+});
+
+describe("T29 account deletion with a fresh Google sign-in", () => {
+  const now = () => Math.floor(Date.now() / 1000);
+  const GOOGLE_INPUT = { method: "google", confirmation: EMAIL };
+  const googleOnly = { data: { user: { id: USER, email: EMAIL, identities: [{ provider: "google" }] } }, error: null };
+  const withPassword = { data: { user: { id: USER, email: EMAIL, identities: [{ provider: "email" }, { provider: "google" }] } }, error: null };
+
+  it("deletes a Google-only account after an OAuth sign-in in the last five minutes, without a password", async () => {
+    const { service, calls, verifyPassword } = setup({ user: googleOnly, amr: [{ method: "oauth", timestamp: now() - 60 }] });
+    await expect(service.deleteAccount(GOOGLE_INPUT)).resolves.toEqual({ revokeDeferred: false });
+    expect(calls).toEqual(["amr", "begin_account_deletion", "ban", "signOutGlobal", "signOutLocal"]);
+    expect(verifyPassword).not.toHaveBeenCalled();
+  });
+
+  it("asks for a new Google confirmation when the sign-in is older or not an OAuth one", async () => {
+    for (const amr of [[{ method: "oauth", timestamp: now() - 301 }], [{ method: "password", timestamp: now() }], null]) {
+      const { service, calls } = setup({ user: googleOnly, amr });
+      await expect(codeOf(service.deleteAccount(GOOGLE_INPUT))).resolves.toBe("REAUTH_REQUIRED");
+      expect(calls).toEqual(["amr"]);
+    }
+  });
+
+  it("checks the typed email before the sign-in proof", async () => {
+    const { service, calls } = setup({ user: googleOnly, amr: [{ method: "oauth", timestamp: now() }] });
+    await expect(codeOf(service.deleteAccount({ method: "google", confirmation: "budi@example.com" }))).resolves.toBe("CONFIRMATION_MISMATCH");
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses the Google method for an account that has a password", async () => {
+    const { service, calls } = setup({ user: withPassword, amr: [{ method: "oauth", timestamp: now() }] });
+    await expect(codeOf(service.deleteAccount(GOOGLE_INPUT))).resolves.toBe("VALIDATION");
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses the Google method for an account without a Google identity", async () => {
+    const emailOnly = { data: { user: { id: USER, email: EMAIL, identities: [{ provider: "email" }] } }, error: null };
+    const { service, calls } = setup({ user: emailOnly, amr: [{ method: "oauth", timestamp: now() }] });
+    await expect(codeOf(service.deleteAccount(GOOGLE_INPUT))).resolves.toBe("VALIDATION");
+    expect(calls).toEqual([]);
+  });
+
+  it("keeps the password path for an account with both identities", async () => {
+    const { service, calls } = setup({ user: withPassword });
+    await expect(service.deleteAccount(INPUT)).resolves.toEqual({ revokeDeferred: false });
+    expect(calls[0]).toBe("verify");
+  });
+
+  it("maps REAUTH_REQUIRED to its own message", async () => {
+    const { service } = setup({ user: googleOnly, amr: null });
+    await expect(service.deleteAccount(GOOGLE_INPUT)).rejects.toMatchObject({ messageKey: "account.delete.error.reauthRequired" });
   });
 });

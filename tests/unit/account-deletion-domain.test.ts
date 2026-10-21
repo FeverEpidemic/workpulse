@@ -44,7 +44,15 @@ describe("T23 account deletion domain", () => {
 
   it("lists the error codes the service and the actions use", () => {
     expect([...ACCOUNT_DELETION_ERROR_CODES]).toEqual([
-      "VALIDATION", "CONFIRMATION_MISMATCH", "INVALID_PASSWORD", "RATE_LIMITED", "UNAUTHENTICATED", "UNAVAILABLE",
+      "VALIDATION", "CONFIRMATION_MISMATCH", "INVALID_PASSWORD", "RATE_LIMITED", "UNAUTHENTICATED", "UNAVAILABLE", "REAUTH_REQUIRED",
     ]);
+  });
+
+  it("accepts the password input as before and a Google input without a password (T29)", () => {
+    expect(accountDeletionInputSchema.safeParse({ password: "x", confirmation: "a@b.c" }).success).toBe(true);
+    expect(accountDeletionInputSchema.safeParse({ method: "google", confirmation: "a@b.c" }).success).toBe(true);
+    expect(accountDeletionInputSchema.safeParse({ method: "google", confirmation: "a@b.c", password: "x" }).success).toBe(false);
+    expect(accountDeletionInputSchema.safeParse({ method: "google", confirmation: "" }).success).toBe(false);
+    expect(accountDeletionInputSchema.safeParse({ method: "github", confirmation: "a@b.c" }).success).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ const PASSWORD = "correct-horse-battery-1A!";
 const IDLE = { status: "idle" } as const;
 
 const getUser = vi.fn();
+const getClaims = vi.fn();
 const signOut = vi.fn();
 const clientRpc = vi.fn();
 const adminRpc = vi.fn();
@@ -29,7 +30,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/server/supabase/server", () => ({
   createSupabaseServerClient: async () => ({
-    auth: { getUser: () => getUser(), signOut: (...args: unknown[]) => signOut(...args) },
+    auth: { getUser: () => getUser(), getClaims: () => getClaims(), signOut: (...args: unknown[]) => signOut(...args) },
     rpc: (...args: unknown[]) => clientRpc(...args),
   }),
 }));
@@ -63,7 +64,8 @@ async function redirectOf(promise: Promise<unknown>): Promise<string | null> {
 
 describe("T23 account deletion actions", () => {
   beforeEach(() => {
-    for (const mock of [getUser, signOut, clientRpc, adminRpc, updateUserById, verifyAccountPassword, deleteCookie, setCookie]) mock.mockReset();
+    for (const mock of [getUser, getClaims, signOut, clientRpc, adminRpc, updateUserById, verifyAccountPassword, deleteCookie, setCookie]) mock.mockReset();
+    getClaims.mockResolvedValue({ data: { claims: { amr: [] } }, error: null });
     getUser.mockResolvedValue({ data: { user: { id: USER, email: EMAIL } }, error: null });
     signOut.mockResolvedValue({ error: null });
     adminRpc.mockResolvedValue({ data: [{ requested_at: "2026-10-09T00:00:00Z", already_requested: false }], error: null });
@@ -135,6 +137,28 @@ describe("T23 account deletion actions", () => {
     const state = await deleteAccountAction(IDLE, form({ password: PASSWORD, confirmation: EMAIL }));
     expect(JSON.stringify(state)).not.toContain(PASSWORD);
     expect(JSON.stringify(state)).not.toContain(EMAIL);
+  });
+
+  it("T29: deletes a Google-only account with a fresh OAuth claim and no password", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: USER, email: EMAIL, identities: [{ provider: "google" }] } }, error: null });
+    getClaims.mockResolvedValue({ data: { claims: { amr: [{ method: "oauth", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null });
+    const target = await redirectOf(deleteAccountAction(IDLE, form({ method: "google", confirmation: EMAIL })));
+    expect(target).toBe("/sign-in?notice=accountDeleted");
+    expect(verifyAccountPassword).not.toHaveBeenCalled();
+    expect(adminRpc).toHaveBeenCalledWith("begin_account_deletion", { p_user_id: USER });
+  });
+
+  it("T29: returns REAUTH_REQUIRED without touching the account when the Google sign-in is stale", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: USER, email: EMAIL, identities: [{ provider: "google" }] } }, error: null });
+    getClaims.mockResolvedValue({ data: { claims: { amr: [{ method: "oauth", timestamp: Math.floor(Date.now() / 1000) - 600 }] } }, error: null });
+    const state = await deleteAccountAction(IDLE, form({ method: "google", confirmation: EMAIL }));
+    expect(state).toMatchObject({ status: "error", error: { code: "VALIDATION", messageKey: "account.delete.error.reauthRequired" } });
+    expect(adminRpc).not.toHaveBeenCalled();
+  });
+
+  it("T29: an unknown method still takes the password path", async () => {
+    const state = await deleteAccountAction(IDLE, form({ method: "github", confirmation: EMAIL }));
+    expect(state).toMatchObject({ status: "error", error: { fieldErrors: { password: "account.delete.error.passwordRequired" } } });
   });
 
   it("returns the preview counts for the dialog", async () => {

@@ -14,6 +14,7 @@ const noticeKeys: Record<string, MessageKey> = {
   accountDeleted: "auth.accountDeleted",
   accountDeleting: "auth.accountDeleting",
   invalidRecovery: "auth.invalidRecovery",
+  oauthFailed: "auth.oauthFailed",
   serviceUnavailable: "error.unavailable",
 };
 

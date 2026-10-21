@@ -28,7 +28,8 @@ export interface AuthAdapter {
   updatePassword(password: string): Promise<{ error: AuthError | null }>;
 }
 
-function providersOf(user: { identities?: { provider?: unknown }[] | null; app_metadata?: { providers?: unknown } | null }): string[] {
+/** Linked sign-in methods of a Supabase user, from `identities`, else `app_metadata.providers`. */
+export function authProviders(user: { identities?: { provider?: unknown }[] | null; app_metadata?: { providers?: unknown } | null }): string[] {
   const fromIdentities = (user.identities ?? []).map((identity) => identity.provider).filter((p): p is string => typeof p === "string");
   if (fromIdentities.length > 0) return fromIdentities;
   const fromMetadata = user.app_metadata?.providers;
@@ -44,7 +45,7 @@ export function createAuthAdapter(client: SupabaseClient<Database>): AuthAdapter
           ? {
               id: data.user.id,
               email: data.user.email,
-              providers: providersOf(data.user),
+              providers: authProviders(data.user),
               fullName: googleDisplayNameSuggestion(data.user.user_metadata, PROFILE_FIELD_LIMITS.displayName),
             }
           : null,

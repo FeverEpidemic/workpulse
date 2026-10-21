@@ -36,6 +36,10 @@ async function buildService() {
       admin,
       auth: createAuthAdapter(client),
       verifyPassword: (input) => verifyAccountPassword(input),
+      readAmr: async () => {
+        const { data, error } = await client.auth.getClaims();
+        return error ? null : data?.claims.amr ?? null;
+      },
     }),
   };
 }
@@ -50,22 +54,26 @@ function failure(error: unknown): ActionState {
   }
   const code: ErrorCode = error.code === "RATE_LIMITED" ? "RATE_LIMITED"
     : error.code === "UNAUTHENTICATED" ? "UNAUTHENTICATED"
-    : error.code === "VALIDATION" ? "VALIDATION"
+    : error.code === "VALIDATION" || error.code === "REAUTH_REQUIRED" ? "VALIDATION"
     : "UNAVAILABLE";
   return actionFailure(code, error.messageKey);
 }
 
-/** S12 "Delete account": reauthenticate, mark the account deleting, revoke every session, then leave the workspace. */
+/**
+ * S12 "Delete account": reauthenticate (password, or a fresh Google sign-in for an account without one), mark the
+ * account deleting, revoke every session, then leave the workspace.
+ */
 export async function deleteAccountAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const password = formText(formData, "password");
   const confirmation = formText(formData, "confirmation");
-  if (password === "") {
+  const google = formText(formData, "method") === "google";
+  const password = formText(formData, "password");
+  if (!google && password === "") {
     return actionFailure("VALIDATION", "error.validation", { fieldErrors: { password: "account.delete.error.passwordRequired" } });
   }
 
   try {
     const { service } = await buildService();
-    await service.deleteAccount({ password, confirmation });
+    await service.deleteAccount(google ? { method: "google", confirmation } : { password, confirmation });
     clearAuthCookies(await cookies());
     redirect("/sign-in?notice=accountDeleted");
   } catch (error) {
