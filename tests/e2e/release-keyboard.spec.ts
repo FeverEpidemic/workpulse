@@ -190,18 +190,23 @@ test("every dialog opens with Enter or Space, closes with Escape and gives focus
   const findings = new Set<string>();
   await signIn(page, richUser, "/dashboard");
 
-  // The mobile navigation drawer.
+  // T27 mobile sheets: the Quick log composer from the tab bar and the More menu on Profile.
   await page.setViewportSize({ width: 360, height: 820 });
-  await page.goto("/dashboard");
-  const menu = page.getByRole("button", { name: "Open navigation menu" });
-  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
-  for (const key of ["Enter", "Space"]) {
-    await activate(page, menu, findings, key);
-    await expect(drawer, `drawer opens with ${key}`).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(drawer).toBeHidden();
-    await expect(menu, `focus returns to the menu button after ${key}`).toBeFocused();
-    await settle(page);
+  for (const [path, trigger, sheetName] of [
+    ["/dashboard", page.getByRole("navigation", { name: "Main tabs" }).getByRole("button", { name: "Quick log", exact: true }), "Quick log"],
+    ["/settings/profile", page.getByRole("button", { name: "Open more menu" }), "More"],
+  ] as const) {
+    await page.goto(path);
+    const sheet = page.getByRole("dialog", { name: sheetName });
+    for (const key of ["Enter", "Space"]) {
+      await activate(page, trigger, findings, key);
+      await expect(sheet, `${sheetName} opens with ${key}`).toBeVisible();
+      if (sheetName === "Quick log") await expect(sheet.getByLabel("Work note"), "the note takes focus").toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(sheet).toBeHidden();
+      await expect(trigger, `focus returns to the ${sheetName} trigger after ${key}`).toBeFocused();
+      await settle(page);
+    }
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 
