@@ -132,12 +132,34 @@ Setelah T27 (PR #32) masuk `main`, `origin/main` di-merge ke branch gate (`11719
 - **RV-PW (`f92cc04`) diterima.** Diff mengganti `"playwright": "latest"` dengan `1.63.0`, menurunkan `playwright` dan `playwright-core` dari 1.64.0 ke 1.63.0 di lockfile (termasuk peer `@vitest/browser-playwright`), dan menambah unit penjaga yang mewajibkan versi `playwright` sama dengan `@playwright/test`. Gejala yang sama tercatat di catatan lingkungan lokal reviewer sebelum gate. Seluruh E2E yang diulang lulus dengan pin ini.
 - **Screenshot journey** dibuka reviewer: dialog mode import 360 dark (cincin fokus di judul, dua pilihan bertumpuk), S03 dengan banner *Data ini dibaca tanpa AI* dan dua masa kerja, S06 *Analisis tidak selesai* dengan *Coba lagi* dan *Buat pencapaian secara manual*, S08 konflik dengan isi *Judul* lokal tetap ada, dan dialog S12 berisi hitungan data. Header dan tautan lewati yang tampak di tengah S08 dan S12 adalah artefak screenshot *full page* (M5-N5), bukan cacat layout.
 - **Temuan:** tidak ada P0 atau P1. Satu P2 (RV-PW) sudah diperbaiki. P3 M5-N1 sampai M5-N7 diterima sebagai follow-up.
-- **Kriteria 11–12:** reviewer tidak dapat membaca balik proyek pilot. Connector Supabase hanya menampilkan proyek `Workpulse` (`cotmocgufdxjtiuakwdh`, staging), dan pembacaan read-only terhadap proyek hosted ditolak oleh izin sesi. Bukti staging di T25 Fase 7 tidak berlaku untuk pilot (§2.2 butir 4).
+- **Kriteria 11–12:** sebagian sudah dibaca balik reviewer. Lihat bagian berikut.
+
+### Bukti lingkungan pilot (dibaca balik, 21 Oktober 2026)
+
+Pemilik produk mengonfirmasi bahwa pilot dan staging memakai **satu** proyek Supabase, yaitu `Workpulse` (`cotmocgufdxjtiuakwdh`, ap-northeast-2, Free). Log Auth proyek itu mendukung hal ini: 331 dari 340 baris dalam 24 jam terakhir menyebut `myworkpulse`. Reviewer membaca proyek tersebut lewat connector Supabase secara read-only, setelah diminta pengguna.
+
+| Butir daftar periksa | Hasil | Bukti |
+| --- | --- | --- |
+| 2. Parity | **PASS** | `list_migrations`: 38 versi, sama persis dengan `supabase/migrations/`, termasuk `20261018090000_ai_usage_limits` dan `20261019090000_t26_import_rules_extraction` |
+| 4. Auth dan bucket | **PASS sebagian** | Log Auth 20 Oktober 23:26 UTC: `/signup` 200 dengan redirect `…myworkpulse…/auth/confirm`, lalu `/verify` 200 empat belas detik kemudian. Hari ini sembilan `Login` dan `/token` 200. Dua akun, keduanya terkonfirmasi. Bucket `workpulse-private` privat, batas 50 MiB. Nilai Site URL dan template email tidak terbaca lewat connector |
+| 5. Smoke | **Sebagian** | `https://myworkpulse.my.id/api/health` mengembalikan `{"status":"ok","service":"workpulse-web","version":"0.1.0"}`, dan ref Supabase tidak ada di bundle browser. Data hosted: 5 evidence `ready`, 1 export `succeeded`, 1 batch import mode `ai` `committed`. Belum terbukti: EICAR ditolak, import mode `rules`, ekstraksi teks PDF, penghapusan akun sampai nol, dan recovery |
+| 7. Mode AI | **Aktif, berjalan** | Satu `ai_jobs` jenis `import` berstatus `succeeded` (21 Oktober 05:02 UTC) dan 2 baris `internal.ai_usage`. Keputusan tertulis pemilik produk soal mode AI belum dilampirkan |
+| 9. Ops | **PASS (data)** | `get_operational_health`: delapan metrik bernilai 0. Cron `ops:check` dan kanal notifikasinya belum ditunjukkan |
+| 3. Image | **Menunggu** | Hanya terbaca dari host (M5-N1) |
+| 6. Backup | **Menunggu** | sha256 `backup.sh`, `crontab -l`, `backup.log`, dan daftar salinan dari host |
+
+**M5-E1 (P2, menunggu keputusan pemilik produk).** Staging dan pilot berbagi satu proyek Supabase, sehingga syarat "lulus smoke di staging lebih dulu" (§1.11) tidak dapat dipenuhi untuk database: setiap migration, smoke, dan akun uji langsung mengenai data pilot. Ada dua penyelesaian:
+
+- memisahkan staging ke proyek sendiri (paket Free membatasi dua proyek aktif per organisasi, dan slot kedua dipakai proyek lain); atau
+- decision baru yang menerima satu proyek untuk pilot 20 pengguna, dengan syarat: migration hanya setelah lulus lokal dan setelah backup hari itu `ok`, akun uji tidak didaftarkan `set_pilot_participant`, dan akun uji dihapus lewat S12 setelah smoke.
+
+Sisi positifnya, bukti staging T25 Fase 7 untuk database, Auth, dan bucket kini berlaku juga untuk pilot. Log backup 18–19 Oktober pun mencadangkan database yang sama, asalkan asal host dan versi script-nya ditunjukkan.
 
 ### Daftar kerja untuk PASSED
 
-Semuanya dikerjakan operator mengikuti [daftar periksa lingkungan pilot](M5-gate-pilot-environment.md). Bukti ditempel tanpa rahasia, dan setiap bukti mencantumkan project ref pilot.
+Semuanya dikerjakan operator mengikuti [daftar periksa lingkungan pilot](M5-gate-pilot-environment.md). Bukti ditempel tanpa rahasia, dan setiap bukti mencantumkan project ref pilot. Butir 2 sudah PASS, dan butir 4 dan 7 sebagian, menurut bagian bukti di atas.
 
+0. Keputusan pemilik produk untuk M5-E1: pisahkan staging, atau terima satu proyek lewat decision baru (0036).
 1. Urutan rilis: tanggal migration 37–38 diterapkan dan tanggal worker T26 terpasang di pilot, serta job import yang dibuat di antara keduanya (butir 1).
 2. `migration list` proyek pilot 38/38, dibaca balik (butir 2).
 3. Tag image web dan worker `sha-<commit>` dari `docker ps` di host pilot. Image harus memuat HEAD gate setelah branch ini di-merge ke `main` (butir 3).

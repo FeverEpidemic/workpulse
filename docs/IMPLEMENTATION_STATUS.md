@@ -9,7 +9,8 @@ Verdict Gate M5: **BLOCKED**. Kriteria 1–10 dan 13 lulus lokal. Yang belum ter
 - Temuan: tanpa P0/P1. Satu P2 diperbaiki: RV-PW (`f92cc04`), `"playwright": "latest"` dari commit Storybook membuat semua `pnpm test:e2e:*` di `main` gagal sebelum test pertama. Fix-nya mem-pin 1.63.0 dan menambah unit penjaga. P3 M5-N1 sampai M5-N7 dicatat.
 - Checks reviewer: lint, typecheck exit 0; unit 129/1181; integration `m5` 7, `release` 12, `account-deletion` 15; E2E `m5` 1, `release` 15. Setelah merge `main` dengan T27: unit 135/1262, E2E `m5` 1, `release` 21. Pelaksana: regresi 52 command lulus, clean rebuild 38 migration 21/1725 dengan tipe identik, p95 lokal baca ≤ 154,7 ms dan simpan ≤ 91,2 ms.
 - Belum dijalankan: semua butir lingkungan pilot, p95 hosted, NVDA manusia, `test:ai:live`.
-- Risiko: `db:test` di database lokal bersama gagal 3 assertion karena data sisa akun lain (M5-N3), sedangkan clean rebuild lulus.
+- Lingkungan pilot, dibaca balik reviewer pada 21 Oktober: proyek hosted `Workpulse` (`cotmocgufdxjtiuakwdh`) melayani `myworkpulse.my.id` dan menurut pemilik produk dipakai bersama staging. Migration 38/38 (termasuk 37 dan 38), signup sampai verify dan login berjalan, bucket privat, satu job AI import `succeeded`, `get_operational_health` semuanya 0. Image dan backup masih menunggu bukti dari host.
+- Risiko: staging dan pilot satu proyek (M5-E1, P2), jadi migration dan smoke langsung mengenai data pilot. Keputusan pemilik produk dibutuhkan. `db:test` di database lokal bersama gagal 3 assertion karena data sisa akun lain (M5-N3), sedangkan clean rebuild lulus.
 
 Berikutnya: merge `claude/m5-gate-review` ke `main` (perlu karena RV-PW). Deploy ke staging lalu pilot, termasuk migration 37–38 bersama worker baru. Operator menjalankan [daftar periksa lingkungan pilot](verification/M5-gate-pilot-environment.md), lalu reviewer menulis ulang verdict. Production tetap terhalang sepuluh BLOCKER di checklist T25.
 
