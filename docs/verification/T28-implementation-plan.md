@@ -188,9 +188,9 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 4: Regresi penuh dan Delivery Gate antislop
 
-- [ ] Regresi §7 lengkap; catat angka aktual.
-- [ ] Delivery Gate antislop (Block 1-4 dari `.claude/skills/antislop/SKILL.md`) di receipt, setiap PASS dengan bukti; plus checklist `antislop-copywriting` untuk copy §2.2.8. Klik-through setiap kontrol dialog dicatat per elemen (R-35).
-- [ ] Receipt `T28-phase4-regression.md`, commit. **Stop: gate review Claude.**
+- [x] Regresi §7 lengkap; catat angka aktual.
+- [x] Delivery Gate antislop (Block 1-4 dari `.claude/skills/antislop/SKILL.md`) di receipt, setiap PASS dengan bukti; plus checklist `antislop-copywriting` untuk copy §2.2.8. Klik-through setiap kontrol dialog dicatat per elemen (R-35).
+- [x] Receipt `T28-phase4-regression.md`, commit. **Stop: gate review Claude.**
 
 ### Fase 5: Draft dokumen (setelah gate lulus)
 
