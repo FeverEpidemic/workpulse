@@ -205,26 +205,46 @@ describe("T26 S02 upload steps", () => {
     });
   });
 
-  it("saves consent before an ai upload, never uploads when that fails, and uploads rules without consent", async () => {
+  const recorder = (errors: { save?: string; withdraw?: string } = {}) => {
     const calls: string[] = [];
-    const steps = (consentError: string | null) => ({
-      saveConsent: vi.fn(async () => { calls.push("consent"); return consentError; }),
+    const steps = {
+      saveConsent: vi.fn(async () => { calls.push("save"); return errors.save ?? null; }),
+      withdrawConsent: vi.fn(async () => { calls.push("withdraw"); return errors.withdraw ?? null; }),
       upload: vi.fn(async (mode: "ai" | "rules") => { calls.push(`upload:${mode}`); }),
-    });
-    const ok = steps(null);
-    expect(await chooseImportMode("ai", ok)).toBeNull();
-    expect(calls).toEqual(["consent", "upload:ai"]);
+    };
+    return { calls, steps };
+  };
 
-    calls.length = 0;
-    const refused = steps("Could not save.");
-    expect(await chooseImportMode("ai", refused)).toBe("Could not save.");
-    expect(calls).toEqual(["consent"]);
-    expect(refused.upload).not.toHaveBeenCalled();
+  it("without consent: Use AI saves consent then uploads ai, Read without AI uploads rules and never touches consent", async () => {
+    const ai = recorder();
+    expect(await chooseImportMode("ai", false, ai.steps)).toBeNull();
+    expect(ai.calls).toEqual(["save", "upload:ai"]);
 
-    calls.length = 0;
-    const rules = steps(null);
-    expect(await chooseImportMode("rules", rules)).toBeNull();
-    expect(calls).toEqual(["upload:rules"]);
-    expect(rules.saveConsent).not.toHaveBeenCalled();
+    const rules = recorder();
+    expect(await chooseImportMode("rules", false, rules.steps)).toBeNull();
+    expect(rules.calls).toEqual(["upload:rules"]);
+  });
+
+  // T28: with consent the dialog still opens; Use AI does not save consent again, Read without AI withdraws it first.
+  it("with consent: Use AI uploads ai at once, Read without AI withdraws consent then uploads rules", async () => {
+    const ai = recorder();
+    expect(await chooseImportMode("ai", true, ai.steps)).toBeNull();
+    expect(ai.calls).toEqual(["upload:ai"]);
+
+    const rules = recorder();
+    expect(await chooseImportMode("rules", true, rules.steps)).toBeNull();
+    expect(rules.calls).toEqual(["withdraw", "upload:rules"]);
+  });
+
+  it("returns the consent error and never uploads when saving or withdrawing consent fails", async () => {
+    const save = recorder({ save: "Could not save." });
+    expect(await chooseImportMode("ai", false, save.steps)).toBe("Could not save.");
+    expect(save.calls).toEqual(["save"]);
+    expect(save.steps.upload).not.toHaveBeenCalled();
+
+    const withdraw = recorder({ withdraw: "Reload to see the latest settings." });
+    expect(await chooseImportMode("rules", true, withdraw.steps)).toBe("Reload to see the latest settings.");
+    expect(withdraw.calls).toEqual(["withdraw"]);
+    expect(withdraw.steps.upload).not.toHaveBeenCalled();
   });
 });

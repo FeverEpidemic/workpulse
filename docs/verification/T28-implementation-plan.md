@@ -155,10 +155,10 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 1: Logika pilihan (unit)
 
-- [ ] Test `chooseImportMode` (gagal): empat kombinasi mode × consent (§2.2.2), urutan langkah, `withdrawConsent` gagal → tanpa upload dan pesan error dikembalikan, `saveConsent` gagal → tanpa upload.
-- [ ] Implementasi `chooseImportMode` baru; perbarui pemanggil.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
-- [ ] Receipt `T28-phase1-choice-logic.md`, commit.
+- [x] Test `chooseImportMode` (gagal): empat kombinasi mode × consent (§2.2.2), urutan langkah, `withdrawConsent` gagal → tanpa upload dan pesan error dikembalikan, `saveConsent` gagal → tanpa upload.
+- [x] Implementasi `chooseImportMode` baru; perbarui pemanggil.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
+- [x] Receipt `T28-phase1-choice-logic.md`, commit.
 
 ### Fase 2: Dialog dan S02 (unit markup)
 

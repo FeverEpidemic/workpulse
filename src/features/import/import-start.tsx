@@ -55,15 +55,22 @@ export function importUploadHeaders(mime: string, key: string, name: string, mod
 }
 
 /**
- * T26: what a choice in the mode dialog does. Use AI saves consent first and uploads only if that worked; Read
- * without AI uploads at once and never touches consent. Returns the consent error to show in the dialog, or null.
+ * T26/T28: what a choice in the mode dialog does. Use AI saves consent first when there is none; Read without AI
+ * withdraws consent first when there is one (only after the user confirmed that). The upload runs only if the consent
+ * step worked. Returns the consent error to show in the dialog, or null.
  */
 export async function chooseImportMode(
   mode: ImportExtractionMode,
-  steps: { saveConsent: () => Promise<string | null>; upload: (mode: ImportExtractionMode) => Promise<void> },
+  granted: boolean,
+  steps: {
+    saveConsent: () => Promise<string | null>;
+    withdrawConsent: () => Promise<string | null>;
+    upload: (mode: ImportExtractionMode) => Promise<void>;
+  },
 ): Promise<string | null> {
-  if (mode === "ai") {
-    const consentError = await steps.saveConsent();
+  const consentStep = mode === "ai" && !granted ? steps.saveConsent : mode === "rules" && granted ? steps.withdrawConsent : null;
+  if (consentStep) {
+    const consentError = await consentStep();
     if (consentError !== null) return consentError;
   }
   await steps.upload(mode);
@@ -103,6 +110,8 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
   const [modeError, setModeError] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [granted, setGranted] = useState(consent.granted);
+  /** The latest profile revision: a consent change bumps it, so the next change in this page must send the new one. */
+  const [profileRevision, setProfileRevision] = useState(consent.profileRevision);
   const [pending, startTransition] = useTransition();
   const input = useRef<HTMLInputElement>(null);
   const dropzone = useRef<HTMLDivElement>(null);
@@ -207,22 +216,28 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
     requestAnimationFrame(() => dropzone.current?.focus());
   };
 
-  /** A choice in the mode dialog: Use AI saves consent first, Read without AI uploads at once. */
+  /** Saves or withdraws AI consent; returns the message to show, or null once the new state is applied. */
+  const setConsent = async (choice: "allow" | "withdraw"): Promise<string | null> => {
+    const form = new FormData();
+    form.set("consent", choice);
+    form.set("expected_revision", String(profileRevision));
+    const state = await setAiConsentAction(IDLE_ACTION_STATE, form);
+    if (state.status !== "success") return state.status === "error" ? t(locale, state.error.messageKey) : t(locale, "common.error");
+    const revision = (state.data as { revision?: unknown } | undefined)?.revision;
+    if (typeof revision === "number") setProfileRevision(revision);
+    setGranted(choice === "allow");
+    return null;
+  };
+
+  /** A choice in the mode dialog; the consent step depends on whether consent is on (chooseImportMode). */
   const chooseMode = (mode: ImportExtractionMode) => {
     modeChoice.current = mode;
     setModePending(mode);
     setModeError("");
     startTransition(async () => {
-      const failure = await chooseImportMode(mode, {
-        saveConsent: async () => {
-          const form = new FormData();
-          form.set("consent", "allow");
-          form.set("expected_revision", String(consent.profileRevision));
-          const state = await setAiConsentAction(IDLE_ACTION_STATE, form);
-          if (state.status !== "success") return state.status === "error" ? t(locale, state.error.messageKey) : t(locale, "common.error");
-          setGranted(true);
-          return null;
-        },
+      const failure = await chooseImportMode(mode, granted, {
+        saveConsent: () => setConsent("allow"),
+        withdrawConsent: () => setConsent("withdraw"),
         upload: async (chosen) => {
           if (modeChoice.current !== chosen) return;
           setModeOpen(false);
