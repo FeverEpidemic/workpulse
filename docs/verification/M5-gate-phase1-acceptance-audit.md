@@ -61,7 +61,7 @@ Tidak ada baris **Tidak terbukti**. Dua baris *sebagian* hanya tertutup oleh buk
 | T25 7b | B7 | Nilai yang hanya dilaporkan | P3 | Fase 6 memberi label *dibaca balik* / *dilaporkan* |
 | T25 7b | RV-B1 di server | Status pemasangan script baru di host | Bagian kriteria §1.12 | Dibuktikan lewat sha256 di host pilot |
 | T25 closeout | C1–C4 | Prune pertama, versi script di server, jam cron, harness p95 | P3 | C2 menjadi syarat §1.12 untuk host pilot (sha256) |
-| T25 §3 | — | Cleanup setelah restore hosted; p95 staging; kanal notifikasi `ops:check` | P3 / BLOCKER production | Tidak menghalangi verdict pilot (§1 "tidak mencakup"); kanal notifikasi masuk daftar periksa Fase 6 butir 9 |
+| T25 §3 | tanpa ID | Cleanup setelah restore hosted; p95 staging; kanal notifikasi `ops:check` | P3 / BLOCKER production | Tidak menghalangi verdict pilot (§1 "tidak mencakup"); kanal notifikasi masuk daftar periksa Fase 6 butir 9 |
 | Batas AI | U1–U5 | pgTAP khusus, parse gagal memakai unit, baris kapasitas, entry status, staging belum dimigrasi | P3 | U5 masuk Fase 6 butir 1 (urutan rilis) |
 | T26 | N1 | T26 bertumpuk di branch usage limits | **Tertutup** | Keduanya sudah di `main` (`973e886` memuat `20261018090000` dan `20261019090000`) |
 | T26 | N2 | Migration dan worker harus naik bersamaan | **P3, syarat §1.11** | Pilot dilaporkan sudah di migration terakhir; Fase 6 butir 1 meminta waktu penerapan migration 37–38 dan waktu worker T26 terpasang, serta job import di antara keduanya. Bila ada job yang macet, P2 lingkungan |
