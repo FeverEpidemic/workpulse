@@ -8,7 +8,7 @@ import type { Database } from "../../src/server/supabase/database.types";
 import { CV_LINES, cvPdf, DOCX_MIME, emptyDocx, pdfFixture, rulesCvPdf } from "../import-fixtures";
 import { expectNoWcagViolations } from "./helpers/accessibility";
 import { drainImportWorker } from "./helpers/import-worker";
-import { assignAiPlan } from "../integration/ai-usage-support";
+import { assignAiPlan, usageSql } from "../integration/ai-usage-support";
 
 type Client = SupabaseClient<Database>;
 type User = { id: string; email: string; password: string };
@@ -74,6 +74,18 @@ async function chooseFile(page: Page, file: { name: string; mimeType: string; bu
 }
 
 const pdf = (name = "cv.pdf", bytes: Buffer = cvPdf(2)) => ({ name, mimeType: "application/pdf", buffer: bytes });
+
+const UPLOAD_LABELS = {
+  en: { upload: "Upload and extract", dialog: "How should we read your CV?", ai: "Use AI" },
+  id: { upload: "Unggah dan ekstrak", dialog: "Bagaimana CV Anda dibaca?", ai: "Pakai AI" },
+} as const;
+
+/** T28: every upload opens the read-mode choice, also with consent; these flows keep reading with AI. */
+async function uploadWithAi(page: Page, locale: "en" | "id" = "en") {
+  const labels = UPLOAD_LABELS[locale];
+  await page.getByRole("button", { name: labels.upload }).click();
+  await page.getByRole("dialog", { name: labels.dialog }).getByRole("button", { name: labels.ai }).click();
+}
 
 async function expectNoOverflow(page: Page, name: string) {
   await page.waitForLoadState("networkidle");
@@ -168,12 +180,12 @@ test("S02 unsupported, password-protected and duplicate files", async ({ page },
   await signIn(page, user);
 
   await chooseFile(page, { name: "cv.pdf", mimeType: "application/pdf", buffer: Buffer.from("plain text, not a pdf") });
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.locator(".import-start [role='alert']")).toContainText("Only PDF and DOCX files are supported.");
   expect(await batches(user.id)).toEqual([]);
 
   await chooseFile(page, pdf("locked.pdf", pdfFixture([CV_LINES], { encrypt: true })));
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   await drainImportWorker("valid");
   await expect(page.getByRole("status")).toHaveText("This file could not be imported", { timeout: 30_000 });
@@ -187,14 +199,14 @@ test("S02 unsupported, password-protected and duplicate files", async ({ page },
   await page.getByRole("button", { name: "Try another file" }).click();
   await expect(page.getByRole("button", { name: "CV file. Press Enter or Space to choose a file." })).toBeFocused();
   await chooseFile(page, pdf("first.pdf", bytes));
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   await page.getByRole("button", { name: "Cancel import" }).click();
   await page.getByRole("dialog", { name: "Cancel this import?" }).getByRole("button", { name: "Cancel import" }).click();
   await expect(page.getByRole("status")).toHaveText("Import cancelled");
   await page.getByRole("button", { name: "Try another file" }).click();
   await chooseFile(page, pdf("second.pdf", bytes));
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.getByText(/You already imported a file with the same content on/)).toBeVisible();
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
 });
@@ -203,7 +215,7 @@ test("S02 transient AI failure offers Retry on the same batch", async ({ page },
   const user = await createUser({ consent: true });
   await signIn(page, user);
   await chooseFile(page, pdf());
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   await drainImportWorker("unavailable");
   await expect(page.getByRole("status")).toHaveText("Extraction did not finish", { timeout: 30_000 });
@@ -220,7 +232,7 @@ test("S02 cancel while waiting keeps the batch cancelled after the worker runs",
   const user = await createUser({ consent: true });
   await signIn(page, user);
   await chooseFile(page, pdf());
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   const trigger = page.getByRole("button", { name: "Cancel import" });
   await trigger.click();
@@ -244,7 +256,7 @@ test("S02 empty extraction and Indonesian copy", async ({ page }, testInfo) => {
   await signIn(page, user);
   await expect(page.getByText("PDF atau DOCX, maksimal 10 MiB dan 20 halaman")).toBeVisible();
   await chooseFile(page, { name: "kosong.docx", mimeType: DOCX_MIME, buffer: emptyDocx() });
-  await page.getByRole("button", { name: "Unggah dan ekstrak" }).click();
+  await uploadWithAi(page, "id");
   await expect(page.getByRole("status")).toHaveText("Menunggu dimulai");
   await drainImportWorker("valid");
   await expect(page.getByRole("status")).toHaveText("File ini tidak dapat diimpor", { timeout: 30_000 });
@@ -253,7 +265,7 @@ test("S02 empty extraction and Indonesian copy", async ({ page }, testInfo) => {
 
   await page.getByRole("button", { name: "Coba file lain" }).click();
   await chooseFile(page, pdf("cv.pdf"));
-  await page.getByRole("button", { name: "Unggah dan ekstrak" }).click();
+  await uploadWithAi(page, "id");
   await expect(page.getByRole("status")).toHaveText("Menunggu dimulai");
   await drainImportWorker("import_empty");
   await expect(page.getByRole("status")).toHaveText("Tidak ada data karier", { timeout: 30_000 });
@@ -265,7 +277,7 @@ test("S02 layouts at 360 and 1440 in light and dark stay within the viewport", a
   const user = await createUser({ consent: true });
   await signIn(page, user);
   await chooseFile(page, pdf());
-  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await uploadWithAi(page);
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   await drainImportWorker("valid");
   for (const [width, height] of [[360, 800], [1440, 900]] as const) {
@@ -300,7 +312,8 @@ test("T26 a new user reads the CV without AI, reviews, confirms and sees the rec
   page.on("pageerror", (error) => seen.push(String(error)));
   const fileName = `cv-${randomUUID()}-WP-RULES-FILENAME.pdf`;
   await signIn(page, user);
-  await expect(page.getByText("If you allow AI, your CV text is sent to an external AI provider.")).toBeVisible();
+  // T28: one disclosure for both paths replaced the no-consent text (intended change).
+  await expect(page.getByText("With AI, your CV text is sent to an external AI provider. Without AI, WorkPulse reads it itself using fixed rules.")).toBeVisible();
 
   await chooseWithKeyboard(page, pdf(fileName, rulesCvPdf()));
   const upload = page.getByRole("button", { name: "Upload and extract" });
@@ -473,4 +486,200 @@ test("T26 an empty rules result uses its own copy, in Indonesian too", async ({ 
   await expect(page.getByRole("status")).toHaveText("Menunggu dimulai");
   await drainImportWorker("valid");
   await expect(page.getByText("CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI.", { exact: false })).toBeVisible({ timeout: 30_000 });
+});
+
+// T28: the choice on every upload; Read without AI with consent turns AI off after a confirmation (decision 0036).
+const RULES_AI_OFF = "This also turns off AI for activity analysis. You can turn it back on in Settings.";
+const CONFIRM_TITLE = "Turn off AI for your account?";
+
+async function profileRevision(userId: string): Promise<number> {
+  const { data } = await admin.from("profiles").select("revision").eq("id", userId).single();
+  return data!.revision;
+}
+
+function importUnits(userId: string): number {
+  return Number(usageSql(`select coalesce(sum(units), 0) from internal.ai_usage where user_id = '${userId}' and bucket = 'import'`));
+}
+
+async function batchModes(userId: string) {
+  const { data } = await admin.from("import_batches").select("id, extraction_mode").eq("user_id", userId).order("created_at");
+  return data ?? [];
+}
+
+test("T28 a user with consent sees the choice; Use AI uploads with AI and leaves consent untouched", async ({ page }, testInfo) => {
+  const user = await createUser({ consent: true });
+  await signIn(page, user);
+  const revision = await profileRevision(user.id);
+  await chooseFile(page, pdf());
+  await page.getByRole("button", { name: "Upload and extract" }).click();
+  const dialog = modeDialog(page);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+  await expect(dialog.getByRole("region", { name: "Without AI" })).toContainText(RULES_AI_OFF);
+  expect(await batches(user.id)).toEqual([]);
+  await snapshot(page, testInfo, "t28-choice-consented");
+
+  await dialog.getByRole("button", { name: "Use AI" }).click();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  expect((await batchModes(user.id)).map((row) => row.extraction_mode)).toEqual(["ai"]);
+  expect(await profileRevision(user.id)).toBe(revision);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
+});
+
+test("T28 Read without AI asks first; Back, Enter and Escape change nothing; confirming turns AI off everywhere", async ({ page }, testInfo) => {
+  const user = await createUser({ consent: true });
+  await signIn(page, user);
+  const unitsBefore = importUnits(user.id);
+  await chooseFile(page, pdf("rules.pdf", rulesCvPdf()));
+  const upload = page.getByRole("button", { name: "Upload and extract" });
+  await upload.click();
+  const dialog = modeDialog(page);
+  const readWithoutAi = dialog.getByRole("button", { name: "Read without AI" });
+  await readWithoutAi.click();
+
+  // The confirmation replaces the cards in the same dialog; focus is on its heading, not on a button.
+  const confirmTitle = dialog.getByRole("heading", { name: CONFIRM_TITLE });
+  await expect(confirmTitle).toBeFocused();
+  await expect(dialog).toContainText("If an AI analysis is still running, its result is discarded.");
+  await expect(dialog.getByRole("button", { name: "Use AI" })).toHaveCount(0);
+  const turnOff = dialog.getByRole("button", { name: "Turn off AI and read CV" });
+  const back = dialog.getByRole("button", { name: "Back" });
+  expect(await turnOff.getAttribute("class")).toBe(await back.getAttribute("class"));
+  await snapshot(page, testInfo, "t28-confirm");
+
+  // A stray Enter on the heading chooses nothing.
+  await page.keyboard.press("Enter");
+  await expect(confirmTitle).toBeVisible();
+  expect(await batches(user.id)).toEqual([]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
+
+  // Tab order: Turn off first, then Back. Back returns to the cards with focus on Read without AI.
+  await page.keyboard.press("Tab");
+  await expect(turnOff).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(back).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(readWithoutAi).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Use AI" })).toBeVisible();
+
+  // Escape from the confirmation closes the dialog, keeps the file and consent, and the next upload starts at the cards.
+  await readWithoutAi.click();
+  await expect(confirmTitle).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Selected: rules.pdf")).toBeVisible();
+  expect(await batches(user.id)).toEqual([]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
+  await upload.click();
+  await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Use AI" })).toBeVisible();
+
+  // Confirm: consent is withdrawn, then the CV is uploaded for reading without AI.
+  await readWithoutAi.click();
+  await turnOff.click();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+  const created = await batchModes(user.id);
+  expect(created.map((row) => row.extraction_mode)).toEqual(["rules"]);
+  await drainImportWorker("valid");
+  await expect(page.getByRole("status")).toHaveText("Extraction finished", { timeout: 30_000 });
+  await expect(page.getByRole("link", { name: "Review candidates" })).toBeVisible();
+  expect((await admin.from("ai_jobs").select("id").eq("import_batch_id", created[0]!.id)).data).toEqual([]);
+  expect(importUnits(user.id)).toBe(unitsBefore);
+
+  // AI is off for the whole account: S12 says so and activity analysis asks for permission again.
+  await admin.from("profiles").update({ display_name: "Rina Fiktif", timezone: "Asia/Jakarta", onboarding_completed_at: new Date().toISOString() }).eq("id", user.id);
+  await page.goto("/settings/profile");
+  await expect(page.getByTestId("ai-consent-status")).toHaveText("Not allowed");
+  await page.goto("/activity/new");
+  await page.locator("#quick-log-note").fill(`T28 note ${randomUUID()}`);
+  await page.locator("#quick-log-note-form button[type='submit']").click();
+  await expect(page).toHaveURL(/\/activity\/[0-9a-f-]{36}/i);
+  await page.getByRole("button", { name: "Analyze with AI" }).click();
+  await expect(page.getByRole("dialog", { name: "Allow AI processing?" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  const { count } = await admin.from("ai_jobs").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+  expect(count).toBe(0);
+});
+
+test("T28 allowing AI and then turning it off in one page visit uses the newest profile revision", async ({ page }) => {
+  const user = await createUser();
+  await signIn(page, user);
+  await chooseFile(page, pdf("first.pdf", cvPdf(1, [...CV_LINES, `first ${randomUUID()}`])));
+  await page.getByRole("button", { name: "Upload and extract" }).click();
+  await modeDialog(page).getByRole("button", { name: "Use AI" }).click();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
+  await page.getByRole("button", { name: "Cancel import" }).click();
+  await page.getByRole("dialog", { name: "Cancel this import?" }).getByRole("button", { name: "Cancel import" }).click();
+  await expect(page.getByRole("status")).toHaveText("Import cancelled");
+
+  await page.getByRole("button", { name: "Try another file" }).click();
+  await chooseFile(page, pdf("second.pdf", rulesCvPdf()));
+  await page.getByRole("button", { name: "Upload and extract" }).click();
+  const dialog = modeDialog(page);
+  await expect(dialog.getByRole("region", { name: "Without AI" })).toContainText(RULES_AI_OFF);
+  await dialog.getByRole("button", { name: "Read without AI" }).click();
+  await dialog.getByRole("button", { name: "Turn off AI and read CV" }).click();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  await expect(page.getByText("Your AI setting changed in another tab or session")).toHaveCount(0);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+  expect((await batchModes(user.id)).map((row) => row.extraction_mode)).toEqual(["ai", "rules"]);
+});
+
+test("T28 a user with consent at the AI import limit still uploads, reading without AI", async ({ page }, testInfo) => {
+  const user = await createUser({ consent: true });
+  assignAiPlan(user.id, "free");
+  for (const window of ["day", "month"] as const) {
+    const start = window === "day" ? "(now() at time zone 'UTC')::date" : "date_trunc('month', now() at time zone 'UTC')::date";
+    usageSql(
+      `insert into internal.ai_usage (user_id, bucket, window_kind, window_start, units) values ('${user.id}', 'import', '${window}', ${start}, 3) ` +
+      `on conflict (user_id, bucket, window_kind, window_start) do update set units = excluded.units`,
+    );
+  }
+  await signIn(page, user);
+  await expect(page.getByRole("button", { name: "CV file. Press Enter or Space to choose a file." })).toBeVisible();
+  await chooseFile(page, pdf("limit.pdf", rulesCvPdf()));
+  await page.getByRole("button", { name: "Upload and extract" }).click();
+  const dialog = modeDialog(page);
+  await expect(dialog.getByRole("region", { name: "With AI" })).toContainText("CV import limit reached");
+  await expect(dialog.getByRole("button", { name: "Use AI" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Read without AI" })).toBeEnabled();
+  await snapshot(page, testInfo, "t28-limit-choice");
+  await dialog.getByRole("button", { name: "Read without AI" }).click();
+  await dialog.getByRole("button", { name: "Turn off AI and read CV" }).click();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  expect((await batchModes(user.id)).map((row) => row.extraction_mode)).toEqual(["rules"]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+});
+
+test("T28 both dialog views at 360 and 1440 in light and dark: axe, no overflow, focus on each heading", async ({ page }, testInfo) => {
+  const user = await createUser({ consent: true });
+  await signIn(page, user);
+  for (const [width, height] of [[360, 800], [1440, 900]] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize({ width, height });
+      await page.context().addCookies([{ name: "wp-theme", value: theme, url: BASE_URL }]);
+      await page.goto("/onboarding/import");
+      await chooseFile(page, pdf("layout.pdf", rulesCvPdf()));
+      await page.getByRole("button", { name: "Upload and extract" }).click();
+      const dialog = modeDialog(page);
+      await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+      await expect(dialog.getByRole("region", { name: "Without AI" })).toContainText(RULES_AI_OFF);
+      for (const view of ["choice", "confirm"] as const) {
+        if (view === "confirm") {
+          await dialog.getByRole("button", { name: "Read without AI" }).click();
+          await expect(dialog.getByRole("heading", { name: CONFIRM_TITLE })).toBeFocused();
+        }
+        const panel = await dialog.evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
+        expect(panel.scroll, `t28-${view}-${width}-${theme} should not overflow`).toBeLessThanOrEqual(panel.client);
+        await expectNoOverflow(page, `t28-${view}-${width}-${theme}`);
+        await snapshot(page, testInfo, `t28-${view}-${width}-${theme}`);
+      }
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+    }
+  }
+  expect(await batches(user.id)).toEqual([]);
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
 });

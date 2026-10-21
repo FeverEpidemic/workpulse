@@ -175,16 +175,16 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 3: E2E dan aksesibilitas
 
-- [ ] Baca skill antislop (header dokumen ini) sebelum fase ini; cek tampilan konfirmasi terhadap `Design.md` (dialog, tombol, spasi).
-- [ ] `import-onboarding.spec.ts`, skenario baru (gagal dulu):
+- [x] Baca skill antislop (header dokumen ini) sebelum fase ini; cek tampilan konfirmasi terhadap `Design.md` (dialog, tombol, spasi).
+- [x] `import-onboarding.spec.ts`, skenario baru (gagal dulu):
   - (a) Pengguna consent: Upload → dialog → Pakai AI → batch `ai`, revisi profil tidak berubah (acceptance 1, 2).
   - (b) Pengguna consent: Upload → Baca tanpa AI → konfirmasi. Fokus di judul konfirmasi; Enter tidak memilih; Kembali mengembalikan fokus ke Baca tanpa AI; Esc menutup tanpa perubahan; buka lagi lalu konfirmasi → consent `null`, batch `rules`, review terbuka, tidak ada baris `ai_jobs` dan unit `import` tidak bertambah (acceptance 3, 4, 5, 12).
   - (c) Pengguna tanpa consent: Pakai AI → Coba file lain → Baca tanpa AI → konfirmasi berhasil tanpa `CONFLICT` (acceptance 7).
   - (d) Setelah (b): halaman aktivitas menampilkan jalur *Izinkan AI*, S12 *Tidak diizinkan* (acceptance 8).
   - (e) Pengguna consent dengan kuota import habis: dropzone tampil, kartu AI nonaktif dengan pemberitahuan, alur konfirmasi Tanpa AI berhasil (acceptance 9).
-- [ ] Axe pada dialog di kedua tampilan, 360 px dan 1440 px, light dan dark; tanpa overflow horizontal (acceptance 12).
-- [ ] Perbarui langkah upload pengguna consent di spec lain (§4) agar memilih Pakai AI di dialog; jangan melemahkan assertion lain.
-- [ ] Receipt `T28-phase3-e2e.md`, commit.
+- [x] Axe pada dialog di kedua tampilan, 360 px dan 1440 px, light dan dark; tanpa overflow horizontal (acceptance 12).
+- [x] Perbarui langkah upload pengguna consent di spec lain (§4) agar memilih Pakai AI di dialog; jangan melemahkan assertion lain.
+- [x] Receipt `T28-phase3-e2e.md`, commit.
 
 ### Fase 4: Regresi penuh dan Delivery Gate antislop
 
