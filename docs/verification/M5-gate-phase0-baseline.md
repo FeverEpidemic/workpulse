@@ -1,7 +1,7 @@
 # Gate M5 Fase 0: baseline
 
 - Tanggal: 21 Oktober 2026. Pelaksana: Claude (Opus 5.5), satu sesi, mode antislop *during* (dipilih pengguna untuk sesi ini).
-- Handoff: `docs/verification/M5-gate-review-plan.md`. File itu **belum ada di `main`**; ia hanya ada di branch `claude/t27-mobile-tab-bar` (commit `071c046`, `a0416d4`). Pelaksana membacanya dari checkout utama tanpa mengubahnya dan tidak menyalinnya ke branch gate.
+- Handoff: `docs/verification/M5-gate-review-plan.md`. File itu **belum ada di `main`**; ia hanya ada di branch `claude/t27-mobile-tab-bar` (commit `071c046`, `a0416d4`). Pelaksana membacanya dari checkout utama tanpa mengubahnya. Atas permintaan sesi asal, salinan identik (blob `adaaff94`, sama dengan branch T27) di-commit ke branch gate di `32b8ebc` agar receipt dapat menautkannya di `main`.
 - Tujuan: worktree bersih dari `origin/main`, parity migration, tiga container nyata, dan angka baseline.
 
 ## Worktree
