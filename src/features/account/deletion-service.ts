@@ -10,7 +10,8 @@ import {
   type AccountDeletionPreview,
 } from "@/domain/account/deletion";
 import type { MessageKey } from "@/i18n/messages";
-import type { AuthAdapter } from "@/server/auth/adapter";
+import { authProviders, type AuthAdapter } from "@/server/auth/adapter";
+import { hasRecentOAuthProof } from "@/server/auth/oauth-session";
 import type { PasswordVerification } from "@/server/auth/reauthenticate";
 import type { Database } from "@/server/supabase/database.types";
 
@@ -26,6 +27,7 @@ export const ACCOUNT_DELETION_MESSAGE_KEYS: Record<AccountDeletionErrorCode, Mes
   RATE_LIMITED: "auth.rateLimited",
   UNAUTHENTICATED: "auth.signInRequired",
   UNAVAILABLE: "error.unavailable",
+  REAUTH_REQUIRED: "account.delete.error.reauthRequired",
 };
 
 /** Safe, localized deletion error with a correlation ID. It never carries the password, the email or any record text. */
@@ -48,6 +50,8 @@ export interface AccountDeletionDeps {
   admin: Pick<Client, "rpc"> & { auth: { admin: Pick<Client["auth"]["admin"], "updateUserById"> } };
   auth: Pick<AuthAdapter, "signOutGlobal" | "signOutLocal">;
   verifyPassword: (input: { email: string; password: string; expectedUserId: string }) => Promise<PasswordVerification>;
+  /** The `amr` claim of the current session JWT, or null when it cannot be read. */
+  readAmr: () => Promise<unknown>;
   correlationId?: string;
 }
 
@@ -60,12 +64,12 @@ export function createAccountDeletionService(deps: AccountDeletionDeps) {
   const correlationId = deps.correlationId ?? randomUUID();
   const fail = (code: AccountDeletionErrorCode) => new AccountDeletionError(code, correlationId);
 
-  async function sessionUser(): Promise<{ id: string; email: string }> {
+  async function sessionUser(): Promise<{ id: string; email: string; providers: string[] }> {
     const { data, error } = await deps.client.auth.getUser();
     if (error) throw fail(isAuthRetryableFetchError(error) ? "UNAVAILABLE" : "UNAUTHENTICATED");
     const user = data?.user;
     if (!user?.id || !user.email) throw fail("UNAUTHENTICATED");
-    return { id: user.id, email: user.email };
+    return { id: user.id, email: user.email, providers: authProviders(user) };
   }
 
   return {
@@ -89,10 +93,16 @@ export function createAccountDeletionService(deps: AccountDeletionDeps) {
       const user = await sessionUser();
       if (!confirmationMatches(user.email, parsed.data.confirmation)) throw fail("CONFIRMATION_MISMATCH");
 
-      const verification = await deps.verifyPassword({ email: user.email, password: parsed.data.password, expectedUserId: user.id });
-      if (verification === "invalid") throw fail("INVALID_PASSWORD");
-      if (verification === "rate_limited") throw fail("RATE_LIMITED");
-      if (verification !== "ok") throw fail("UNAVAILABLE");
+      if ("method" in parsed.data) {
+        // An account with a password keeps the T23 password check; Google proof is only for accounts without one.
+        if (user.providers.includes("email") || !user.providers.includes("google")) throw fail("VALIDATION");
+        if (!hasRecentOAuthProof(await deps.readAmr())) throw fail("REAUTH_REQUIRED");
+      } else {
+        const verification = await deps.verifyPassword({ email: user.email, password: parsed.data.password, expectedUserId: user.id });
+        if (verification === "invalid") throw fail("INVALID_PASSWORD");
+        if (verification === "rate_limited") throw fail("RATE_LIMITED");
+        if (verification !== "ok") throw fail("UNAVAILABLE");
+      }
 
       const begun = await deps.admin.rpc("begin_account_deletion", { p_user_id: user.id });
       if (begun.error) throw fail("UNAVAILABLE");

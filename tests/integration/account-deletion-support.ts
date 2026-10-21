@@ -276,6 +276,7 @@ export async function deleteThroughService(account: Account) {
     admin,
     auth: createAuthAdapter(account.client),
     verifyPassword: (input) => verifyAccountPassword(input),
+    readAmr: async () => (await account.client.auth.getClaims()).data?.claims.amr ?? null,
   });
   return service.deleteAccount({ password: account.password, confirmation: account.email });
 }
