@@ -242,6 +242,15 @@ pnpm db:stop     # stops containers without deleting volumes
 configured to target a linked/hosted project. `supabase/config.toml` pins the local
 stack definition and loads the seed after migrations.
 
+Every git worktree shares this one local stack. Run `pnpm db:start` and `pnpm db:stop`
+only from the main checkout: the service versions (storage among them) are pinned in
+`supabase/.temp/`, which is git-ignored and exists only there. Started from a worktree,
+the CLI falls back to older images; storage then fails every file upload with Postgres
+error `42P10` because the shared schema was migrated by the newer version. To check,
+`docker ps --format "{{.Names}} {{.Image}}"` must list `storage-api:v1.80.2`. If it
+does not, run `pnpm db:stop` and then `pnpm db:start` from the main checkout. Data is
+kept; never use `db:reset` for this.
+
 ### Local authentication and profile
 
 T03 and T05 use the same local Supabase stack. After `pnpm db:start`, copy the local API
