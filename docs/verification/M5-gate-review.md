@@ -123,6 +123,8 @@ Dijalankan reviewer di worktree gate pada `a9e5ac4`, 21 Oktober 2026 13:04–13:
 | `pnpm test:e2e:m5` | 0 | 1 (1,5 menit) |
 | `pnpm test:e2e:release` | 0 | 15 (3,7 menit) |
 
+Setelah T27 (PR #32) masuk `main`, `origin/main` di-merge ke branch gate (`1171989`). Hasil merge diuji ulang sesuai §2.2 butir 2: lint dan typecheck exit 0, unit 135 file / 1262, `test:e2e:m5` 1, dan `test:e2e:release` 21 (termasuk 6 dari spec T27). Semuanya lulus.
+
 `test:e2e:release` menulis ulang 88 PNG ter-track di `docs/verification/T25-screenshots/`, sama seperti di T25. Reviewer mengembalikannya dengan `git checkout`, sehingga worktree bersih. Regresi penuh 52 command, clean rebuild, dan `test:perf` tidak diulang. Angka pelaksana di Fase 5 dipakai untuk suite yang tidak disentuh perbaikan.
 
 ### Penilaian

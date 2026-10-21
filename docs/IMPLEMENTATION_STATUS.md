@@ -7,7 +7,7 @@ Verdict Gate M5: **BLOCKED**. Kriteria 1–10 dan 13 lulus lokal. Yang belum ter
 - Pelaksana Fase 0–7: Claude (Opus 5.5), branch `claude/m5-gate-review` dari `973e886`, belum di-push. Reviewer Fase 8: Claude (Opus 5.5) pada `a9e5ac4`.
 - Suite baru: `test:e2e:m5` (satu akun pilot dari daftar sampai login ditolak, semua baris, event, dan objek 0 setelah purge) dan `test:integration:m5` (7 skenario: metrik pilot, `rules` tanpa unit, penghapusan saat semua job aktif, retensi import, penarikan consent, isolasi, `ops:check`).
 - Temuan: tanpa P0/P1. Satu P2 diperbaiki: RV-PW (`f92cc04`), `"playwright": "latest"` dari commit Storybook membuat semua `pnpm test:e2e:*` di `main` gagal sebelum test pertama. Fix-nya mem-pin 1.63.0 dan menambah unit penjaga. P3 M5-N1 sampai M5-N7 dicatat.
-- Checks reviewer: lint, typecheck exit 0; unit 129/1181; integration `m5` 7, `release` 12, `account-deletion` 15; E2E `m5` 1, `release` 15. Pelaksana: regresi 52 command lulus, clean rebuild 38 migration 21/1725 dengan tipe identik, p95 lokal baca ≤ 154,7 ms dan simpan ≤ 91,2 ms.
+- Checks reviewer: lint, typecheck exit 0; unit 129/1181; integration `m5` 7, `release` 12, `account-deletion` 15; E2E `m5` 1, `release` 15. Setelah merge `main` dengan T27: unit 135/1262, E2E `m5` 1, `release` 21. Pelaksana: regresi 52 command lulus, clean rebuild 38 migration 21/1725 dengan tipe identik, p95 lokal baca ≤ 154,7 ms dan simpan ≤ 91,2 ms.
 - Belum dijalankan: semua butir lingkungan pilot, p95 hosted, NVDA manusia, `test:ai:live`.
 - Risiko: `db:test` di database lokal bersama gagal 3 assertion karena data sisa akun lain (M5-N3), sedangkan clean rebuild lulus.
 
