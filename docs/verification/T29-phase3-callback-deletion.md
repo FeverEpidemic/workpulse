@@ -29,7 +29,7 @@ Tanggal: 21 Oktober 2026. Pelaksana: Claude (Opus 5.5). Worktree `D:\Project\Wor
 | `pnpm lint` | exit 0 |
 | `pnpm typecheck` (pertama) | exit 2: `account-deletion-support.ts` tidak memberi `readAmr` |
 | `pnpm typecheck` (setelah perbaikan helper) | exit 0 |
-| `pnpm test` | exit 0, 138 file / 1286 + 23 = 1309 test |
+| `pnpm test` | exit 0, 138 file / 1309 test (Fase 2: 137 / 1286) |
 | `pnpm test:integration:account-deletion` | exit 0, 2 file / 15 test (sama dengan angka Gate M5, tanpa perubahan assertion) |
 | `pnpm test:e2e:auth` | exit 0, 1 lulus |
 
