@@ -574,6 +574,23 @@ test("T28 Read without AI asks first; Back, Enter and Escape change nothing; con
   await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
   await expect(dialog.getByRole("button", { name: "Use AI" })).toBeVisible();
 
+  // Cancel and the backdrop from the confirmation do the same as Escape (T28 review RV2).
+  for (const close of [
+    () => dialog.getByRole("button", { name: "Cancel" }).click(),
+    () => page.mouse.click(5, 5),
+  ]) {
+    await readWithoutAi.click();
+    await expect(confirmTitle).toBeFocused();
+    await close();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Selected: rules.pdf")).toBeVisible();
+    expect(await batches(user.id)).toEqual([]);
+    expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
+    await upload.click();
+    await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+    await expect(dialog.getByRole("button", { name: "Use AI" })).toBeVisible();
+  }
+
   // Confirm: consent is withdrawn, then the CV is uploaded for reading without AI.
   await readWithoutAi.click();
   await turnOff.click();
