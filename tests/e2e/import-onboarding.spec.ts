@@ -729,3 +729,40 @@ test("T28 both dialog views at 360 and 1440 in light and dark: axe, no overflow,
   expect(await batches(user.id)).toEqual([]);
   expect(await profileConsent(user.id)).toEqual({ ai_consent_at: expect.any(String), ai_consent_version: CONSENT_VERSION });
 });
+
+// T28 review RV3: same root font size as release-a11y "text at 200%". Design tokens are px, so that scales only rem
+// text; 720 x 450 is a 1440 x 900 window at 200% browser zoom in CSS px, which scales everything.
+test("T28 both dialog views with text at 200% at 320, 360 and 720: no clipping, every button reachable, axe", async ({ page }, testInfo) => {
+  const user = await createUser({ consent: true });
+  await signIn(page, user);
+  for (const [width, height] of [[320, 640], [360, 800], [720, 450]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/onboarding/import");
+    await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+    await chooseFile(page, pdf("zoom.pdf", rulesCvPdf()));
+    await page.getByRole("button", { name: "Upload and extract" }).click();
+    const dialog = modeDialog(page);
+    await expect(dialog.getByRole("heading", { name: "How should we read your CV?" })).toBeFocused();
+    for (const view of ["choice", "confirm"] as const) {
+      if (view === "confirm") {
+        await dialog.getByRole("button", { name: "Read without AI" }).click();
+        await expect(dialog.getByRole("heading", { name: CONFIRM_TITLE })).toBeFocused();
+      }
+      const name = `t28-200-${view}-${width}`;
+      const panel = await dialog.evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
+      expect(panel.scroll, `${name} should not overflow`).toBeLessThanOrEqual(panel.client);
+      await expectNoOverflow(page, name);
+      for (const button of await dialog.getByRole("button").all()) {
+        const label = await button.innerText();
+        const size = await button.evaluate((element) => ({ scroll: element.scrollWidth, client: element.clientWidth }));
+        expect(size.scroll, `${name} "${label}" should not clip`).toBeLessThanOrEqual(size.client);
+        await button.scrollIntoViewIfNeeded();
+        await expect(button, `${name} "${label}" should be reachable`).toBeInViewport();
+      }
+      await snapshot(page, testInfo, name);
+    }
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
+  expect(await batches(user.id)).toEqual([]);
+});
