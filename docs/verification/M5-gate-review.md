@@ -3,7 +3,7 @@
 - Tanggal: 21 Oktober 2026 (Fase 0–7 pelaksana, Fase 8 reviewer).
 - Branch: `claude/m5-gate-review`, basis `origin/main` `973e886` (PR #31). Tidak di-push.
 - Pelaksana: Claude (Opus 5.5), satu sesi tanpa sub-agent, mode antislop *during*. Fase 0–7 dari [`M5-gate-review-plan.md`](M5-gate-review-plan.md). Reviewer Fase 8: Claude (Opus 5.5), sesi terpisah.
-- **Verdict: BLOCKED** (21 Oktober 2026, HEAD gate `a9e5ac4`). Kriteria 1–10 dan 13 lulus lokal. Kriteria 11 dan 12 (lingkungan pilot) belum punya bukti yang dibaca balik, dan menurut §2.2 butir 3 handoff, gate tidak boleh PASSED tanpa keduanya. Daftar kerja di [§8](#8-verdict-reviewer-fase-8) hanya berisi item lingkungan pilot.
+- **Verdict: PASSED dengan pengecualian pemilik produk** (21 Oktober 2026, [decision 0037](../decisions/0037-m5-owner-exceptions.md)). Kriteria 1–10 dan 13 lulus lokal dan diverifikasi ulang reviewer. Untuk kriteria 11, parity, Auth, bucket, mode AI, health, dan image dibaca balik. Lima butir lingkungan pilot (E1–E5: bukti backup lengkap, import `rules`, EICAR, teks PDF, nilai Auth di dashboard) dikecualikan pemilik produk dan wajib dibuktikan sebelum production. Verdict sebelumnya pada hari yang sama adalah **BLOCKED**. Staging dan pilot berbagi satu proyek menurut [decision 0036](../decisions/0036-shared-staging-pilot-project.md).
 - Kalimat gate (`IMPLEMENTATION_PLAN.md:299`): *Gate M5: seluruh acceptance lulus. Target pilot 60% activation, 40% value completion, 30% return capture dan 98% export reliability baru dievaluasi dari 20 consenting pilot users; bukan syarat metrik yang bisa dibuktikan sebelum pilot berjalan.*
 - Receipt: [Fase 0](M5-gate-phase0-baseline.md), [1](M5-gate-phase1-acceptance-audit.md), [2](M5-gate-phase2-code-review.md), [3](M5-gate-phase3-pilot-journey.md), [4](M5-gate-phase4-cross-domain.md), [5](M5-gate-phase5-regression.md), [6](M5-gate-phase6-pilot-environment.md). Daftar periksa operator: [M5-gate-pilot-environment.md](M5-gate-pilot-environment.md).
 
@@ -106,7 +106,19 @@ Tidak menghalangi verdict gate pilot (§1 handoff, "tidak mencakup"), tetapi waj
 
 ## 8. Verdict reviewer (Fase 8)
 
-**BLOCKED.** Bukti lokal cukup untuk PASSED. Yang belum terbukti hanya kesesuaian lingkungan pilot `myworkpulse.my.id` dengan HEAD gate dan retensi backup di host pilot.
+**PASSED dengan pengecualian pemilik produk ([decision 0037](../decisions/0037-m5-owner-exceptions.md)).**
+
+Verdict ini menyimpang dari §2.2 butir 3 handoff, yang hanya mengenal PASSED atau BLOCKED, atas keputusan tertulis pemilik produk. Tanpa pengecualian itu, verdict reviewer adalah **BLOCKED**, karena kriteria 12 dan sebagian kriteria 11 tidak terbukti:
+
+| Kriteria | Status akhir |
+| --- | --- |
+| 1–10, 13 | PASS |
+| 11 | PASS untuk parity, Auth (signup, verify, login), bucket, mode AI, health, dan image. **Dikecualikan:** E2 import `rules`, E3 EICAR, E4 teks PDF, E5 nilai Auth di dashboard |
+| 12 | **Dikecualikan:** E1 (baris backup 20 Oktober dan setelahnya, sha256 `backup.sh`, cron, daftar salinan). Dua baris `backup: ok` 18–19 Oktober ada |
+
+E1–E5 wajib dibuktikan sebelum production. Reviewer menyarankan E1 dan E2 ditutup sebelum peserta pilot pertama didaftarkan (`internal.pilot_participants` saat ini 0).
+
+Riwayat: verdict awal Fase 8 pada pagi 21 Oktober adalah **BLOCKED** karena kesesuaian lingkungan pilot `myworkpulse.my.id` dengan HEAD gate dan retensi backup di host pilot belum terbukti. Bukti dibaca balik dan decision 0036–0037 ditambahkan pada hari yang sama.
 
 ### Verifikasi ulang independen
 
@@ -155,7 +167,7 @@ Pemilik produk mengonfirmasi bahwa pilot dan staging memakai **satu** proyek Sup
 
 Sisi positifnya, bukti staging T25 Fase 7 untuk database, Auth, dan bucket kini berlaku juga untuk pilot. Log backup 18–19 Oktober pun mencadangkan database yang sama, asalkan asal host dan versi script-nya ditunjukkan.
 
-### Daftar kerja untuk PASSED
+### Daftar kerja sebelum production (semula: daftar kerja untuk PASSED)
 
 Semuanya dikerjakan operator mengikuti [daftar periksa lingkungan pilot](M5-gate-pilot-environment.md). Bukti ditempel tanpa rahasia, dan setiap bukti mencantumkan project ref pilot. Butir 2 sudah PASS, dan butir 4 dan 7 sebagian, menurut bagian bukti di atas.
 
