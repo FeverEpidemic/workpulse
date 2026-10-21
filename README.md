@@ -4,7 +4,7 @@ Private career workspace (MVP v0.1). A user records activities, reviews and conf
 achievements, selects data into one master CV, and downloads a PDF. The manual path must
 keep working with AI unavailable.
 
-Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) done: local release evidence complete and staging verified, with hosted p95 deferred by the product owner as a production blocker; not production-ready. Pilot AI usage limits (decision 0032), T26 CV import without AI (decision 0033) and T27 mobile bottom tab bar (decision 0035) done locally.** Auth/profile,
+Status: **T01–T24 done locally; Gates M2, M3 and M4 passed; T25 (regression and release handoff) done: local release evidence complete and staging verified, with hosted p95 deferred by the product owner as a production blocker; not production-ready. Pilot AI usage limits (decision 0032), T26 CV import without AI (decision 0033), T27 mobile bottom tab bar (decision 0035) and T29 Google sign-in behind `WORKPULSE_AUTH_GOOGLE_ENABLED` (decision 0039; staging smoke with real Google pending) done locally.** Auth/profile,
 app frame, Activity capture, Projects and context, manual Achievements/Skills, Evidence,
 Dashboard/Timeline, AI jobs with consent, detection/refinement review, and CV import (staging, commit, and the S03 review screen) are
 implemented. Evidence covers atomic slot/byte reservation, private Storage, signature/MIME/size
@@ -66,7 +66,8 @@ then removes them in `finally`; run it against the local stack only.
 | `pnpm test:integration:import` | T15 CV import staging against local Supabase, Storage and real ClamAV with the isolated parser thread: upload validation, scan/parse/AI pipeline, grounding, cancel/retry/idempotency, purge, two-account isolation, log hygiene; plus the real Gotenberg DOCX page-count check ([renderer runbook](docs/verification/T15-renderer-runbook.md)) |
 | `pnpm test:ai:live` | Opt-in live smoke against the configured OpenAI-compatible endpoint with synthetic fixtures; skipped unless `WORKPULSE_AI_LIVE=1` and `.env.ai.local` is configured |
 | `pnpm test:e2e` | Playwright health/anonymous smoke suite; builds and starts the production server on port 3100 |
-| `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit |
+| `pnpm test:e2e:auth` | Local Supabase Auth/Profile acceptance through Mailpit; also checks that Google sign-in stays hidden with the flag off |
+| `pnpm test:e2e:auth-google` | T29 Google sign-in with the flag on (port 3016): PKCE redirect through local Supabase Auth with Google stubbed (never loaded), cancelled sign-in notice, onboarding name prefill, S12 Google-only delete dialog, 360/1440 light/dark with Axe; writes `docs/verification/T29-screenshots/` |
 | `pnpm test:e2e:ui` | Authenticated app-frame, theme, filter, keyboard, responsive, and Axe checks |
 | `pnpm test:e2e:activity` | Activity capture/list/detail/edit acceptance against local Supabase; fixtures are cleaned up |
 | `pnpm test:e2e:projects` | Project list/detail/create, linked Activity, delete retention, responsive, and Axe checks against local Supabase |
@@ -290,6 +291,16 @@ and the Chromium browser installed above. The authenticated application-frame su
 uses the same local services through `pnpm test:e2e:ui`. The configured templates are
 for local verification only. Production email delivery still needs a configured SMTP
 provider and an allowlisted hosted redirect origin.
+
+Google sign-in (T29) is configured in `supabase/config.toml` under `[auth.external.google]`,
+with the client ID and secret read from `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and
+`SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`. Local tests need neither: the stack starts with them
+unset and the browser suite never loads Google. The web button appears only with
+`WORKPULSE_AUTH_GOOGLE_ENABLED=true`. When restarting the shared stack from a fresh git
+worktree, copy `supabase/.temp/{storage,postgres,gotrue,rest}-version` and
+`storage-migration` from the main checkout first, or the older default Storage image fails
+every upload with `42P10`. Hosted setup is in
+[`docs/verification/T29-google-oauth-runbook.md`](docs/verification/T29-google-oauth-runbook.md).
 
 The active Auth service must report `mailer_autoconfirm=false` for signup confirmation
 to be tested. If `supabase/config.toml` changed after the stack was started, run

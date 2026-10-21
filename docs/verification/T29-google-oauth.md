@@ -1,6 +1,6 @@
 # T29 Masuk dengan Google: bukti
 
-Tanggal: 22 Oktober 2026. Branch `claude/t29-google-oauth` dari `466b2f8`. Status saat dokumen ini ditulis: **acceptance lokal lulus, smoke staging belum dijalankan**. Dokumen ini tidak menandai T29 DONE; itu keputusan closeout.
+Tanggal: 22 Oktober 2026. Branch `claude/t29-google-oauth` dari `466b2f8`. Status: **DONE lokal** (closeout 22 Oktober 2026, atas permintaan pengguna, seperti T26 dan T27). Acceptance lokal lulus; smoke staging dengan Google nyata belum dijalankan dan menjadi langkah berikutnya (runbook). Acceptance 7 dan jalur penuh acceptance 9 baru terbukti setelah smoke itu.
 
 [Rencana](T29-implementation-plan.md), [gate review](T29-gate-review.md), [decision 0039](../decisions/0039-t29-google-oauth.md), [runbook provider](T29-google-oauth-runbook.md). Receipt: [Fase 0](T29-phase0-baseline.md), [1](T29-phase1-config-helpers.md), [2](T29-phase2-actions.md), [3](T29-phase3-callback-deletion.md), [4](T29-phase4-ui.md), [5](T29-phase5-e2e-regression.md), [6](T29-phase6-docs.md).
 
@@ -53,7 +53,7 @@ P3 dari gate review: N1 (klasifikasi sesi OAuth bergantung jendela waktu `amr`),
 
 > ## T29 Masuk dengan Google: acceptance lokal, 22 Oktober 2026
 >
-> Status T29: menunggu keputusan closeout (acceptance lokal lulus, smoke staging belum). Tombol Continue with Google di S01 di balik flag `WORKPULSE_AUTH_GOOGLE_ENABLED` (default mati), PKCE lewat Supabase Auth dan callback `/auth/confirm` yang ada, onboarding dengan nama Google sebagai isian awal, penolakan akun `deleting`, dan hapus akun untuk akun Google saja dengan login Google ≤ 5 menit.
+> Status T29: **DONE** (acceptance lokal); smoke staging belum. Tombol Continue with Google di S01 di balik flag `WORKPULSE_AUTH_GOOGLE_ENABLED` (default mati), PKCE lewat Supabase Auth dan callback `/auth/confirm` yang ada, onboarding dengan nama Google sebagai isian awal, penolakan akun `deleting`, dan hapus akun untuk akun Google saja dengan login Google ≤ 5 menit.
 >
 > - Pelaksana Fase 0-6 dan gate review: Claude (Opus 5.5); independensi review terbatas. Gate pada `363293f`: PASS, tanpa P0-P2, P3 N1-N8.
 > - Dependensi: T03, T23, T25 DONE; Gate M5 PASSED. T29 permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5.

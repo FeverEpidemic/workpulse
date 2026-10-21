@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 21 Oktober 2026
-- Status plan: **siap dieksekusi**. Pengguna menyetujui §2.2 butir 6, 7, dan 9 pada 21 Oktober 2026: "Setuju dengan §2.2 butir 6, 7, dan 9 seperti di plan T29." Fase 0 selesai (`T29-phase0-baseline.md`).
+- Status plan: **DONE lokal, 22 Oktober 2026** (Fase 0-6 selesai, gate review PASS, smoke staging di runbook menjadi langkah berikutnya). Sebelumnya: **siap dieksekusi**. Pengguna menyetujui §2.2 butir 6, 7, dan 9 pada 21 Oktober 2026: "Setuju dengan §2.2 butir 6, 7, dan 9 seperti di plan T29." Fase 0 selesai (`T29-phase0-baseline.md`).
 - Dependensi: T03 (auth, callback `/auth/confirm`) **DONE**, T23 (hapus akun dengan reautentikasi) **DONE**, T25 **DONE**, Gate M5 **PASSED** dengan pengecualian (`466b2f8`).
 - Asal task: penambahan scope oleh pengguna pada 21 Oktober 2026. T29 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Decision 0003 *Scope boundary* menyatakan T03 tidak menambah OAuth; T29 membuka batas itu untuk satu provider, Google.
 - Branch: `claude/t29-google-oauth` dari `origin/main` (`466b2f8`).

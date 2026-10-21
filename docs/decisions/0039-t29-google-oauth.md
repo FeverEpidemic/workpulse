@@ -2,7 +2,7 @@
 
 Date: 22 Oktober 2026
 
-Status: Accepted untuk cakupan lokal. Keputusan produk §2.2 butir 6, 7, dan 9 disetujui pengguna di chat pada 21 Oktober 2026: "Setuju dengan §2.2 butir 6, 7, dan 9 seperti di plan T29." Gate review 22 Oktober 2026 PASS tanpa P0-P2 (independensi terbatas: reviewer sama dengan pelaksana). Smoke staging dengan Google nyata belum dijalankan. Task: T29 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T29-implementation-plan.md), [bukti](../verification/T29-google-oauth.md), [gate review](../verification/T29-gate-review.md), [runbook provider](../verification/T29-google-oauth-runbook.md). Tanpa migration (parity tetap 38).
+Status: Accepted. Keputusan produk §2.2 butir 6, 7, dan 9 disetujui pengguna di chat pada 21 Oktober 2026: "Setuju dengan §2.2 butir 6, 7, dan 9 seperti di plan T29." Gate review 22 Oktober 2026 PASS tanpa P0-P2 (independensi terbatas: reviewer sama dengan pelaksana). Closeout 22 Oktober 2026: DONE lokal atas permintaan pengguna ("Tutup T29 sebagai DONE lokal sekarang (seperti T26/T27), smoke staging dicatat sebagai langkah berikutnya"). Smoke staging dengan Google nyata belum dijalankan. Task: T29 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T29-implementation-plan.md), [bukti](../verification/T29-google-oauth.md), [gate review](../verification/T29-gate-review.md), [runbook provider](../verification/T29-google-oauth-runbook.md). Tanpa migration (parity tetap 38).
 
 Nomor: 0038 dipakai draft decision T28 di branch `claude/t28-import-mode-choice`. Bila urutan merge berbeda, nomor dicek ulang saat merge.
 
