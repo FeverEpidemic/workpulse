@@ -148,7 +148,7 @@ Pemilik produk mengonfirmasi bahwa pilot dan staging memakai **satu** proyek Sup
 | 3. Image | **Menunggu** | Hanya terbaca dari host (M5-N1) |
 | 6. Backup | **Menunggu** | sha256 `backup.sh`, `crontab -l`, `backup.log`, dan daftar salinan dari host |
 
-**M5-E1 (P2, menunggu keputusan pemilik produk).** Staging dan pilot berbagi satu proyek Supabase, sehingga syarat "lulus smoke di staging lebih dulu" (§1.11) tidak dapat dipenuhi untuk database: setiap migration, smoke, dan akun uji langsung mengenai data pilot. Ada dua penyelesaian:
+**M5-E1 (P2, tertutup oleh [decision 0036](../decisions/0036-shared-staging-pilot-project.md), 21 Oktober 2026).** Pemilik produk memilih penyelesaian kedua di bawah. Staging dan pilot berbagi satu proyek Supabase, sehingga syarat "lulus smoke di staging lebih dulu" (§1.11) tidak dapat dipenuhi untuk database: setiap migration, smoke, dan akun uji langsung mengenai data pilot. Ada dua penyelesaian:
 
 - memisahkan staging ke proyek sendiri (paket Free membatasi dua proyek aktif per organisasi, dan slot kedua dipakai proyek lain); atau
 - decision baru yang menerima satu proyek untuk pilot 20 pengguna, dengan syarat: migration hanya setelah lulus lokal dan setelah backup hari itu `ok`, akun uji tidak didaftarkan `set_pilot_participant`, dan akun uji dihapus lewat S12 setelah smoke.
@@ -159,7 +159,7 @@ Sisi positifnya, bukti staging T25 Fase 7 untuk database, Auth, dan bucket kini 
 
 Semuanya dikerjakan operator mengikuti [daftar periksa lingkungan pilot](M5-gate-pilot-environment.md). Bukti ditempel tanpa rahasia, dan setiap bukti mencantumkan project ref pilot. Butir 2 sudah PASS, dan butir 4 dan 7 sebagian, menurut bagian bukti di atas.
 
-0. Keputusan pemilik produk untuk M5-E1: pisahkan staging, atau terima satu proyek lewat decision baru (0036).
+0. ~~Keputusan pemilik produk untuk M5-E1~~: selesai lewat decision 0036. Untuk butir 1 dan seterusnya, staging tidak lagi menjadi langkah uji database terpisah. Yang wajib ditunjukkan adalah syarat 0036 #2: migration lulus lokal dan ada `backup: ok` hari itu sebelum migration diterapkan.
 1. Urutan rilis: tanggal migration 37–38 diterapkan dan tanggal worker T26 terpasang di pilot, serta job import yang dibuat di antara keduanya (butir 1).
 2. `migration list` proyek pilot 38/38, dibaca balik (butir 2).
 3. Tag image web dan worker `sha-<commit>` dari `docker ps` di host pilot. Image harus memuat HEAD gate setelah branch ini di-merge ke `main` (butir 3).
