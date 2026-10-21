@@ -12,8 +12,14 @@ import { actionFailure, actionSuccess, type ActionState } from "@/server/action-
 import { authFailureState } from "@/server/auth/errors";
 import { createAuthAdapter } from "@/server/auth/adapter";
 import { clearAuthCookies } from "@/server/auth/clear-cookies";
+import {
+  OAUTH_RETURN_COOKIE,
+  REAUTH_INTENT_COOKIE,
+  oauthCookieOptions,
+  reauthIntentValue,
+} from "@/server/auth/oauth-session";
 import { hasRecentRecoveryProof } from "@/server/auth/recovery-session";
-import { getAuthCallbackUrl } from "@/server/supabase/config";
+import { getAuthCallbackUrl, getBrowserSupabaseOrigin, isGoogleAuthEnabled } from "@/server/supabase/config";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { persistLocaleCookie } from "@/server/locale/cookie";
 
@@ -82,6 +88,66 @@ export async function signInAction(_previous: ActionState, formData: FormData): 
     }
     const lifecycle = profile.onboarding_completed_at ? "complete" : "provisional";
     redirect(destinationForLifecycle(lifecycle, sanitizeReturnTo(formText(formData, "returnTo"))));
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    return actionFailure("UNAVAILABLE", "error.unavailable");
+  }
+}
+
+/** Only a redirect to the Supabase Auth origin the browser already talks to is followed. */
+function trustedAuthorizeUrl(url: string | null): string | null {
+  const origin = getBrowserSupabaseOrigin();
+  if (!url || !origin) return null;
+  try {
+    return new URL(url).origin === origin ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** S01 "Continue with Google": start PKCE on the cookie-bound client and leave for Supabase Auth. */
+export async function signInWithGoogleAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  if (!isGoogleAuthEnabled()) return actionFailure("UNAVAILABLE", "error.unavailable");
+
+  try {
+    const client = await createSupabaseServerClient();
+    const auth = createAuthAdapter(client);
+    const result = await auth.signInWithGoogle({ redirectTo: getAuthCallbackUrl(), selectAccount: false });
+    if (result.error) return authFailureState(result.error);
+    const url = trustedAuthorizeUrl(result.url);
+    if (!url) return actionFailure("UNAVAILABLE", "error.unavailable");
+
+    const cookieStore = await cookies();
+    cookieStore.set(OAUTH_RETURN_COOKIE, sanitizeReturnTo(formText(formData, "returnTo")), oauthCookieOptions(process.env.NODE_ENV === "production"));
+    cookieStore.delete(REAUTH_INTENT_COOKIE);
+    redirect(url);
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    return actionFailure("UNAVAILABLE", "error.unavailable");
+  }
+}
+
+/**
+ * S12 "Confirm with Google" for an account with a Google identity. Not gated by the sign-in flag, so a Google-only
+ * account can still be deleted after the button is hidden again.
+ */
+export async function startGoogleReauthAction(_previous: ActionState, _formData: FormData): Promise<ActionState> {
+  try {
+    const client = await createSupabaseServerClient();
+    const auth = createAuthAdapter(client);
+    const { user, error: userError } = await auth.getUser();
+    if (userError || !user) return actionFailure("UNAUTHENTICATED", "auth.signInRequired");
+    if (!user.providers.includes("google")) return actionFailure("VALIDATION", "error.validation");
+
+    const result = await auth.signInWithGoogle({ redirectTo: getAuthCallbackUrl(), selectAccount: true });
+    if (result.error) return authFailureState(result.error);
+    const url = trustedAuthorizeUrl(result.url);
+    if (!url) return actionFailure("UNAVAILABLE", "error.unavailable");
+
+    const cookieStore = await cookies();
+    cookieStore.set(REAUTH_INTENT_COOKIE, reauthIntentValue(user.id), oauthCookieOptions(process.env.NODE_ENV === "production"));
+    cookieStore.delete(OAUTH_RETURN_COOKIE);
+    redirect(url);
   } catch (error) {
     if (isNextRedirect(error)) throw error;
     return actionFailure("UNAVAILABLE", "error.unavailable");

@@ -10,6 +10,7 @@ import {
   oauthCookieOptions,
   readOAuthReturn,
   readReauthIntent,
+  reauthIntentValue,
 } from "@/server/auth/oauth-session";
 import { isGoogleAuthEnabled } from "@/server/supabase/config";
 
@@ -77,11 +78,15 @@ describe("OAuth flow cookies", () => {
     expect(readOAuthReturn(undefined)).toBe(DEFAULT_RETURN_TO);
   });
 
-  it("recognises only the delete-account reauthentication intent", () => {
-    expect(readReauthIntent("delete-account")).toBe("delete-account");
-    expect(readReauthIntent("Delete-Account")).toBeNull();
-    expect(readReauthIntent("change-email")).toBeNull();
-    expect(readReauthIntent(undefined)).toBeNull();
+  it("binds the delete-account intent to the user who started it", () => {
+    const user = "3f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f";
+    const other = "9a9c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f";
+    expect(reauthIntentValue(user)).toBe(`delete-account.${user}`);
+    expect(readReauthIntent(reauthIntentValue(user), user)).toBe("delete-account");
+    expect(readReauthIntent(reauthIntentValue(user), other)).toBeNull();
+    expect(readReauthIntent("delete-account", user)).toBeNull();
+    expect(readReauthIntent(`change-email.${user}`, user)).toBeNull();
+    expect(readReauthIntent(undefined, user)).toBeNull();
   });
 });
 

@@ -26,8 +26,13 @@ export function readOAuthReturn(value: string | null | undefined): string {
   return sanitizeReturnTo(value);
 }
 
-export function readReauthIntent(value: string | null | undefined): ReauthIntent | null {
-  return value === "delete-account" ? value : null;
+/** The intent names the user who asked, so choosing another Google account at Google does not open that account's delete dialog. */
+export function reauthIntentValue(userId: string): string {
+  return `delete-account.${userId}`;
+}
+
+export function readReauthIntent(value: string | null | undefined, userId: string): ReauthIntent | null {
+  return value === reauthIntentValue(userId) ? "delete-account" : null;
 }
 
 /** Account deletion for a Google-only account needs an OAuth sign-in recorded in the last five minutes. */
