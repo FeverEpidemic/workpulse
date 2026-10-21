@@ -174,7 +174,7 @@ Baru:
 - `tests/e2e/auth-google.spec.ts` (masuk `playwright.auth.config.ts`)
 - `docs/verification/T29-google-oauth-runbook.md`
 - `docs/verification/T29-phase{0..6}-*.md`, `docs/verification/T29-google-oauth.md`
-- `docs/decisions/0038-t29-google-oauth.md` (nomor berikutnya yang kosong di `main` saat merge; T28 juga menulis draft decision)
+- `docs/decisions/0039-t29-google-oauth.md` (Fase 6: 0038 sudah dipakai draft decision T28; nomor dicek ulang saat merge)
 
 Berubah: file di §2.1, `tests/unit/account-reauthenticate.test.ts` atau test service hapus akun yang ada, `tests/unit/auth-routing.test.ts` bila peta notice diuji di sana.
 
@@ -228,7 +228,7 @@ Berubah: file di §2.1, `tests/unit/account-reauthenticate.test.ts` atau test se
 
 ### Fase 6: Draft dokumen (setelah gate)
 
-- [ ] `docs/decisions/0038-t29-google-oauth.md`: §2.2 beserta alasan, pengecualian ikon merek, batas yang diterima, seam ke production.
+- [x] `docs/decisions/0039-t29-google-oauth.md`: §2.2 beserta alasan, keputusan tanpa logo merek, batas yang diterima, seam ke production.
 - [ ] `docs/verification/T29-google-oauth-runbook.md` untuk pemilik produk: buat OAuth client *Web application* di Google Cloud, authorized redirect URI `https://cotmocgufdxjtiuakwdh.supabase.co/auth/v1/callback`, aktifkan provider Google di dashboard Supabase, tambahkan `https://myworkpulse.my.id/auth/confirm` ke Redirect URLs bila belum ada, smoke dengan flag masih mati lewat URL authorize langsung, lalu nyalakan `WORKPULSE_AUTH_GOOGLE_ENABLED` di web, smoke masuk, penautan akun, hapus akun Google, dan hapus akun uji lewat S12 (decision 0036 #4).
 - [ ] `docs/verification/T29-google-oauth.md` (bukti, tanpa klaim DONE) dan draft entry status untuk closeout.
 
