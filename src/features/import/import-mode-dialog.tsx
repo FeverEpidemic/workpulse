@@ -12,7 +12,8 @@ import { t, type Locale } from "@/i18n/messages";
  * T26/T28 (decisions 0033, 0036): every upload picks how the CV is read. Two equal cards in a fixed order, the same
  * button variant, no recommendation, and focus on the title so a stray Enter chooses nothing. With AI consent on,
  * Read without AI first shows a confirmation (step "confirm", controlled by the parent) because it turns AI off for
- * the whole account; its heading takes focus for the same reason. Escape, the backdrop and Cancel only call onCancel.
+ * the whole account; its heading takes focus for the same reason. Escape, the backdrop and Cancel only call onCancel, and
+ * do nothing while a choice is being saved or uploaded: closing then would leave consent changed and no upload.
  */
 export function ImportModeDialog({
   open,
@@ -68,6 +69,7 @@ export function ImportModeDialog({
       description={t(locale, "import.mode.description")}
       className="import-mode-dialog"
       focusTitle
+      dismissible={!busy}
     >
       {step === "confirm" ? (
         <section className="import-mode-confirm" aria-labelledby={confirmTitleId}>
@@ -119,7 +121,7 @@ export function ImportModeDialog({
         </>
       )}
       <div className="ui-dialog-actions">
-        <Button variant="ghost" onClick={onCancel}>{t(locale, "common.cancel")}</Button>
+        <Button variant="ghost" disabled={busy} onClick={onCancel}>{t(locale, "common.cancel")}</Button>
       </div>
     </Dialog>
   );

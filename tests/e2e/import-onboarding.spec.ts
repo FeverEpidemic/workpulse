@@ -653,6 +653,35 @@ test("T28 a user with consent at the AI import limit still uploads, reading with
   expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
 });
 
+// T28 review RV1: once Turn off AI is pressed, Cancel, Escape and the backdrop wait for the choice to finish.
+test("T28 the choice cannot be closed while AI is being turned off", async ({ page }) => {
+  const user = await createUser({ consent: true });
+  await signIn(page, user);
+  await chooseFile(page, pdf("rules.pdf", rulesCvPdf()));
+  let release = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  // Hold the consent server action so the dialog stays busy while we try to close it.
+  await page.route("**/*", async (route) => {
+    if (route.request().method() === "POST" && route.request().headers()["next-action"]) await held;
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Upload and extract" }).click();
+  const dialog = modeDialog(page);
+  await dialog.getByRole("button", { name: "Read without AI" }).click();
+  await dialog.getByRole("button", { name: "Turn off AI and read CV" }).click();
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(dialog).toBeVisible();
+
+  release();
+  await expect(page.getByRole("status")).toHaveText("Waiting to start");
+  expect(await profileConsent(user.id)).toEqual({ ai_consent_at: null, ai_consent_version: null });
+  expect((await batchModes(user.id)).map((row) => row.extraction_mode)).toEqual(["rules"]);
+  await page.unroute("**/*");
+});
+
 test("T28 both dialog views at 360 and 1440 in light and dark: axe, no overflow, focus on each heading", async ({ page }, testInfo) => {
   const user = await createUser({ consent: true });
   await signIn(page, user);

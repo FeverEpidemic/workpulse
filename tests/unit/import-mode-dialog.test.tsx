@@ -118,6 +118,15 @@ describe("T28 import mode dialog: every upload, and a confirmation before AI is 
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Back<\/button>/);
   });
 
+  // T28 review RV1: once a choice runs, closing the dialog would leave consent changed and nothing uploaded.
+  it("disables Cancel while a choice is being saved or uploaded, in both views", () => {
+    const cancel = /<button[^>]*>Cancel<\/button>/;
+    expect(render("en", { granted: true, step: "confirm", pending: "rules" }).match(cancel)?.[0]).toContain('disabled=""');
+    expect(render("en", { pending: "ai" }).match(cancel)?.[0]).toContain('disabled=""');
+    expect(render("en", { granted: true, step: "confirm" }).match(cancel)?.[0]).not.toContain("disabled");
+    expect(render().match(cancel)?.[0]).not.toContain("disabled");
+  });
+
   it("has the approved Indonesian confirmation", () => {
     const html = render("id", { granted: true, step: "confirm" });
     for (const text of ["Matikan AI untuk akun Anda?", "Matikan AI dan baca CV", "Kembali",
