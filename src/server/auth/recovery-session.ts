@@ -1,7 +1,13 @@
 const RECOVERY_WINDOW_SECONDS = 15 * 60;
 const CLOCK_SKEW_SECONDS = 60;
 
-function hasRecentMethod(amr: unknown, methods: readonly string[], nowSeconds: number): boolean {
+/** True when the JWT `amr` claim records one of `methods` within `windowSeconds` (one minute of clock skew allowed). */
+export function hasRecentMethod(
+  amr: unknown,
+  methods: readonly string[],
+  nowSeconds: number,
+  windowSeconds: number = RECOVERY_WINDOW_SECONDS,
+): boolean {
   if (!Array.isArray(amr)) return false;
 
   return amr.some((entry: unknown) => {
@@ -11,7 +17,7 @@ function hasRecentMethod(amr: unknown, methods: readonly string[], nowSeconds: n
     if (typeof method !== "string" || !methods.includes(method) || typeof timestamp !== "number" || !Number.isFinite(timestamp)) return false;
 
     const ageSeconds = nowSeconds - timestamp;
-    return ageSeconds >= -CLOCK_SKEW_SECONDS && ageSeconds <= RECOVERY_WINDOW_SECONDS;
+    return ageSeconds >= -CLOCK_SKEW_SECONDS && ageSeconds <= windowSeconds;
   });
 }
 

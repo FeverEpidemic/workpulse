@@ -79,6 +79,11 @@ export function getTrustedSiteUrl(): string {
   }
 }
 
+/** Google sign-in stays hidden until this is exactly `true`, so the hosted provider can be smoke-tested first. */
+export function isGoogleAuthEnabled(): boolean {
+  return process.env.WORKPULSE_AUTH_GOOGLE_ENABLED === "true";
+}
+
 export function getAuthCallbackUrl(): string {
   return new URL("/auth/confirm", getTrustedSiteUrl()).toString();
 }
