@@ -60,7 +60,8 @@ Pelaksana, setelah fast-forward ke `bed98db` (perubahan primitive `Dialog`): `te
 
 ## Flaky dan batas lingkungan
 
-- `pnpm test:e2e:*` gagal di mesin ini karena `package.json` memuat `"playwright": "latest"` (1.64) di samping `@playwright/test` 1.63; semua suite dijalankan lewat `node node_modules/@playwright/test/cli.js test` dengan argumen script yang sama.
+- `pnpm test:e2e:*` gagal selama T28 dikerjakan karena `package.json` memuat `"playwright": "latest"` (1.64) di samping `@playwright/test` 1.63; semua suite di atas dijalankan lewat `node node_modules/@playwright/test/cli.js test` dengan argumen script yang sama. Gate M5 (RV-PW) mem-pin 1.63.0 dan ikut masuk lewat merge `main`.
+- Setelah merge `main` (M5, `1f34115`): lint, typecheck exit 0; unit 135/1272. `pnpm test:e2e:import` gagal 14/18 di langkah upload karena storage lokal bersama kembali ke `v1.72.1` (di-restart sesi lain); merge tidak mengubah kode T28.
 - `pnpm lint` penuh membaca build output `.claude/worktrees/*/.next/`; repo sendiri bersih dengan `--ignore-pattern ".claude/**"`.
 - Stack Supabase lokal bersama sempat di-restart dari checkout tanpa pin `supabase/.temp`, sehingga storage `v1.72.1` berjalan di atas skema `v1.80.2` dan setiap upload `500` (`42P10`). Dipulihkan dengan `supabase stop`/`start` dari checkout utama atas persetujuan pengguna, tanpa reset. RV4 mencatat aturan ini di `README.md` dan `AGENTS.md`.
 - Log `[WebServer] The destination stream closed early.` muncul tanpa menggagalkan test (sama dengan baseline).
