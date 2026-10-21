@@ -1250,6 +1250,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T25 | Regression dan release handoff | DONE |
 | T26 | Import CV tanpa AI (parser aturan) | DONE |
 | T27 | Bottom tab bar mobile | DONE |
+| T28 | Pilihan Dengan AI / Tanpa AI di setiap import | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

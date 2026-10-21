@@ -16,7 +16,7 @@ Sebelum mengubah implementasi:
 
 1. Baca `IMPLEMENTATION_STATUS.md` untuk status, blocker, dan langkah berikutnya.
 2. Baca bagian terkait di `IMPLEMENTATION_PLAN.md`, terutama §1 untuk keputusan scope, §3 untuk kontrak lintas fitur, §4 untuk gap schema, serta acceptance task yang dikerjakan.
-3. Baca bagian dokumen sumber yang relevan dengan task. Pertahankan rujukan requirement R01–R10, flow F01–F07, screen S01–S14, dan task T01–T29 dalam catatan implementasi/verifikasi.
+3. Baca bagian dokumen sumber yang relevan dengan task. Pertahankan rujukan requirement R01–R10, flow F01–F07, screen S01–S14, dan task T01–T28 dalam catatan implementasi/verifikasi.
 4. Baca `Design.md` ketika mengerjakan UI, dengan batas scope yang sudah diselesaikan dalam rencana.
 
 | Dokumen | Tanggung jawab |
@@ -138,7 +138,7 @@ Targetkan WCAG 2.2 AA: keyboard navigation, label yang jelas, focus management/r
 Gunakan scripts dari `package.json` melalui pnpm; `README.md` mendokumentasikan setup web/worker/database. Jangan mengklaim perintah sudah lulus tanpa menjalankannya.
 
 - Gate dasar: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, dan `pnpm worker:check`.
-- Database lokal (Docker + Supabase CLI): `pnpm db:start`, `pnpm db:test` (pgTAP di `supabase/tests/`), `pnpm db:lint`, dan `pnpm db:types` setelah migration. Migration bersifat forward-only; jangan `db:reset` database lokal aktif tanpa persetujuan pengguna.
+- Database lokal (Docker + Supabase CLI): `pnpm db:start`, `pnpm db:test` (pgTAP di `supabase/tests/`), `pnpm db:lint`, dan `pnpm db:types` setelah migration. Migration bersifat forward-only; jangan `db:reset` database lokal aktif tanpa persetujuan pengguna. Stack lokal dipakai bersama semua worktree; jalankan `db:start`/`db:stop` hanya dari checkout utama, karena versi service (mis. storage) di-pin di `supabase/.temp/` yang tidak ada di worktree.
 - Integration per domain: `pnpm test:integration:{activity,projects,achievements,storage,evidence}` terhadap Supabase lokal dengan `.env.local`; export CV `pnpm test:integration:cv-export` juga membutuhkan renderer `workpulse-t21-pdf` (`WORKPULSE_PDF_GOTENBERG_URL`), begitu pula QA PDF `pnpm test:pdf` dan E2E S14 `pnpm test:e2e:cv-export`.
 - E2E per domain: `pnpm test:e2e`, `pnpm test:e2e:{auth,ui,activity,projects,achievements,evidence}`; masing-masing memakai config `playwright.*.config.ts` sendiri dan membersihkan fixture akun test. `pnpm test:e2e:auth-google` menjalankan server dengan flag Google menyala (port 3016) dan tidak pernah memuat Google; stack lokal harus dimulai dari checkout yang `config.toml`-nya punya blok `[auth.external.google]`.
 - Scanner nyata untuk evidence mengikuti `docs/verification/T10-scanner-runbook.md`.

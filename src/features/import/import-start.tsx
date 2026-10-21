@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { AiUsageWindow } from "@/domain/ai/usage";
 import { IMPORT_ENTITY_TYPES, IMPORT_MAX_BYTES, type ImportExtractionMode } from "@/domain/import/contracts";
-import type { ImportView } from "@/domain/import/import-view";
+import { withConsentWithdrawn, type ImportView } from "@/domain/import/import-view";
 import { setAiConsentAction } from "@/features/ai/actions";
 import { AiLimitNotice, isAiLimited } from "@/features/ai/ai-limit-notice";
 import { EVIDENCE_POLL_DELAYS } from "@/features/evidence/evidence-attachments";
@@ -55,15 +55,22 @@ export function importUploadHeaders(mime: string, key: string, name: string, mod
 }
 
 /**
- * T26: what a choice in the mode dialog does. Use AI saves consent first and uploads only if that worked; Read
- * without AI uploads at once and never touches consent. Returns the consent error to show in the dialog, or null.
+ * T26/T28: what a choice in the mode dialog does. Use AI saves consent first when there is none; Read without AI
+ * withdraws consent first when there is one (only after the user confirmed that). The upload runs only if the consent
+ * step worked. Returns the consent error to show in the dialog, or null.
  */
 export async function chooseImportMode(
   mode: ImportExtractionMode,
-  steps: { saveConsent: () => Promise<string | null>; upload: (mode: ImportExtractionMode) => Promise<void> },
+  granted: boolean,
+  steps: {
+    saveConsent: () => Promise<string | null>;
+    withdrawConsent: () => Promise<string | null>;
+    upload: (mode: ImportExtractionMode) => Promise<void>;
+  },
 ): Promise<string | null> {
-  if (mode === "ai") {
-    const consentError = await steps.saveConsent();
+  const consentStep = mode === "ai" && !granted ? steps.saveConsent : mode === "rules" && granted ? steps.withdrawConsent : null;
+  if (consentStep) {
+    const consentError = await consentStep();
     if (consentError !== null) return consentError;
   }
   await steps.upload(mode);
@@ -99,10 +106,13 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
   const [modeOpen, setModeOpen] = useState(false);
+  const [modeStep, setModeStep] = useState<"choose" | "confirm">("choose");
   const [modePending, setModePending] = useState<ImportExtractionMode | null>(null);
   const [modeError, setModeError] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [granted, setGranted] = useState(consent.granted);
+  /** The latest profile revision: a consent change bumps it, so the next change in this page must send the new one. */
+  const [profileRevision, setProfileRevision] = useState(consent.profileRevision);
   const [pending, startTransition] = useTransition();
   const input = useRef<HTMLInputElement>(null);
   const dropzone = useRef<HTMLDivElement>(null);
@@ -163,16 +173,16 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
     setUploadKey(next ? crypto.randomUUID() : null);
   };
 
-  /** Without consent and without a chosen mode, the neutral choice opens instead of uploading (T26). */
+  /** Without a chosen mode the neutral choice opens instead of uploading, with or without consent (T26, T28). */
   const upload = useCallback(async (mode?: ImportExtractionMode) => {
     if (!file || !uploadKey) return;
     if (file.size === 0) return setError(t(locale, "import.failed.FILE_EMPTY"));
     if (file.size > IMPORT_MAX_BYTES) return setError(t(locale, "import.failed.FILE_TOO_LARGE"));
     const mime = mimeFor(file);
     if (mime !== "application/pdf" && mime !== DOCX_MIME) return setError(t(locale, "import.failed.UNSUPPORTED_FORMAT"));
-    const resolved = mode ?? (granted ? "ai" : null);
-    if (resolved === null) {
+    if (!mode) {
       setModeError("");
+      setModeStep("choose");
       setModeOpen(true);
       return;
     }
@@ -181,7 +191,7 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
     try {
       const response = await fetch("/api/imports", {
         method: "POST",
-        headers: importUploadHeaders(mime, uploadKey, file.name, resolved),
+        headers: importUploadHeaders(mime, uploadKey, file.name, mode),
         body: file,
       });
       const body = await response.json().catch(() => ({})) as ImportView & { message?: string };
@@ -198,31 +208,51 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
     } finally {
       setUploading(false);
     }
-  }, [file, uploadKey, granted, locale]);
+  }, [file, uploadKey, locale]);
 
   const closeModeDialog = () => {
     modeChoice.current = null;
     setModeOpen(false);
+    setModeStep("choose");
     setModePending(null);
     requestAnimationFrame(() => dropzone.current?.focus());
   };
 
-  /** A choice in the mode dialog: Use AI saves consent first, Read without AI uploads at once. */
+  /** Saves or withdraws AI consent; returns the message to show, or null once the new state is applied. */
+  const setConsent = async (choice: "allow" | "withdraw"): Promise<string | null> => {
+    const form = new FormData();
+    form.set("consent", choice);
+    form.set("expected_revision", String(profileRevision));
+    const state = await setAiConsentAction(IDLE_ACTION_STATE, form);
+    if (state.status !== "success") return state.status === "error" ? t(locale, state.error.messageKey) : t(locale, "common.error");
+    const revision = (state.data as { revision?: unknown } | undefined)?.revision;
+    if (typeof revision === "number") setProfileRevision(revision);
+    setGranted(choice === "allow");
+    if (choice === "withdraw") setView(withConsentWithdrawn);
+    return null;
+  };
+
+  /** With consent on, Read without AI asks first: it turns AI off for the whole account (T28). */
   const chooseMode = (mode: ImportExtractionMode) => {
+    setModeError("");
+    if (mode === "rules" && granted) setModeStep("confirm");
+    else runChoice(mode);
+  };
+
+  const backToChoice = () => {
+    setModeError("");
+    setModeStep("choose");
+  };
+
+  /** Runs a choice; the consent step depends on whether consent is on (chooseImportMode). */
+  const runChoice = (mode: ImportExtractionMode) => {
     modeChoice.current = mode;
     setModePending(mode);
     setModeError("");
     startTransition(async () => {
-      const failure = await chooseImportMode(mode, {
-        saveConsent: async () => {
-          const form = new FormData();
-          form.set("consent", "allow");
-          form.set("expected_revision", String(consent.profileRevision));
-          const state = await setAiConsentAction(IDLE_ACTION_STATE, form);
-          if (state.status !== "success") return state.status === "error" ? t(locale, state.error.messageKey) : t(locale, "common.error");
-          setGranted(true);
-          return null;
-        },
+      const failure = await chooseImportMode(mode, granted, {
+        saveConsent: () => setConsent("allow"),
+        withdrawConsent: () => setConsent("withdraw"),
         upload: async (chosen) => {
           if (modeChoice.current !== chosen) return;
           setModeOpen(false);
@@ -251,7 +281,7 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
 
   const showChooser = view.state === "choose" || choosing;
   const limited = isAiLimited(usage) ? usage : null;
-  // The AI import limit blocks AI only: without consent the user can still read the CV with rules (T26), and a
+  // The AI import limit blocks AI only: the user can still read the CV with rules (T26, T28 also with consent), and a
   // rules batch retries without an AI unit.
   const aiBlocksRetry = limited !== null && view.extractionMode !== "rules";
   const progress = PROGRESS_KEYS[view.state];
@@ -266,19 +296,13 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
 
   return (
     <div className="import-start space-y-5">
-      {showChooser && limited && granted ? (
-        <section className="space-y-4" aria-labelledby="import-choose-title">
-          <h2 id="import-choose-title" className="text-xl font-semibold">{t(locale, "import.title")}</h2>
-          <AiLimitNotice locale={locale} bucket="import" usage={limited} timeZone={timeZone} />
-          <div className="import-actions">{manual(true)}</div>
-        </section>
-      ) : showChooser ? (
+      {showChooser ? (
         <section className="space-y-4" aria-labelledby="import-choose-title">
           <h2 id="import-choose-title" className="text-xl font-semibold">{t(locale, "import.title")}</h2>
           <p className="text-sm text-[var(--color-text-secondary)]">{t(locale, "import.intro")}</p>
           <div className="import-disclosure">
             <h3 className="text-sm font-semibold">{t(locale, "import.disclosureTitle")}</h3>
-            <p className="text-sm">{t(locale, granted ? "import.disclosure" : "import.disclosureNoConsent")}</p>
+            <p className="text-sm">{t(locale, "import.disclosureChoice")}</p>
           </div>
           <div
             ref={dropzone}
@@ -407,17 +431,22 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
         </section>
       )}
 
-      {granted ? null : (
+      {/* Only the chooser has an Upload button, so the choice lives with it (T28: for every user). */}
+      {showChooser ? (
         <ImportModeDialog
           open={modeOpen}
           locale={locale}
+          step={modeStep}
+          granted={granted}
           pending={modePending}
           error={modeError}
           onCancel={closeModeDialog}
           onChoose={chooseMode}
+          onBack={backToChoice}
+          onConfirmRules={() => runChoice("rules")}
           aiNotice={limited ? <AiLimitNotice locale={locale} bucket="import" usage={limited} timeZone={timeZone} /> : undefined}
         />
-      )}
+      ) : null}
 
       <Dialog
         open={cancelOpen}
