@@ -3,7 +3,7 @@
 - Tanggal: 21 Oktober 2026
 - Branch: `claude/t30-motion-loading` (dari `466b2f8`, `origin/main`). Status: **DESAIN**, menunggu review owner.
 - Sumber arah: [DESIGN.md](../../DESIGN.md) §16.2, §28, §29, §37. Filter: antislop mode DURING, dial **MOTION 2**.
-- Rencana implementasi: menyusul (`T30-implementation-plan.md`) setelah desain ini disetujui.
+- Rencana implementasi: [T30-implementation-plan.md](T30-implementation-plan.md). Desain disetujui owner 21 Oktober 2026; dua koreksi dari pembacaan kode (skeleton, transisi halaman) dicatat di bagian 2.1 dan 3.
 
 ## Masalah
 
@@ -55,9 +55,9 @@ Aturan: tidak ada transisi di atas 240ms (kecuali highlight memudar item baru da
 ### 2.1 Pindah halaman
 
 - Item navigasi (sidebar, tab bar) yang diklik langsung menampilkan state pending lewat `useLinkStatus` dari `next/link`. Verifikasi dukungan di Next 16.3 di Fase 0; jika tidak tersedia, pakai `useTransition` + router.
-- Skeleton: shimmer pelan kiri ke kanan, sekitar 1.6 detik per putaran, dari `--color-bg-subtle` ke nada sage lebih terang, dicek di light dan dark. Ini satu-satunya animasi berulang: punya pemicu (data dimuat) dan berhenti saat konten datang.
+- Skeleton: berdenyut pelan lewat `opacity` (1 → 0.55 → 1, sekitar 1.6 detik), dicek di light dan dark. Bukan shimmer kiri ke kanan, karena shimmer butuh gradient dan Design.md §16.1 melarang gradient (koreksi 22 Oktober 2026). Ini satu-satunya animasi berulang selain spinner: punya pemicu (data dimuat) dan berhenti saat konten datang.
 - Anti-kedip: skeleton baru terlihat setelah sekitar 150ms (`animation-delay` pada opacity).
-- Lebih dari 8 detik: muncul teks "masih memuat" dengan tombol muat ulang. Error tetap ditangani `error.tsx`.
+- Lebih dari 8 detik: muncul teks "masih memuat" dengan tombol muat ulang. Saat ini tidak ada `error.tsx` di `src/app/`; error boundary per route adalah follow-up di luar T30.
 
 ### 2.2 Tombol simpan atau kirim
 
@@ -91,7 +91,9 @@ Semua copy lewat i18n (en/id), tanpa em dash. Teks final ditulis saat implementa
 | Accordion / collapsible | tinggi + opacity, 180ms | sama | |
 | Tab bar | transisi tinggi yang ada tetap | | |
 
-Sengaja tidak dianimasikan: stagger isi list, animasi saat scroll, kartu terangkat saat hover, dan logo (§16.2). Browser tanpa View Transitions berganti halaman tanpa animasi.
+Sengaja tidak dianimasikan: stagger isi list, animasi saat scroll, kartu terangkat saat hover, dan logo (§16.2).
+
+Koreksi 22 Oktober 2026: transisi halaman memakai `src/app/(workspace)/template.tsx` dengan animasi masuk CSS, bukan View Transitions. `next.config.ts` tidak punya flag `viewTransition` dan opsi itu tidak ada di schema Next 16.3.5, sedangkan T30 tidak memakai flag eksperimental. Hasilnya sama untuk pengguna (masuk saja, tanpa animasi keluar) dan jalan di semua browser.
 
 ## 4. Tahapan dan testing
 
