@@ -4,6 +4,7 @@ import { destinationForLifecycle } from "@/domain/auth/route-state";
 import { sanitizeReturnTo } from "@/domain/routes/safe-return";
 import { SignInClient } from "@/features/auth/sign-in-client";
 import { getRequestContext, getRequestLocale } from "@/server/auth/context";
+import { isGoogleAuthEnabled } from "@/server/supabase/config";
 import type { MessageKey } from "@/i18n/messages";
 
 type SignInSearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -35,6 +36,7 @@ export default async function SignInPage({ searchParams }: { searchParams: SignI
       returnTo={returnTo}
       notice={context.accountDeleting ? "auth.accountDeleting" : noticeKeys[noticeValue]}
       configured={context.configured}
+      googleEnabled={isGoogleAuthEnabled()}
     />
   );
 }

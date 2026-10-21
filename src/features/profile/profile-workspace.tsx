@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { DeleteAccountCard } from "@/features/account/delete-account-card";
+import type { DeletionReauth } from "@/features/account/delete-account-state";
 import { AiConsentCard } from "@/features/profile/ai-consent-card";
 import { FoundationEditors } from "@/features/profile/foundation-editors";
 import { ProfileEditor } from "@/features/profile/profile-editor";
@@ -24,12 +25,16 @@ export async function ProfileWorkspace({
   userEmail,
   locale,
   openRecordId,
+  deletionReauth,
+  openDeleteDialog = false,
 }: {
   client: ServerClient;
   profile: ProfileRow;
   userEmail: string;
   locale: Locale;
   openRecordId?: string;
+  deletionReauth?: DeletionReauth;
+  openDeleteDialog?: boolean;
 }) {
   const [experienceResult, educationResult, certificationResult, skillResult, projectResult] = await Promise.all([
     client.from("experiences").select("*").eq("user_id", profile.id).order("start_date", { ascending: false, nullsFirst: false }),
@@ -66,7 +71,7 @@ export async function ProfileWorkspace({
           <AiConsentCard profile={profile} locale={locale} />
         </Card>
         <Card className="space-y-3">
-          <DeleteAccountCard accountEmail={userEmail} locale={locale} />
+          <DeleteAccountCard accountEmail={userEmail} locale={locale} reauth={deletionReauth} openOnLoad={openDeleteDialog} />
         </Card>
       </section>
 
