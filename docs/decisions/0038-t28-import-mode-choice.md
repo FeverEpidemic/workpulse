@@ -1,4 +1,4 @@
-# Decision 0036: T28 pilihan Dengan AI / Tanpa AI di setiap import
+# Decision 0038: T28 pilihan Dengan AI / Tanpa AI di setiap import
 
 Date: 21 Oktober 2026
 

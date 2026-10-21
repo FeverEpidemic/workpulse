@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §8 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 21 Oktober 2026
-- Status plan: **DONE** (21 Oktober 2026). Fase 0-5 selesai, gate review PASS, remediasi RV1-RV4 selesai; lihat [bukti](T28-import-mode-choice.md) dan [decision 0036](../decisions/0036-t28-import-mode-choice.md).
+- Status plan: **DONE** (21 Oktober 2026). Fase 0-5 selesai, gate review PASS, remediasi RV1-RV4 selesai; lihat [bukti](T28-import-mode-choice.md) dan [decision 0038](../decisions/0038-t28-import-mode-choice.md).
 - Dependensi: T26 **DONE** (dialog pilihan netral, batch `rules`), batas pemakaian AI (decision 0032) **DONE**, T27 **DONE** dan sudah di `main` (`f9fff79`).
 - Asal task: penambahan scope oleh pengguna pada 21 Oktober 2026, setelah uji import di staging. T28 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Konsep disetujui di chat per bagian: pilihan di setiap import, Tanpa AI mencabut consent AI global, langkah konfirmasi sebelum pencabutan.
 - Eksekutor: satu agent **Claude**. Semua fase dikerjakan berurutan tanpa delegasi.
@@ -61,7 +61,7 @@ T28 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - `src/features/import/import-start.tsx`: dialog untuk semua pengguna, `chooseImportMode` dengan langkah pencabutan, revisi profil di state, hapus cabang kuota-habis-hanya-manual, disclosure netral.
 - `src/i18n/messages.ts`: key baru en/id (§2.2.8), hapus key yang tidak dipakai lagi.
 - `src/app/globals.css` hanya bila tampilan konfirmasi butuh layout; pakai token yang ada.
-- Test unit/E2E, receipt, draft decision 0036.
+- Test unit/E2E, receipt, draft decision 0038 (plan menulis 0036; dinomori ulang saat merge karena Gate M5 memakai 0036 dan 0037).
 
 ### 2.2 Keputusan implementasi
 
@@ -95,7 +95,7 @@ T28 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
    - `import.mode.confirmBack`: en "Back" / id "Kembali".
    - Key `import.disclosure` dan `import.disclosureNoConsent` dihapus bila tidak dipakai lagi di `src/`. Key lain dari T26 tidak berubah.
 9. **Hal yang tidak berubah.** `AiConsentDialog`, kartu consent S12, panel analisis aktivitas, route `/api/imports`, RPC, worker, dan migration. Parity migration tetap **38/38**.
-10. **Nomor.** Decision baru `docs/decisions/0036-t28-import-mode-choice.md` (0035 dipakai T27). Tidak ada script npm baru.
+10. **Nomor.** Decision baru `docs/decisions/0038-t28-import-mode-choice.md` (0035 dipakai T27). Tidak ada script npm baru.
 
 ### 2.3 Di luar scope
 
@@ -137,7 +137,7 @@ Tidak ada perubahan. Rujukan yang dipakai apa adanya: `setAiConsentAction` (`src
 | Modify | `tests/unit/import-start-ui.test.tsx`, `tests/unit/import-mode-dialog.test.tsx`, `tests/unit/ai-usage-limits.test.tsx` |
 | Modify | `tests/e2e/import-onboarding.spec.ts`, `tests/e2e/m3-assisted-journey.spec.ts`, `tests/e2e/import-review.spec.ts`, `tests/e2e/release-a11y.spec.ts` (hanya langkah upload pengguna consent) |
 | Create | `docs/verification/T28-phase{0..4}-*.md`, `docs/verification/T28-import-mode-choice.md` |
-| Create | `docs/decisions/0036-t28-import-mode-choice.md` |
+| Create | `docs/decisions/0038-t28-import-mode-choice.md` |
 
 Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk pengguna consent (`rg "Upload and extract" tests` pada 21 Oktober 2026: `import-onboarding` 16, `m3-assisted-journey` 3, `ai-usage-limits` 3, `import-start-ui` 3, `import-review` 1, `m2-manual-journey` 1, `release-a11y` 1). Hanya langkah yang kini membuka dialog yang diubah. Langkah dialog yang berulang dijadikan helper di spec masing-masing atau di `tests/e2e/helpers/`.
 
@@ -194,7 +194,7 @@ Fase 0 menghitung ulang file test yang menekan *Upload and extract* untuk penggu
 
 ### Fase 5: Draft dokumen (setelah gate lulus)
 
-- [x] Tulis `docs/decisions/0036-t28-import-mode-choice.md`: mengubah 0033 #2 (dialog untuk semua pengguna; Tanpa AI mencabut consent global setelah konfirmasi) dan memperluas 0033 #10 (kuota habis untuk pengguna consent). Sebut perilaku `CONSENT_WITHDRAWN` untuk job yang sedang berjalan.
+- [x] Tulis `docs/decisions/0038-t28-import-mode-choice.md`: mengubah 0033 #2 (dialog untuk semua pengguna; Tanpa AI mencabut consent global setelah konfirmasi) dan memperluas 0033 #10 (kuota habis untuk pengguna consent). Sebut perilaku `CONSENT_WITHDRAWN` untuk job yang sedang berjalan.
 - [x] Tulis `docs/verification/T28-import-mode-choice.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
 - [x] Commit.
 

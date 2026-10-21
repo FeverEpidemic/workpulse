@@ -7,6 +7,7 @@ Daftar ini menjaga agar tidak ada yang menyebut production live hanya karena sta
 
 - Tanggal: 10 Oktober 2026; diperbarui 11 Oktober 2026 setelah regresi Fase 8 dan gate review, dan 20 Oktober 2026 saat T25 ditutup.
 - Status: **tidak siap untuk production**. Sepuluh BLOCKER terbuka. T25 **DONE** (20 Oktober 2026) atas bukti lokal dan staging; bukti staging di kolom kanan tidak menutup BLOCKER, karena BLOCKER hanya ditutup dengan bukti lingkungan production.
+- Gate M5 (21 Oktober 2026): **PASSED dengan pengecualian pemilik produk** ([laporan](M5-gate-review.md), decision [0036](../decisions/0036-shared-staging-pilot-project.md) dan [0037](../decisions/0037-m5-owner-exceptions.md)). Itu verdict untuk pilot 20 pengguna dan tidak menutup BLOCKER di bawah. Staging dan pilot memakai satu proyek Supabase (`Workpulse`). Lima butir bukti pilot E1–E5 dikecualikan dan wajib dibuktikan sebelum production, bersama BLOCKER di bawah.
 - Pemilik: pelaksana (agen T25), reviewer (Claude), operator (menjalankan host), pemilik produk (keputusan dan otorisasi).
 
 ## 1. BLOCKER production

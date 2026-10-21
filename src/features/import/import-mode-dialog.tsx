@@ -9,7 +9,7 @@ import type { ImportExtractionMode } from "@/domain/import/contracts";
 import { t, type Locale } from "@/i18n/messages";
 
 /**
- * T26/T28 (decisions 0033, 0036): every upload picks how the CV is read. Two equal cards in a fixed order, the same
+ * T26/T28 (decisions 0033, 0038): every upload picks how the CV is read. Two equal cards in a fixed order, the same
  * button variant, no recommendation, and focus on the title so a stray Enter chooses nothing. With AI consent on,
  * Read without AI first shows a confirmation (step "confirm", controlled by the parent) because it turns AI off for
  * the whole account; its heading takes focus for the same reason. Escape, the backdrop and Cancel only call onCancel, and

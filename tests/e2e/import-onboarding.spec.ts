@@ -488,7 +488,7 @@ test("T26 an empty rules result uses its own copy, in Indonesian too", async ({ 
   await expect(page.getByText("CV dua kolom atau berbentuk tabel sering tidak terbaca tanpa AI.", { exact: false })).toBeVisible({ timeout: 30_000 });
 });
 
-// T28: the choice on every upload; Read without AI with consent turns AI off after a confirmation (decision 0036).
+// T28: the choice on every upload; Read without AI with consent turns AI off after a confirmation (decision 0038).
 const RULES_AI_OFF = "This also turns off AI for activity analysis. You can turn it back on in Settings.";
 const CONFIRM_TITLE = "Turn off AI for your account?";
 

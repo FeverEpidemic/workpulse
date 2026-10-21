@@ -96,3 +96,5 @@ Semuanya dijalankan ulang di Fase 8 terhadap stack lokal. Nama test lengkap ada 
 3. Pemeriksaan NVDA §6.4 rencana oleh manusia (bukan syarat DONE menurut §2.4.2, tetapi tetap tercatat terbuka).
 
 Gate M5 tidak dapat PASSED sebelum poin 1 dan 2 terpenuhi.
+
+Pembaruan 21 Oktober 2026: poin 1 dan 2 terpenuhi untuk staging (decision 0034). Gate M5 **PASSED dengan pengecualian pemilik produk** ([laporan](M5-gate-review.md), [decision 0037](../decisions/0037-m5-owner-exceptions.md)). Bukti backup lengkap di proyek bersama staging dan pilot ([decision 0036](../decisions/0036-shared-staging-pilot-project.md)) termasuk butir yang dikecualikan (E1).

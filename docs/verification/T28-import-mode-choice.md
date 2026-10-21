@@ -3,7 +3,7 @@
 - Tanggal: 21 Oktober 2026
 - Status: **DONE** (acceptance lokal). Gate review PASS tanpa P0-P2; empat P3 (G1-G4) diselesaikan dalam remediasi RV1-RV4.
 - Pelaksana Fase 0-5: Claude (Opus 5.5), single-agent. Gate review dan remediasi: Claude (Opus 5.5) di sesi dan worktree terpisah (`claude/t28-gate-review-5493dd`), lalu branch T28 di-fast-forward ke `bed98db`. Independensi terbatas: pelaksana dan reviewer memakai model yang sama.
-- Dokumen: [rencana](T28-implementation-plan.md), [decision 0036](../decisions/0036-t28-import-mode-choice.md), [gate review](T28-gate-review.md), [rencana remediasi](T28-review-remediation-plan.md), [receipt remediasi](T28-review-remediation.md), receipt [Fase 0](T28-phase0-baseline.md), [1](T28-phase1-choice-logic.md), [2](T28-phase2-dialog-s02.md), [3](T28-phase3-e2e.md), [4](T28-phase4-regression.md).
+- Dokumen: [rencana](T28-implementation-plan.md), [decision 0038](../decisions/0038-t28-import-mode-choice.md), [gate review](T28-gate-review.md), [rencana remediasi](T28-review-remediation-plan.md), [receipt remediasi](T28-review-remediation.md), receipt [Fase 0](T28-phase0-baseline.md), [1](T28-phase1-choice-logic.md), [2](T28-phase2-dialog-s02.md), [3](T28-phase3-e2e.md), [4](T28-phase4-regression.md).
 
 ## Trace
 
@@ -13,7 +13,7 @@
 | User Flow | F01, *Import exceptions* | upload pengguna consent kini melalui pilihan; kuota habis tidak menutup jalur import |
 | Wireframe | S02, S12 | dialog dan konfirmasi di S02; status consent S12 *Not allowed* setelah pencabutan |
 | Database | `public.set_ai_consent` (T13), `begin_import_batch` mode `rules` (T26) | dipakai apa adanya; tanpa migration (38) |
-| Decision | 0033 #2 dan #10 | diubah dan diperluas oleh 0036 #1, #3, #8 |
+| Decision | 0033 #2 dan #10 | diubah dan diperluas oleh 0038 #1, #3, #8 |
 
 ## Acceptance §1
 
@@ -64,5 +64,5 @@ Pelaksana, setelah fast-forward ke `bed98db` (perubahan primitive `Dialog`): `te
 - `pnpm lint` penuh membaca build output `.claude/worktrees/*/.next/`; repo sendiri bersih dengan `--ignore-pattern ".claude/**"`.
 - Stack Supabase lokal bersama sempat di-restart dari checkout tanpa pin `supabase/.temp`, sehingga storage `v1.72.1` berjalan di atas skema `v1.80.2` dan setiap upload `500` (`42P10`). Dipulihkan dengan `supabase stop`/`start` dari checkout utama atas persetujuan pengguna, tanpa reset. RV4 mencatat aturan ini di `README.md` dan `AGENTS.md`.
 - Log `[WebServer] The destination stream closed early.` muncul tanpa menggagalkan test (sama dengan baseline).
-- Batasan yang diterima: Esc kedua yang dipaksa Chromium selama request (decision 0036 #5) tidak diuji E2E.
+- Batasan yang diterima: Esc kedua yang dipaksa Chromium selama request (decision 0038 #5) tidak diuji E2E.
 - Semua bukti lokal; bukan bukti integrasi staging atau production.
