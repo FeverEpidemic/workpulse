@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SubmitButton } from "@/components/forms/submit-button";
 import { AiConsentDialog } from "@/components/ui/ai-consent-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,19 +141,17 @@ export function AiConsentCard({ profile, locale }: { profile: AiConsentCardProfi
 }
 
 function AllowSubmit({ locale }: { locale: Locale }) {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" name="consent" value="allow" loading={pending} loadingLabel={t(locale, "common.loading")}>
+    <SubmitButton name="consent" value="allow" pendingLabel={t(locale, "common.loading")}>
       {t(locale, "ai.consent.dialogAllow")}
-    </Button>
+    </SubmitButton>
   );
 }
 
 function WithdrawSubmit({ locale }: { locale: Locale }) {
-  const { pending } = useFormStatus();
   return (
-    <Button variant="secondary" type="submit" name="consent" value="withdraw" loading={pending} loadingLabel={t(locale, "common.loading")}>
+    <SubmitButton variant="secondary" name="consent" value="withdraw" pendingLabel={t(locale, "common.loading")}>
       {t(locale, "ai.consent.withdrawConfirm")}
-    </Button>
+    </SubmitButton>
   );
 }

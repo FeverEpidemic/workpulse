@@ -63,7 +63,8 @@ describe("T26 import mode dialog: a neutral choice", () => {
     const html = render("en", { pending: "ai", error: "Could not save." });
     expect(html).toContain('role="alert"');
     expect(html).toContain("Could not save.");
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-busy="true"[^>]*>Saving…<\/button>/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-busy="true"[^>]*>.*?Use AI<span class="sr-only">Saving…<\/span><\/button>/);
+    expect(html).toContain("ui-loading-spinner");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Read without AI<\/button>/);
   });
 

@@ -23,11 +23,22 @@ export const Destructive: Story = { args: { variant: 'destructive', children: 'D
 export const Loading: Story = {
   args: { loading: true, loadingLabel: 'Saving activity' },
   play: async ({ canvas }) => {
-    const button = canvas.getByRole('button', { name: 'Saving activity' });
+    const button = canvas.getByRole('button', { name: 'Save activity Saving activity' });
     await expect(button).toBeDisabled();
     await expect(button).toHaveAttribute('aria-busy', 'true');
+    await expect(button).toHaveTextContent('Save activity');
   },
 };
+export const LoadingWithoutLabel: Story = {
+  args: { loading: true },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Save activity' });
+    await expect(button).toBeDisabled();
+    await expect(button.querySelector('.ui-loading-spinner')).toBeInTheDocument();
+  },
+};
+// Hold the native pointer here; synthetic userEvent does not activate CSS :active.
+export const Pressed: Story = {};
 export const Disabled: Story = { args: { disabled: true } };
 export const Dark: Story = { globals: { theme: 'dark' } };
 export const CssCheck: Story = {

@@ -133,7 +133,8 @@ a {
     background-color var(--motion-fast) var(--ease-standard),
     border-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-fast) var(--ease-standard);
+    box-shadow var(--motion-fast) var(--ease-standard),
+    transform var(--motion-instant) var(--ease-standard);
 }
 
 .button-primary {
@@ -1258,9 +1259,14 @@ a {
 .button-primary:active:not(:disabled),
 .button-secondary:active:not(:disabled),
 .button-danger:active:not(:disabled),
-.ui-button-ghost:active:not(:disabled) {
-  transform: translateY(1px);
+.ui-button-ghost:active:not(:disabled),
+.ui-icon-button:active:not(:disabled) {
+  transform: scale(0.97);
 }
+
+[data-ui-button="true"] { position: relative; padding-inline: calc(var(--space-4) + var(--space-1)); }
+[data-ui-button="true"][aria-busy="true"] { opacity: 1; cursor: progress; }
+.ui-button-spinner { position: absolute; inset-inline-start: var(--space-1); top: 50%; display: inline-flex; transform: translateY(-50%); }
 
 .button-primary:disabled,
 .button-secondary:disabled,
@@ -1517,6 +1523,7 @@ button:disabled {
   background: transparent;
   color: var(--color-text-primary);
   cursor: pointer;
+  transition: transform var(--motion-instant) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
 }
 
 .ui-icon-button:hover {

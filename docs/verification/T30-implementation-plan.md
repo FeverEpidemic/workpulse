@@ -194,12 +194,12 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 3: Tombol
 
-- [ ] Test gagal `Button`: spinner + label asli saat `loading`, `aria-busy`, `disabled`, `loadingLabel` sebagai `sr-only`, spinner tetap ada tanpa `loadingLabel`.
-- [ ] Implementasi §2.2.3 di `button.tsx` dan CSS.
-- [ ] Ganti tombol `useFormStatus` sendiri dari inventaris Fase 0 ke `Button`/`SubmitButton`.
-- [ ] Perbarui test yang mengharapkan teks tombol berganti; setiap perubahan assertion dicatat alasannya di receipt.
-- [ ] Perbarui `button.stories.tsx` (pending, pending tanpa label, ditekan).
-- [ ] Receipt `T30-phase3-buttons.md`, commit.
+- [x] Test gagal `Button`: spinner + label asli saat `loading`, `aria-busy`, `disabled`, `loadingLabel` sebagai `sr-only`, spinner tetap ada tanpa `loadingLabel`.
+- [x] Implementasi §2.2.3 di `button.tsx` dan CSS.
+- [x] Ganti tombol `useFormStatus` sendiri dari inventaris Fase 0 ke `Button`/`SubmitButton`.
+- [x] Perbarui test yang mengharapkan teks tombol berganti; setiap perubahan assertion dicatat alasannya di receipt.
+- [x] Perbarui `button.stories.tsx` (pending, pending tanpa label, ditekan).
+- [x] Receipt `T30-phase3-buttons.md`, commit.
 
 ### Fase 4: Transisi dan copy
 
