@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §7 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 22 Oktober 2026
-- Status plan: **siap gate review**. Fase 0–4 telah dieksekusi; bukti ada pada receipt tiap fase. Verdict Claude dan pembaruan status authoritative masih menunggu reviewer.
+- Status plan: **DONE lokal, 22 Oktober 2026.** Fase 0–4 dieksekusi ChatGPT Sol 6.1; [gate review Claude](T29-p3-gate-review.md) PASS tanpa P0-P2, P3 R1-R6. Smoke staging dengan Google nyata (N5) tetap di runbook T29.
 - Dasar: [gate review T29](T29-gate-review.md) (PASS, tanpa P0-P2, P3 N1-N8), [decision 0039](../decisions/0039-t29-google-oauth.md), [plan T29](T29-implementation-plan.md), [bukti T29](T29-google-oauth.md).
 - Dependensi: T29 **DONE** lokal dan sudah di `main` (PR #35, merge `0910fd8`). T28 juga sudah di `main` (PR #34).
 - Branch: `claude/t29-p3-remediation` dari `origin/main` `0910fd8`, di worktree `D:\Project\WorkPulse-t29`.

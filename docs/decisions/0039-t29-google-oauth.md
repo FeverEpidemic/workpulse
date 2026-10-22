@@ -58,4 +58,4 @@ RV1 menggantikan batas waktu klasifikasi pada keputusan #5: callback dengan code
 
 RV2 melengkapi keputusan #8: cookie niat nonkosong yang tidak cocok dengan user sesi, untuk profil complete, diarahkan ke /settings/profile?reauth=switched. Notice role=status pada kartu Privacy and account hanya memakai email session server, tidak membuka dialog dan tidak menghapus data. Profil provisional tetap menuju onboarding; cookie niat milik user sendiri tetap memakai jalur delete-account. Copy tersedia en dan id.
 
-Bukti pelaksana ada di [receipt Fase 4](../verification/T29-p3-phase4-regression.md). Menunggu gate review Claude; pembaruan ini tidak menandai remediation DONE dan tidak menjadi bukti smoke Google nyata di staging.
+Bukti pelaksana ada di [receipt Fase 4](../verification/T29-p3-phase4-regression.md). [Gate review remediation](../verification/T29-p3-gate-review.md) 22 Oktober 2026: PASS tanpa P0-P2 (pelaksana ChatGPT Sol 6.1, reviewer Claude); remediation DONE lokal. Pembaruan ini bukan bukti smoke Google nyata di staging.
