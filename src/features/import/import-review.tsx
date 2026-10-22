@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { ProgressStatus } from "@/components/ui/progress-status";
 import { Input, Select } from "@/components/ui/field-control";
 import { useUnsavedForm } from "@/components/ui/unsaved-changes";
 import type { ImportCommitResult, ImportItemAction, ImportItemError } from "@/domain/import/commit-contracts";
@@ -408,7 +409,7 @@ export function ImportReview({ locale, snapshot: initial, ownerId, defaults, man
       <div className="import-review space-y-5">
         {header}
         <section className="space-y-3" aria-labelledby="import-review-state">
-          <h2 id="import-review-state" className="text-xl font-semibold" aria-live="polite">{t(locale, "import.review.processingTitle")}</h2>
+          <ProgressStatus key={batchId} locale={locale} kind="import" stage={snapshot.batch.status === "queued" ? "queued" : "running"} label={t(locale, "import.review.processingTitle")} headingId="import-review-state" />
           <p className="text-sm">{t(locale, "import.review.processingBody")}</p>
           <Link className="button-primary" href="/onboarding/import">{t(locale, "import.review.backToStatus")}</Link>
         </section>

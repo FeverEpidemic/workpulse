@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SlowLoadingNotice } from "@/components/ui/slow-loading-notice";
 import { getRequestLocale } from "@/server/auth/context";
 import { t } from "@/i18n/messages";
 
@@ -6,6 +7,7 @@ export default async function DashboardLoading() {
   const locale = await getRequestLocale();
   return (
     <section className="dashboard-page dashboard-loading" aria-busy="true" aria-label={t(locale, "workspace.loading")}>
+      <SlowLoadingNotice locale={locale} />
       <header className="dashboard-header">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-9 w-64 max-w-full" />

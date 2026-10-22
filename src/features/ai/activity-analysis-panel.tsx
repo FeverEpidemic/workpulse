@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/field-control";
 import { InlineError } from "@/components/ui/inline-error";
 import { RevisionConflict } from "@/components/ui/revision-conflict";
+import { ProgressStatus } from "@/components/ui/progress-status";
 import { AiLimitNotice, isAiLimited } from "@/features/ai/ai-limit-notice";
 import type { AnalysisViewPayload } from "@/features/ai/ai-review-service";
 import type { ApplyBlockReason } from "@/domain/ai/analysis-view";
@@ -360,9 +361,7 @@ export function ActivityAnalysisPanel({
       case "running":
         return (
           <div className="ai-analysis-progress">
-            <p role="status" className="ai-analysis-progress-title">
-              {t(locale, view.state === "queued" ? "ai.analysis.queued" : "ai.analysis.running")}
-            </p>
+            <ProgressStatus key={job?.id} locale={locale} kind="ai" stage={view.state} />
             <p className="field-help">{t(locale, "ai.analysis.progressHelp")}</p>
           </div>
         );

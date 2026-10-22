@@ -185,12 +185,12 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 2: Loading
 
-- [ ] Test gagal: `progress-status-view.test.ts` (ambang 3 s dan per jenis, `startedAt` di masa depan → 0, kind tak dikenal ditolak tipe), `progress-status.test.tsx` (`renderToStaticMarkup` untuk tiap hasil `progressStatusView`: teks tahap di region `status`, teks waktu `aria-hidden`, peringatan; keputusan "interval jalan atau berhenti" untuk unmount dan tab tersembunyi diuji sebagai fungsi murni, perilaku nyata dibuktikan E2E Fase 5), `slow-loading-notice.test.tsx` (fungsi murni ambang 8 s dengan fake timers, markup tombol muat ulang), test bahwa setiap `loading.tsx` merender `common.loadingPage`.
-- [ ] Implementasi `Skeleton` pulse (§2.2.4), `ProgressStatus`, `SlowLoadingNotice`, teks memuat di sembilan `loading.tsx`.
-- [ ] Pasang `ProgressStatus` di panel AI, export CV, dan status import. State error dan tombol coba lagi yang ada tidak berubah.
-- [ ] Pending link di sidebar dan tab bar (§2.2.7) dengan unit yang me-mock `useLinkStatus`.
-- [ ] Story `progress-status.stories.tsx` dan `skeleton.stories.tsx` (normal, lama, reduced motion, dark).
-- [ ] Receipt `T30-phase2-loading.md`, commit.
+- [x] Test gagal: `progress-status-view.test.ts` (ambang 3 s dan per jenis, `startedAt` di masa depan → 0, kind tak dikenal ditolak tipe), `progress-status.test.tsx` (`renderToStaticMarkup` untuk tiap hasil `progressStatusView`: teks tahap di region `status`, teks waktu `aria-hidden`, peringatan; keputusan "interval jalan atau berhenti" untuk unmount dan tab tersembunyi diuji sebagai fungsi murni, perilaku nyata dibuktikan E2E Fase 5), `slow-loading-notice.test.tsx` (fungsi murni ambang 8 s dengan fake timers, markup tombol muat ulang), test bahwa setiap `loading.tsx` merender `common.loadingPage`.
+- [x] Implementasi `Skeleton` pulse (§2.2.4), `ProgressStatus`, `SlowLoadingNotice`, teks memuat di sembilan `loading.tsx`.
+- [x] Pasang `ProgressStatus` di panel AI, export CV, dan status import. State error dan tombol coba lagi yang ada tidak berubah.
+- [x] Pending link di sidebar dan tab bar (§2.2.7) dengan unit yang me-mock `useLinkStatus`.
+- [x] Story `progress-status.stories.tsx` dan `skeleton.stories.tsx` (normal, lama, reduced motion, dark).
+- [x] Receipt `T30-phase2-loading.md`, commit.
 
 ### Fase 3: Tombol
 

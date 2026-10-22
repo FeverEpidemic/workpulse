@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SlowLoadingNotice } from "@/components/ui/slow-loading-notice";
 import { t } from "@/i18n/messages";
 import { getRequestLocale } from "@/server/auth/context";
 
@@ -6,6 +7,7 @@ export default async function ActivityLoading() {
   const locale = await getRequestLocale();
   return (
     <section className="space-y-6" aria-busy="true" aria-live="polite">
+      <SlowLoadingNotice locale={locale} />
       <h1 className="sr-only">{t(locale, "activity.loading")}</h1>
       <div className="workspace-page-header">
         <Skeleton className="h-9 w-48" />

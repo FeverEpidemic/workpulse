@@ -1395,6 +1395,42 @@ button:disabled {
   display: block;
   border-radius: var(--radius-sm);
   background: var(--color-bg-subtle);
+  opacity: 0;
+  animation: ui-skeleton-pulse 1.6s ease-in-out 150ms infinite;
+}
+
+@keyframes ui-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+@keyframes ui-indicator-enter { to { opacity: 1; } }
+@keyframes ui-nav-icon-out { to { opacity: 0; } }
+
+.ui-loading-indicator { display: inline-flex; flex: none; }
+.ui-loading-spinner {
+  opacity: 0;
+  animation: ui-spin 800ms linear infinite, ui-indicator-enter var(--motion-instant) var(--ease-out) 150ms forwards;
+}
+.ui-loading-static { display: none; }
+.ui-progress-stage { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
+.ui-progress-stage .ui-loading-indicator { order: -1; }
+.ui-progress-slow { flex-basis: 100%; font-weight: 400; }
+.ui-progress-status, .ui-page-loading-status, .ui-slow-loading { display: grid; gap: var(--space-2); }
+.ui-slow-loading { justify-items: start; font-size: var(--font-size-sm); }
+.pending-link-content { display: contents; }
+.pending-link-icon { display: inline-flex; flex: none; }
+.workspace-nav-link, .workspace-tab { position: relative; }
+.pending-link-spinner { position: absolute; inset-inline-start: var(--space-3); top: 50%; transform: translateY(-50%); }
+.workspace-tab .pending-link-spinner { inset-inline-start: 50%; top: var(--space-1); transform: translateX(-50%); }
+.pending-link-content[data-pending="true"] .pending-link-icon { animation: ui-nav-icon-out var(--motion-instant) var(--ease-standard) 150ms forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton { animation: none !important; opacity: 1; }
+  .ui-loading-spinner { display: none; animation: none !important; }
+  .ui-loading-static { display: block; }
+  .pending-link-content[data-pending="true"] .pending-link-icon { opacity: 0; }
 }
 
 .ui-toast-region {
