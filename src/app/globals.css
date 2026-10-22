@@ -130,10 +130,10 @@ a {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .button-primary {
@@ -291,9 +291,9 @@ a {
   font-weight: 500;
   text-decoration: none;
   transition:
-    background-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .workspace-nav-link:hover {
@@ -410,7 +410,7 @@ a {
   /* Narrow gutters leave each slot about 70 px at 360 px, enough for the bold "Dashboard" label. */
   padding: 0 var(--space-1);
   list-style: none;
-  transition: height var(--motion-normal) ease-out;
+  transition: height var(--motion-normal) var(--ease-out);
 }
 
 .workspace-tab-bar[data-compact="true"] {
@@ -443,9 +443,9 @@ a {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .workspace-tab:active {
@@ -1135,7 +1135,7 @@ a {
     border-bottom: 1px solid var(--color-border-default);
     background: var(--color-bg-surface);
     padding: 0 var(--space-4);
-    transition: transform var(--motion-normal) ease-out;
+    transition: transform var(--motion-normal) var(--ease-out);
   }
 
   /* Keyboard focus inside the header always brings it back, even before React hears about it. */

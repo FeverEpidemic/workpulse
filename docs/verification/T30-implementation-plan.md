@@ -178,10 +178,10 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 1: Pondasi
 
-- [ ] Test gagal `motion-tokens.test.ts`: token §2.2.1 ada; tidak ada durasi literal > 240 ms pada `transition`/`animation` interaksi di `globals.css` (pengecualian bernama: `ui-skeleton-pulse`, `ui-just-added`, `ui-spin`).
-- [ ] Implementasi token di `tokens.css`; ganti `ease` di transisi tombol dan navigasi dengan token easing.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
-- [ ] Receipt `T30-phase1-foundation.md`, commit.
+- [x] Test gagal `motion-tokens.test.ts`: token §2.2.1 ada; tidak ada durasi literal > 240 ms pada `transition`/`animation` interaksi di `globals.css` (pengecualian bernama: `ui-skeleton-pulse`, `ui-just-added`, `ui-spin`).
+- [x] Implementasi token di `tokens.css`; ganti `ease` di transisi tombol dan navigasi dengan token easing.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
+- [x] Receipt `T30-phase1-foundation.md`, commit.
 
 ### Fase 2: Loading
 
