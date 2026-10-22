@@ -159,22 +159,22 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 0: Baseline (tanpa edit kode)
 
-- [ ] `git status` bersih di worktree `claude/t30-motion-loading`. `.claude/launch.json` dan `.claude/setting.local.json` sengaja tetap lokal; jangan di-commit. Checkout utama `D:\Project\WorkPulse` sedang berada di tengah merge T28 milik pengguna; jangan disentuh.
-- [ ] `pnpm install --frozen-lockfile` di worktree (worktree belum punya `node_modules`).
-- [ ] Parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari receipt M5 Fase 5: unit **129 file / 1181**; catat angka aktual.
-- [ ] `pnpm test:e2e:ui` dan `pnpm test:e2e:release`; catat angka.
-- [ ] Inventaris dan catat di receipt:
+- [x] `git status` bersih di worktree `claude/t30-motion-loading`. `.claude/launch.json` dan `.claude/setting.local.json` sengaja tetap lokal; jangan di-commit. Checkout utama `D:\Project\WorkPulse` sedang berada di tengah merge T28 milik pengguna; jangan disentuh.
+- [x] `pnpm install --frozen-lockfile` di worktree (worktree belum punya `node_modules`).
+- [x] Parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari receipt M5 Fase 5: unit **129 file / 1181**; catat angka aktual.
+- [x] `pnpm test:e2e:ui` dan `pnpm test:e2e:release`; catat angka.
+- [x] Inventaris dan catat di receipt:
   - semua pemakaian `useFormStatus` di luar `submit-button.tsx` (saat plan ditulis: `conflict-controls.tsx`, `action-feedback.tsx`, `activity-analysis-panel.tsx`, `ai-consent-card.tsx`) dan apakah masing-masing tombol bisa memakai `Button` tanpa mengubah perilaku;
   - test unit/E2E yang mengharapkan teks tombol berganti ke `loadingLabel` (grep `loadingLabel`, `pendingLabel`, dan teks pending di `tests/`);
   - path status import yang menampilkan `queued`/`running`/`processing`, dan path daftar aktivitas terbaru dashboard;
   - key i18n status yang sudah ada untuk AI, import, export;
   - apakah save dari Quick log sheet sudah menampilkan toast dari tempat lain (catatan: `ActionFeedback` di `src/components/forms/action-feedback.tsx` sudah menampilkan toast saat sukses; bila form sheet memakainya, `onCreated` **tidak** boleh menambah toast);
   - accordion/collapsible yang ada (`details`/`summary` atau komponen sendiri).
-- [ ] Cek `useLinkStatus` memberi `pending: true` saat navigasi lambat di `pnpm dev` (route dengan `loading.tsx`). Catat hasilnya. Bila tidak, **stop** (§2.2.7).
-- [ ] Catat durasi job fake lokal (AI, import, export) dari suite E2E yang sudah ada untuk konteks ambang §2.2.11.
-- [ ] Verifikasi rujukan file:baris di dokumen ini; selisih dicatat.
-- [ ] Receipt `T30-phase0-baseline.md`.
+- [x] Cek `useLinkStatus` memberi `pending: true` saat navigasi lambat di `pnpm dev` (route dengan `loading.tsx`). Catat hasilnya. Bila tidak, **stop** (§2.2.7).
+- [x] Catat durasi job fake lokal (AI, import, export) dari suite E2E yang sudah ada untuk konteks ambang §2.2.11.
+- [x] Verifikasi rujukan file:baris di dokumen ini; selisih dicatat.
+- [x] Receipt `T30-phase0-baseline.md`.
 
 ### Fase 1: Pondasi
 

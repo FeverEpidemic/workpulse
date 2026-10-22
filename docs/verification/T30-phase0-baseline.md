@@ -1,7 +1,7 @@
 # T30 Fase 0: baseline
 
 - Tanggal: 22 Oktober 2026.
-- Status: IN_PROGRESS, menunggu baseline release selesai.
+- Status: COMPLETE. Baseline release lulus 21/21, exit 0 (4.0 menit).
 - Branch: `claude/t30-motion-loading`, baseline `dcd146d`, bersih sebelum pekerjaan ini.
 - Eksekusi sendiri, tanpa sub-agent. Checkout utama tidak diubah.
 - antislop during, session override. Design Read: workspace karier privat untuk pengguna individu, bahasa visual tenang sesuai Design.md, ENERGY 1 / RHYTHM 1 / MOTION 2.
