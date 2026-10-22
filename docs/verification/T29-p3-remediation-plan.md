@@ -109,22 +109,22 @@ Baru: `docs/verification/T29-p3-phase{0..4}-*.md`.
 
 ### Fase 0: Baseline tanpa edit kode
 
-- [ ] Worktree `D:\Project\WorkPulse-t29` bersih, branch `claude/t29-p3-remediation`, HEAD turunan `0910fd8`.
-- [ ] Parity migration 38/38 (`pnpm exec supabase migration list --local`).
-- [ ] Provider Google lokal aktif: `GET http://127.0.0.1:54321/auth/v1/settings` (header `apikey` = publishable key) → `external.google` `true`. Bila `false`, ikuti §7 sebelum lanjut.
-- [ ] Image Storage `public.ecr.aws/supabase/storage-api:v1.80.2` (`docker inspect supabase_storage_WorkPulse --format '{{.Config.Image}}'`). Bila berbeda, ikuti §7.
-- [ ] `pnpm lint`, `pnpm typecheck` exit 0; `pnpm test` (catat angka file/test; ini baseline baru setelah merge T28); `pnpm test:e2e:auth-google` 13 lulus.
-- [ ] Verifikasi baris yang dikutip plan ini masih benar (`route.ts:70`, `:106-110`, `oauth-session.ts:39`, `page.tsx:46-60`, `delete-account-card.tsx:45-55`, spec `:28` dan `:129`, receipt Fase 0 `:48`).
-- [ ] Receipt `T29-p3-phase0-baseline.md`.
+- [x] Worktree `D:\Project\WorkPulse-t29` bersih, branch `claude/t29-p3-remediation`, HEAD turunan `0910fd8`.
+- [x] Parity migration 38/38 (`pnpm exec supabase migration list --local`).
+- [x] Provider Google lokal aktif: `GET http://127.0.0.1:54321/auth/v1/settings` (header `apikey` = publishable key) → `external.google` `true`. Bila `false`, ikuti §7 sebelum lanjut.
+- [x] Image Storage `public.ecr.aws/supabase/storage-api:v1.80.2` (`docker inspect supabase_storage_WorkPulse --format '{{.Config.Image}}'`). Bila berbeda, ikuti §7.
+- [x] `pnpm lint`, `pnpm typecheck` exit 0; `pnpm test` (catat angka file/test; ini baseline baru setelah merge T28); `pnpm test:e2e:auth-google` 13 lulus.
+- [x] Verifikasi baris yang dikutip plan ini masih benar (`route.ts:70`, `:106-110`, `oauth-session.ts:39`, `page.tsx:46-60`, `delete-account-card.tsx:45-55`, spec `:28` dan `:129`, receipt Fase 0 `:48`).
+- [x] Receipt `T29-p3-phase0-baseline.md`.
 
 ### Fase 1: RV1
 
-- [ ] Test gagal: `hasOAuthMethod` di `tests/unit/oauth-session.test.ts`; di `tests/unit/auth-confirm-oauth.test.ts`, kasus `amr` `oauth` berumur 400 detik untuk (a) profil `deleting_at` → `accountDeleting` dan (b) cookie return `/projects` → `/projects`.
-- [ ] Jalankan, lihat gagal.
-- [ ] Implementasi §3.1.
-- [ ] Jalankan dua file test itu dan `tests/unit/recovery-session.test.ts`; semua lulus, lima test jalur email/recovery tidak diubah.
-- [ ] Commit `fix(t29): recognise Google callbacks without a time window`.
-- [ ] Receipt `T29-p3-phase1-oauth-classification.md`.
+- [x] Test gagal: `hasOAuthMethod` di `tests/unit/oauth-session.test.ts`; di `tests/unit/auth-confirm-oauth.test.ts`, kasus `amr` `oauth` berumur 400 detik untuk (a) profil `deleting_at` → `accountDeleting` dan (b) cookie return `/projects` → `/projects`.
+- [x] Jalankan, lihat gagal.
+- [x] Implementasi §3.1.
+- [x] Jalankan dua file test itu dan `tests/unit/recovery-session.test.ts`; semua lulus, lima test jalur email/recovery tidak diubah.
+- [x] Commit `fix(t29): recognise Google callbacks without a time window`.
+- [x] Receipt `T29-p3-phase1-oauth-classification.md`.
 
 ### Fase 2: RV2 (antislop during)
 

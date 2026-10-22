@@ -157,3 +157,18 @@ describe("T29 callback keeps the email and recovery paths", () => {
     await expect(GET(request("?code=abc")).then(location)).resolves.toBe("/sign-in?notice=verificationFailed");
   });
 });
+
+describe("RV1 older OAuth callback claims", () => {
+  it("still rejects a deleting account with oauth 400 seconds old", async () => {
+    signedIn([{ method: "oauth", timestamp: NOW() - 400 }]);
+    profile.mockResolvedValue({ data: { locale: "en", onboarding_completed_at: "2026-10-01T00:00:00Z", deleting_at: "2026-10-20T00:00:00Z" }, error: null });
+    const response = await GET(request("?code=abc"));
+    expect(location(response)).toBe("/sign-in?notice=accountDeleting");
+    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+  it("still reads the return cookie with oauth 400 seconds old", async () => {
+    signedIn([{ method: "oauth", timestamp: NOW() - 400 }]);
+    const response = await GET(request("?code=abc", { "wp-oauth-return": "/projects" }));
+    expect(location(response)).toBe("/projects");
+  });
+});
