@@ -18,7 +18,7 @@
 
 **Architecture:** Murni perubahan UI client dan CSS. Tidak ada migration, route API, perubahan server action, atau dependency baru. Token motion dan easing ditambah di `tokens.css`. Animasi ditulis di `globals.css`. Masuk/keluar dialog memakai `@starting-style` dan `transition-behavior: allow-discrete` pada `<dialog>` native. Transisi halaman memakai `src/app/(workspace)/template.tsx` yang di-remount Next pada setiap navigasi segmen, dengan animasi masuk CSS (§2.2.9). `Button` menjadi satu-satunya sumber state pending. `ProgressStatus` adalah komponen client baru dengan logika waktu murni yang diuji unit.
 
-**Tech stack:** Next.js 16.3.5 App Router (`useLinkStatus` tersedia di `next/link`, `node_modules/next/dist/client/link.d.ts:117`), React 19.3.0, TypeScript 6 strict, CSS di `globals.css`, `lucide-react` untuk ikon spinner (`LoaderCircle`), Vitest + Testing Library (fake timers), Storybook 10 dengan addon a11y, Playwright + axe-core, pnpm dari lockfile. **Tidak ada dependency baru.**
+**Tech stack:** Next.js 16.3.5 App Router (`useLinkStatus` tersedia di `next/link`, `node_modules/next/dist/client/link.d.ts:117`), React 19.3.0, TypeScript 6 strict, CSS di `globals.css`, `lucide-react` untuk ikon spinner (`LoaderCircle`), Vitest dengan env `node` tanpa DOM (UI diuji lewat `renderToStaticMarkup`, logika waktu dan state di fungsi murni dengan fake timers), Storybook 10 dengan addon a11y, Playwright + axe-core, pnpm dari lockfile. **Tidak ada dependency baru.**
 
 ---
 
@@ -169,7 +169,7 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
   - test unit/E2E yang mengharapkan teks tombol berganti ke `loadingLabel` (grep `loadingLabel`, `pendingLabel`, dan teks pending di `tests/`);
   - path status import yang menampilkan `queued`/`running`/`processing`, dan path daftar aktivitas terbaru dashboard;
   - key i18n status yang sudah ada untuk AI, import, export;
-  - apakah save dari Quick log sheet sudah menampilkan toast dari tempat lain;
+  - apakah save dari Quick log sheet sudah menampilkan toast dari tempat lain (catatan: `ActionFeedback` di `src/components/forms/action-feedback.tsx` sudah menampilkan toast saat sukses; bila form sheet memakainya, `onCreated` **tidak** boleh menambah toast);
   - accordion/collapsible yang ada (`details`/`summary` atau komponen sendiri).
 - [ ] Cek `useLinkStatus` memberi `pending: true` saat navigasi lambat di `pnpm dev` (route dengan `loading.tsx`). Catat hasilnya. Bila tidak, **stop** (§2.2.7).
 - [ ] Catat durasi job fake lokal (AI, import, export) dari suite E2E yang sudah ada untuk konteks ambang §2.2.11.
@@ -185,7 +185,7 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 2: Loading
 
-- [ ] Test gagal: `progress-status-view.test.ts` (ambang 3 s dan per jenis, `startedAt` di masa depan → 0, kind tak dikenal ditolak tipe), `progress-status.test.tsx` (fake timers: waktu muncul, peringatan, region `status` hanya berubah saat tahap/peringatan, interval berhenti saat unmount dan saat tab tersembunyi), `slow-loading-notice.test.tsx` (8 s, tombol memanggil reload), test bahwa setiap `loading.tsx` merender `common.loadingPage`.
+- [ ] Test gagal: `progress-status-view.test.ts` (ambang 3 s dan per jenis, `startedAt` di masa depan → 0, kind tak dikenal ditolak tipe), `progress-status.test.tsx` (`renderToStaticMarkup` untuk tiap hasil `progressStatusView`: teks tahap di region `status`, teks waktu `aria-hidden`, peringatan; keputusan "interval jalan atau berhenti" untuk unmount dan tab tersembunyi diuji sebagai fungsi murni, perilaku nyata dibuktikan E2E Fase 5), `slow-loading-notice.test.tsx` (fungsi murni ambang 8 s dengan fake timers, markup tombol muat ulang), test bahwa setiap `loading.tsx` merender `common.loadingPage`.
 - [ ] Implementasi `Skeleton` pulse (§2.2.4), `ProgressStatus`, `SlowLoadingNotice`, teks memuat di sembilan `loading.tsx`.
 - [ ] Pasang `ProgressStatus` di panel AI, export CV, dan status import. State error dan tombol coba lagi yang ada tidak berubah.
 - [ ] Pending link di sidebar dan tab bar (§2.2.7) dengan unit yang me-mock `useLinkStatus`.
@@ -203,7 +203,7 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 4: Transisi dan copy
 
-- [ ] Test gagal: `toast` menandai `leaving` 120 ms sebelum dihapus; `just-added-highlight.test.tsx` (key cocok → `data-just-added`, key kedaluwarsa 10 s diabaikan, key dihapus setelah dipakai); `onCreated` menyimpan key, menampilkan tepat satu toast, dan memanggil `router.refresh()`.
+- [ ] Test gagal: `toast` menandai `leaving` 120 ms sebelum dihapus; `just-added-highlight.test.ts` (fungsi murni parse/cocokkan entry `{ id, at }`: ID cocok, entry kedaluwarsa 10 s diabaikan, JSON rusak diabaikan; sessionStorage dan DOM dibuktikan E2E); urutan `onCreated` (simpan key, toast tepat satu, `router.refresh()`) dibuktikan E2E acceptance 11.
 - [ ] Implementasi CSS dialog/sheet/backdrop/toast (§2.2.8), `template.tsx` (§2.2.9), highlight (§2.2.10), accordion yang ada bila Fase 0 menemukannya.
 - [ ] Copy §2.2.13: tulis final dengan `antislop-copywriting`, en dan id, tanpa em dash; test key ada di kedua locale.
 - [ ] Bila ada token warna baru, tambahkan pasangan ke `theme-contrast.test.ts`.
@@ -291,5 +291,5 @@ Read-only setelah Fase 5. P0–P2 memblokir, P3 follow-up.
 2. **Test lama bergantung pada teks pending.** Banyak E2E mungkin menunggu tombol berganti ke `loadingLabel`. Dijaga inventaris Fase 0 dan aturan di Fase 3: hanya assertion label pending yang boleh berubah, dengan alasan.
 3. **Animasi keluar dialog merusak fokus.** `allow-discrete` menunda `display: none`; pemicu bisa kehilangan fokus kembali atau Escape tertahan. Dijaga acceptance 10 dan `release-keyboard`.
 4. **`template.tsx` me-remount terlalu banyak.** Bila template diletakkan di level yang salah, chrome ikut di-remount dan state scroll T27 hilang. Dijaga acceptance 12 dan `mobile-tab-bar.spec.ts`.
-5. **Interval `ProgressStatus` bocor.** Timer terus berjalan setelah unmount atau saat tab tersembunyi. Dijaga unit fake timers.
+5. **Interval `ProgressStatus` bocor.** Timer terus berjalan setelah unmount atau saat tab tersembunyi. Dijaga fungsi murni keputusan interval di unit dan E2E Fase 5 (pindah halaman saat job berjalan, lalu cek tidak ada error console).
 6. **Toast ganda setelah Quick log.** Toast baru di `onCreated` bertumpuk dengan toast yang sudah ada di jalur lain. Dijaga inventaris Fase 0 dan acceptance 11.
