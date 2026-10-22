@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-22",
+  "phase": 5,
+  "status": "BLOCKED",
+  "command": "pnpm test:e2e:release --config .tmp/playwright.t30-release.config.ts --grep \"T30 navigation pending and slow loading at 1440\"",
+  "exitCode": 1,
+  "nextVersion": "16.3.5",
+  "viewportWidth": 1440,
+  "origin": "http://127.0.0.1:3030",
+  "responseHeld": true,
+  "responseStatus": 200,
+  "observation": {
+    "pathname": "/activity",
+    "skeletons": 9,
+    "pageHeading": "Loading activity…",
+    "hook": [
+      "false",
+      "false"
+    ],
+    "observed": [
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      },
+      {
+        "tag": "SPAN",
+        "pending": "true"
+      },
+      {
+        "tag": "A",
+        "pending": "true"
+      },
+      {
+        "tag": "SPAN",
+        "pending": "false"
+      },
+      {
+        "tag": "A",
+        "pending": "false"
+      }
+    ]
+  }
+}

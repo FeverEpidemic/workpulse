@@ -1495,7 +1495,7 @@ button:disabled {
 
 .ui-toast[data-leaving] { opacity: 0; }
 @keyframes ui-toast-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.workspace-page-enter { animation: ui-page-enter var(--motion-normal) var(--ease-out); }
+.workspace-page-enter[data-page-enter="true"] { animation: ui-page-enter var(--motion-normal) var(--ease-out); }
 @keyframes ui-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 [data-just-added] { --just-added-bg: var(--color-primary-100); animation: ui-just-added 1.2s var(--ease-out); }
 [data-theme="dark"] [data-just-added] { --just-added-bg: var(--color-primary-800); }

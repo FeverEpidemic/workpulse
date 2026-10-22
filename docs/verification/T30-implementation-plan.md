@@ -211,6 +211,8 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 5: E2E, aksesibilitas, regresi, Delivery Gate
 
+> **BLOCKED, 22 Oktober 2026.** Pending hook kembali false ketika fallback sudah tampil tetapi respons RSC masih ditahan. Acceptance 8 gagal pada 360 dan 1440 px. Pelaksana berhenti mengikuti §2.2.7/§8, tanpa fallback state buatan. Lihat [receipt Fase 5](T30-phase5-e2e-regression.md) dan [bukti diagnosis](T30-navigation-pending-blocker.json). Checkbox fase ini belum ditutup; T30 belum DONE.
+
 - [ ] E2E baru atau diperbarui untuk acceptance 2, 3, 4, 6, 8, 10, 11, 12, 13. Route lambat untuk acceptance 8 memakai mekanisme yang sudah ada di suite (cek helper); jangan menambah endpoint produksi.
 - [ ] E2E AI dengan fake provider untuk acceptance 9 (`pnpm test:e2e:ai-review`), export (`pnpm test:e2e:cv-export` bila renderer tersedia; bila tidak, catat dan buktikan lewat unit + Storybook).
 - [ ] Tambah state pending, `ProgressStatus`, dan skeleton ke `release-a11y.spec.ts` (acceptance 14) di 360 px dan 1440 px, light dan dark.
