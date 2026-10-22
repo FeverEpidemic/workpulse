@@ -9,6 +9,13 @@ interface ToastEntry {
   id: number;
   message: string;
   kind: ToastKind;
+  leaving?: boolean;
+}
+
+export function scheduleToastLifecycle(onLeaving: () => void, onRemove: () => void): () => void {
+  const leaving = setTimeout(onLeaving, 4380);
+  const removal = setTimeout(onRemove, 4500);
+  return () => { clearTimeout(leaving); clearTimeout(removal); };
 }
 
 type ToastSender = (message: string, kind?: ToastKind) => void;
@@ -25,20 +32,22 @@ export function ToastProvider({
 }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const nextId = useRef(0);
-  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  const timers = useRef(new Map<number, () => void>());
 
   const showToast = useCallback<ToastSender>((message, kind = "success") => {
     const id = ++nextId.current;
     setToasts((current) => [...current, { id, message, kind }]);
-    const timer = setTimeout(() => {
+    const cancel = scheduleToastLifecycle(() => {
+      setToasts((current) => current.map((toast) => toast.id === id ? { ...toast, leaving: true } : toast));
+    }, () => {
       setToasts((current) => current.filter((toast) => toast.id !== id));
       timers.current.delete(id);
-    }, 4500);
-    timers.current.set(id, timer);
+    });
+    timers.current.set(id, cancel);
   }, []);
 
   useEffect(() => () => {
-    for (const timer of timers.current.values()) clearTimeout(timer);
+    for (const cancel of timers.current.values()) cancel();
     timers.current.clear();
   }, []);
 
@@ -52,6 +61,7 @@ export function ToastProvider({
             role={toast.kind === "danger" ? "alert" : "status"}
             aria-live={toast.kind === "danger" ? "assertive" : "polite"}
             className={"ui-toast ui-toast--" + toast.kind}
+            data-leaving={toast.leaving || undefined}
           >
             {toast.message}
           </div>

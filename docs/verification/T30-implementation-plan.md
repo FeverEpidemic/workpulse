@@ -203,11 +203,11 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 4: Transisi dan copy
 
-- [ ] Test gagal: `toast` menandai `leaving` 120 ms sebelum dihapus; `just-added-highlight.test.ts` (fungsi murni parse/cocokkan entry `{ id, at }`: ID cocok, entry kedaluwarsa 10 s diabaikan, JSON rusak diabaikan; sessionStorage dan DOM dibuktikan E2E); urutan `onCreated` (simpan key, toast tepat satu, `router.refresh()`) dibuktikan E2E acceptance 11.
-- [ ] Implementasi CSS dialog/sheet/backdrop/toast (§2.2.8), `template.tsx` (§2.2.9), highlight (§2.2.10), accordion yang ada bila Fase 0 menemukannya.
-- [ ] Copy §2.2.13: tulis final dengan `antislop-copywriting`, en dan id, tanpa em dash; test key ada di kedua locale.
-- [ ] Bila ada token warna baru, tambahkan pasangan ke `theme-contrast.test.ts`.
-- [ ] Receipt `T30-phase4-transitions-copy.md`, commit.
+- [x] Test gagal: `toast` menandai `leaving` 120 ms sebelum dihapus; `just-added-highlight.test.ts` (fungsi murni parse/cocokkan entry `{ id, at }`: ID cocok, entry kedaluwarsa 10 s diabaikan, JSON rusak diabaikan; sessionStorage dan DOM dibuktikan E2E); urutan `onCreated` (simpan key, toast tepat satu, `router.refresh()`) dibuktikan E2E acceptance 11. Unit selesai; pembuktian DOM tetap Fase 5.
+- [x] Implementasi CSS dialog/sheet/backdrop/toast (§2.2.8), `template.tsx` (§2.2.9), highlight (§2.2.10), accordion yang ada bila Fase 0 menemukannya.
+- [x] Copy §2.2.13: tulis final dengan `antislop-copywriting`, en dan id, tanpa em dash; test key ada di kedua locale.
+- [x] Bila ada token warna baru, tambahkan pasangan ke `theme-contrast.test.ts`.
+- [x] Receipt `T30-phase4-transitions-copy.md`, commit.
 
 ### Fase 5: E2E, aksesibilitas, regresi, Delivery Gate
 

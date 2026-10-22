@@ -1337,12 +1337,30 @@ button:disabled {
   color: var(--color-text-primary);
   padding: 0;
   box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: scale(1);
+  transition:
+    opacity var(--motion-fast) var(--ease-in),
+    transform var(--motion-fast) var(--ease-in),
+    display var(--motion-fast) allow-discrete,
+    overlay var(--motion-fast) allow-discrete;
+}
+
+.ui-dialog[open] { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--ease-out); }
+
+@starting-style {
+  .ui-dialog[open] { opacity: 0; transform: scale(0.98); }
 }
 
 .ui-dialog::backdrop {
   background: var(--color-bg-overlay);
   backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-in), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
 }
+
+.ui-dialog[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); }
+@starting-style { .ui-dialog[open]::backdrop { opacity: 0; } }
 
 .ui-dialog-panel {
   padding: var(--space-6);
@@ -1357,7 +1375,12 @@ button:disabled {
   border-bottom: 0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(100%);
+  transition-duration: var(--motion-normal);
 }
+
+.ui-dialog.workspace-sheet-dialog[open] { transform: translateY(0); transition-duration: var(--motion-slow); }
+@starting-style { .ui-dialog.workspace-sheet-dialog[open] { transform: translateY(100%); } }
 
 .workspace-sheet-dialog .ui-dialog-panel {
   position: relative;
@@ -1466,6 +1489,29 @@ button:disabled {
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   pointer-events: auto;
+  animation: ui-toast-enter var(--motion-normal) var(--ease-out);
+  transition: opacity var(--motion-fast) var(--ease-in);
+}
+
+.ui-toast[data-leaving] { opacity: 0; }
+@keyframes ui-toast-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.workspace-page-enter { animation: ui-page-enter var(--motion-normal) var(--ease-out); }
+@keyframes ui-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+[data-just-added] { --just-added-bg: var(--color-primary-100); animation: ui-just-added 1.2s var(--ease-out); }
+[data-theme="dark"] [data-just-added] { --just-added-bg: var(--color-primary-800); }
+@keyframes ui-just-added { from { background-color: var(--just-added-bg); transform: translateY(4px); } to { background-color: transparent; transform: translateY(0); } }
+
+.workspace-content details::details-content {
+  height: 0;
+  opacity: 0;
+  overflow: clip;
+  interpolate-size: allow-keywords;
+  transition: height var(--motion-normal) var(--ease-out), opacity var(--motion-normal) var(--ease-out), content-visibility var(--motion-normal) allow-discrete;
+}
+.workspace-content details[open]::details-content { height: auto; opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-content details::details-content { transition: none !important; }
+  .workspace-page-enter, [data-just-added], .ui-toast { animation: none !important; }
 }
 
 .ui-toast--success {
