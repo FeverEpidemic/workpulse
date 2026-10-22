@@ -3,7 +3,7 @@
 > **Untuk agen pelaksana:** kerjakan fase secara berurutan dan centang checkbox (`- [ ]`) yang selesai. Gunakan TDD: tulis test yang gagal, jalankan dan lihat gagal, buat implementasi minimal, jalankan ulang sampai lulus, lalu commit. Jangan membuat sub-agent. Jangan melompati fase. Bila ragu, baca §7 (stop conditions) sebelum berimprovisasi.
 
 - Tanggal: 22 Oktober 2026
-- Status plan: **siap dieksekusi**. Belum ada kode yang diubah.
+- Status plan: **siap gate review**. Fase 0–4 telah dieksekusi; bukti ada pada receipt tiap fase. Verdict Claude dan pembaruan status authoritative masih menunggu reviewer.
 - Dasar: [gate review T29](T29-gate-review.md) (PASS, tanpa P0-P2, P3 N1-N8), [decision 0039](../decisions/0039-t29-google-oauth.md), [plan T29](T29-implementation-plan.md), [bukti T29](T29-google-oauth.md).
 - Dependensi: T29 **DONE** lokal dan sudah di `main` (PR #35, merge `0910fd8`). T28 juga sudah di `main` (PR #34).
 - Branch: `claude/t29-p3-remediation` dari `origin/main` `0910fd8`, di worktree `D:\Project\WorkPulse-t29`.
@@ -145,12 +145,12 @@ Baru: `docs/verification/T29-p3-phase{0..4}-*.md`.
 
 ### Fase 4: Regresi dan draft dokumen
 
-- [ ] Suite §6.
-- [ ] Kembalikan screenshot lama yang ditulis ulang suite (`git checkout -- docs/verification/T23-screenshots docs/verification/T25-screenshots docs/verification/T27-screenshots`); simpan perubahan di `docs/verification/T29-screenshots/` hanya bila memang dari test baru.
-- [ ] `docs/decisions/0039-t29-google-oauth.md`: tambah bagian `## Pembaruan 22 Oktober 2026 (remediation P3)` yang menyebut RV1 (klasifikasi tanpa jendela; bukti hapus akun tetap ≤ 5 menit) dan RV2 (notice `switched`), lalu ubah kalimat N1/N2 di *Batas yang diterima* menjadi "ditutup oleh remediation P3". Jangan ubah keputusan lain.
-- [ ] Delivery Gate antislop (core blok 1-4 + checklist copywriting dan human) di receipt.
-- [ ] Draft entry status untuk reviewer di receipt (bukan di `IMPLEMENTATION_STATUS.md`).
-- [ ] Receipt `T29-p3-phase4-regression.md`. Berhenti di sini untuk gate review Claude.
+- [x] Suite §6.
+- [x] Kembalikan screenshot lama yang ditulis ulang suite (`git checkout -- docs/verification/T23-screenshots docs/verification/T25-screenshots docs/verification/T27-screenshots`); simpan perubahan di `docs/verification/T29-screenshots/` hanya bila memang dari test baru.
+- [x] `docs/decisions/0039-t29-google-oauth.md`: tambah bagian `## Pembaruan 22 Oktober 2026 (remediation P3)` yang menyebut RV1 (klasifikasi tanpa jendela; bukti hapus akun tetap ≤ 5 menit) dan RV2 (notice `switched`), lalu ubah kalimat N1/N2 di *Batas yang diterima* menjadi "ditutup oleh remediation P3". Jangan ubah keputusan lain.
+- [x] Delivery Gate antislop (core blok 1-4 + checklist copywriting dan human) di receipt.
+- [x] Draft entry status untuk reviewer di receipt (bukan di `IMPLEMENTATION_STATUS.md`).
+- [x] Receipt `T29-p3-phase4-regression.md`. Berhenti di sini untuk gate review Claude.
 
 ## 6. Commands
 

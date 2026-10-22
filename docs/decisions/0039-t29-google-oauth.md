@@ -42,11 +42,20 @@ WorkPulse hanya punya masuk dengan email dan password (T03). Pengguna meminta ma
 ## Batas yang diterima
 
 - Login Google nyata, penautan akun, bentuk `amr` OAuth, dialog yang terbuka otomatis setelah reautentikasi, dan penghapusan akun Google sampai selesai hanya terbukti di smoke staging (runbook).
-- Klasifikasi sesi OAuth bergantung pada jendela waktu `amr` (gate N1). Jam server yang meleset lebih dari 60 detik membuat cek `deleting_at` di callback terlewat; pertahanan yang ada adalah ban akun `deleting` dan `getRequestContext`.
-- Memilih akun Google lain saat reautentikasi mengganti session tanpa pemberitahuan (gate N2).
+- Gate N1 (klasifikasi sesi OAuth bergantung pada jendela waktu `amr`) ditutup oleh remediation P3 RV1. Klasifikasi callback memakai method OAuth tanpa batas umur; bukti hapus akun tetap maksimal 5 menit.
+- Gate N2 (memilih akun Google lain saat reautentikasi mengganti session tanpa pemberitahuan) ditutup oleh remediation P3 RV2. S12 menampilkan notice akun yang sekarang aktif dan bahwa tidak ada yang dihapus.
 
 ## Seam ke task berikutnya
 
 - **Staging (pemilik produk):** runbook T29: OAuth client, provider di dashboard Supabase, Redirect URL, flag, smoke, hapus akun uji (0036 #4).
 - **Production:** verifikasi brand OAuth consent screen Google dan URL kebijakan privasi masuk checklist rilis T25.
 - **Follow-up opsional:** halaman *Connected accounts* di S12, foto profil dari Google (bersama follow-up foto profil T27).
+
+
+## Pembaruan 22 Oktober 2026 (remediation P3)
+
+RV1 menggantikan batas waktu klasifikasi pada keputusan #5: callback dengan code, tanpa type, bukan recovery, dan amr berisi method oauth dikenali tanpa jendela waktu melalui hasOAuthMethod. Cek deleting_at dan cookie return tetap berlaku saat timestamp berumur lebih dari 300 detik. hasRecentOAuthProof pada service hapus akun dan S12 tetap mensyaratkan bukti OAuth maksimal 5 menit; keputusan #7 tidak berubah.
+
+RV2 melengkapi keputusan #8: cookie niat nonkosong yang tidak cocok dengan user sesi, untuk profil complete, diarahkan ke /settings/profile?reauth=switched. Notice role=status pada kartu Privacy and account hanya memakai email session server, tidak membuka dialog dan tidak menghapus data. Profil provisional tetap menuju onboarding; cookie niat milik user sendiri tetap memakai jalur delete-account. Copy tersedia en dan id.
+
+Bukti pelaksana ada di [receipt Fase 4](../verification/T29-p3-phase4-regression.md). Menunggu gate review Claude; pembaruan ini tidak menandai remediation DONE dan tidak menjadi bukti smoke Google nyata di staging.
