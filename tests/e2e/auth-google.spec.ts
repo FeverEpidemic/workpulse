@@ -29,8 +29,9 @@ function config() {
   if (existsSync(".env.local")) process.loadEnvFile(".env.local");
   const url = process.env["SUPABASE_URL"]?.trim();
   const secretKey = process.env["SUPABASE_SECRET_KEY"]?.trim();
-  if (!url || !secretKey) throw new Error("Local Supabase fixture credentials are required.");
-  return { url, secretKey };
+  const publishableKey = process.env["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]?.trim();
+  if (!url || !secretKey || !publishableKey) throw new Error("Local Supabase fixture credentials and publishable key are required.");
+  return { url, secretKey, publishableKey };
 }
 
 async function createGoogleUser(label: string, complete: boolean): Promise<User> {
@@ -126,8 +127,15 @@ function expectGoogleRedirect(authorize: string[], google: string[]) {
   return { start, consent };
 }
 
-test.beforeAll(() => {
-  const { url, secretKey } = config();
+test.beforeAll(async () => {
+  const { url, secretKey, publishableKey } = config();
+  const providerOffMessage = "Local Google provider is off or unavailable. The shared stack may have been restarted from a checkout without [auth.external.google]. Run pnpm db:stop then pnpm db:start from a checkout with that block after coordinating shared stack use. In a new worktree, first copy the image version files from supabase/.temp in the main checkout (not project-ref or linked-project.json).";
+  try {
+    const response = await fetch(`${SUPABASE_ORIGIN}/auth/v1/settings`, { headers: { apikey: publishableKey } });
+    if (!response.ok || (await response.json()).external?.google !== true) throw new Error(providerOffMessage);
+  } catch {
+    throw new Error(providerOffMessage);
+  }
   admin = createClient<Database>(url, secretKey, clientOptions);
   mkdirSync(SHOTS, { recursive: true });
 });
