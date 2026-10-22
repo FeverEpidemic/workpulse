@@ -6,9 +6,9 @@
 - Status saat plan ditulis: **TODO**.
 - Dependensi: T04 (app frame), T07 (Quick log), T27 (tab bar dan sheet mobile) **DONE** di `main`. T28 (import mode choice) dan T29 (Google OAuth) belum merge; T30 tidak menyentuh pilihan mode import atau auth. Bila keduanya merge lebih dulu, rebase dan ulang Fase 0.
 - Asal task: permintaan terarah pengguna pada 21 Oktober 2026 ("nambahin animasi dan loading animation"). T30 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Semua keputusan berasal dari interview di chat dan tercatat di [T30-motion-loading-design.md](T30-motion-loading-design.md).
-- Eksekutor: satu agent **Claude**. Semua fase berurutan tanpa delegasi.
+- Eksekutor: satu agent **ChatGPT Sol 6.1** (reasoning medium), ditetapkan pengguna 22 Oktober 2026. Semua fase berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 5; Fase 6 (draft dokumen) setelah gate.
-- antislop: mode **during** (dipilih pengguna 21 Oktober 2026). Pelaksana membaca `.claude/skills/antislop/SKILL.md`, `antislop-ui`, `antislop-human`, `antislop-copywriting`, dan `antislop-layoutmobile`, lalu menjalankan Delivery Gate di Fase 5.
+- antislop: mode **during** (dipilih pengguna 21 Oktober 2026). Pelaksana membaca `antislop`, `antislop-ui`, `antislop-human`, `antislop-copywriting`, dan `antislop-layoutmobile` dari `.codex/skills/<nama>/SKILL.md` (salinan identik ada di `.claude/skills/`), lalu menjalankan Delivery Gate di Fase 5.
 - Acuan:
   - `docs/Design.md` §16.1 (tanpa gradient), §16.2 (logo tidak dianimasikan berulang), §24 (state komponen), §28 (motion), §29 (skeleton), §37 (reduced motion).
   - `AGENTS.md` *UI dan aksesibilitas* (WCAG 2.2 AA, reduced motion, 360 px dan 1440 px light/dark).
