@@ -57,6 +57,7 @@ export default async function ProfileSettingsPage({ searchParams }: { searchPara
       locale={locale}
       openRecordId={openRecordId}
       deletionReauth={deletionReauth}
+      reauthNotice={params.reauth === "switched" ? "switched" : undefined}
       openDeleteDialog={params.reauth === "delete-account" && deletionReauth.method === "google" && deletionReauth.fresh}
     />
   );

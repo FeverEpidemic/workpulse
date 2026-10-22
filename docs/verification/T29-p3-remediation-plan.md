@@ -128,12 +128,12 @@ Baru: `docs/verification/T29-p3-phase{0..4}-*.md`.
 
 ### Fase 2: RV2 (antislop during)
 
-- [ ] Baca skill antislop core, copywriting, ui, human.
-- [ ] Test gagal: unit callback (cookie niat user lain + complete → `switched`; provisional → onboarding; tanpa cookie → `/dashboard`); unit markup `DeleteAccountCard` dengan `reauthNotice="switched"` (notice `role="status"` berisi email, en dan id) dan tanpa prop (tidak ada notice).
-- [ ] Implementasi §3.2 dan copy en/id.
-- [ ] E2E di `tests/e2e/auth-google.spec.ts`: akun Google `delete` yang sudah ada di spec, buka `/settings/profile?reauth=switched`, notice tampil dengan email akun itu, dialog tidak terbuka; `/settings/profile?reauth=other` tanpa notice; axe dan overflow di 360/1440 light/dark (pola test S12 yang ada).
-- [ ] Commit `feat(t29): tell the user when Google reauthentication switched accounts`.
-- [ ] Receipt `T29-p3-phase2-switched-notice.md`.
+- [x] Baca skill antislop core, copywriting, ui, human.
+- [x] Test gagal: unit callback (cookie niat user lain + complete → `switched`; provisional → onboarding; tanpa cookie → `/dashboard`); unit markup `DeleteAccountCard` dengan `reauthNotice="switched"` (notice `role="status"` berisi email, en dan id) dan tanpa prop (tidak ada notice).
+- [x] Implementasi §3.2 dan copy en/id.
+- [x] E2E di `tests/e2e/auth-google.spec.ts`: akun Google `delete` yang sudah ada di spec, buka `/settings/profile?reauth=switched`, notice tampil dengan email akun itu, dialog tidak terbuka; `/settings/profile?reauth=other` tanpa notice; axe dan overflow di 360/1440 light/dark (pola test S12 yang ada).
+- [x] Commit `feat(t29): tell the user when Google reauthentication switched accounts`.
+- [x] Receipt `T29-p3-phase2-switched-notice.md`.
 
 ### Fase 3: RV3 dan RV4
 

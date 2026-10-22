@@ -268,3 +268,34 @@ for (const width of [360, 1440]) {
     });
   }
 }
+
+for (const width of [360, 1440]) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`S12 switched notice at ${width}px in ${theme}: current email, closed dialog, Axe clean`, async ({ page, browser }, testInfo) => {
+      const { user, cookies } = await sessionFor(browser, "delete", true, /\/dashboard$/);
+      await page.context().addCookies(cookies);
+      await setTheme(page, theme);
+      await page.setViewportSize({ width, height: 900 });
+      for (const locale of ["en", "id"] as const) {
+        const updated = await admin.from("profiles").update({ locale }).eq("id", user.id);
+        expect(updated.error).toBeNull();
+        await page.goto("/settings/profile?reauth=switched");
+        await page.waitForLoadState("networkidle");
+        const notice = page.locator('.delete-account > p[role="status"]');
+        await expect(notice).toContainText(user.email);
+        await expect(notice).toContainText(locale === "en" ? "Nothing was deleted." : "Tidak ada yang dihapus.");
+        await expect(page.locator("dialog[open]")).toHaveCount(0);
+        expect(await horizontalOverflow(page)).toEqual({ page: false, dialog: false });
+        await expectNoWcagViolations(page, testInfo, `s12-switched-${locale}-${width}-${theme}`);
+        for (const suffix of ["?reauth=other", ""]) {
+          await page.goto(`/settings/profile${suffix}`);
+          await expect(page.locator('.delete-account > p[role="status"]')).toHaveCount(0);
+          await expect(page.locator("dialog[open]")).toHaveCount(0);
+        }
+      }
+      const restored = await admin.from("profiles").update({ locale: "en" }).eq("id", user.id);
+      expect(restored.error).toBeNull();
+      expect(sql(`select count(*) from internal.account_deletions where user_id = '${user.id}'::uuid`)).toBe("0");
+    });
+  }
+}

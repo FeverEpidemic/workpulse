@@ -104,8 +104,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
     if (isOAuthSession) {
-      const reauth = readReauthIntent(request.cookies.get(REAUTH_INTENT_COOKIE)?.value, user.id);
+      const intentCookie = request.cookies.get(REAUTH_INTENT_COOKIE)?.value;
+      const reauth = readReauthIntent(intentCookie, user.id);
       if (reauth && profile.onboarding_completed_at) return redirectTo("/settings/profile?reauth=delete-account");
+      if (intentCookie && !reauth && profile.onboarding_completed_at) return redirectTo("/settings/profile?reauth=switched");
       const next = readOAuthReturn(request.cookies.get(OAUTH_RETURN_COOKIE)?.value);
       return redirectTo(destinationForLifecycle(profile.onboarding_completed_at ? "complete" : "provisional", next));
     }

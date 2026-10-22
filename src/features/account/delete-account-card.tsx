@@ -47,11 +47,13 @@ export function DeleteAccountCard({
   locale,
   reauth = { method: "password" },
   openOnLoad = false,
+  reauthNotice,
 }: {
   accountEmail: string;
   locale: Locale;
   reauth?: DeletionReauth;
   openOnLoad?: boolean;
+  reauthNotice?: "switched";
 }) {
   const [actionState, formAction, pending] = useActionState(deleteAccountAction, IDLE_ACTION_STATE);
   const [reauthState, startReauth] = useActionState(startGoogleReauthAction, IDLE_ACTION_STATE);
@@ -136,6 +138,11 @@ export function DeleteAccountCard({
       <h2 className="text-xl font-semibold">{t(locale, "account.delete.title")}</h2>
       <p className="text-sm text-[var(--wp-muted)]">{t(locale, "account.privacy.events")}</p>
       <p className="text-sm text-[var(--wp-muted)]">{t(locale, "account.delete.privacy")}</p>
+      {reauthNotice === "switched" && (
+        <p role="status" className="rounded-lg bg-[var(--wp-subtle)] px-4 py-3 text-sm [overflow-wrap:anywhere]">
+          {t(locale, "account.delete.googleSwitched", { email: accountEmail })}
+        </p>
+      )}
       <div>
         <button ref={triggerRef} type="button" className="button-secondary" onClick={() => void openDialog()}>
           {t(locale, "account.delete.trigger")}

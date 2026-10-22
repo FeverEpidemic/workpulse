@@ -114,7 +114,7 @@ describe("T29 OAuth callback", () => {
     expect(cleared(own, "wp-reauth")).toBe(true);
 
     const other = await GET(request("?code=abc", { "wp-reauth": `delete-account.${OTHER}` }));
-    expect(location(other)).toBe("/dashboard");
+    expect(location(other)).toBe("/settings/profile?reauth=switched");
   });
 
   it("does not open the delete dialog for a provisional profile", async () => {
@@ -170,5 +170,25 @@ describe("RV1 older OAuth callback claims", () => {
     signedIn([{ method: "oauth", timestamp: NOW() - 400 }]);
     const response = await GET(request("?code=abc", { "wp-oauth-return": "/projects" }));
     expect(location(response)).toBe("/projects");
+  });
+});
+
+describe("RV2 switched reauthentication callback", () => {
+  it("clears both cookies and ignores return paths when another account is selected", async () => {
+    const response = await GET(request("?code=abc", { "wp-reauth": `delete-account.${OTHER}`, "wp-oauth-return": "/projects" }));
+    expect(location(response)).toBe("/settings/profile?reauth=switched");
+    expect(cleared(response, "wp-reauth")).toBe(true);
+    expect(cleared(response, "wp-oauth-return")).toBe(true);
+  });
+  it("keeps a provisional switched account on onboarding", async () => {
+    profile.mockResolvedValue({ data: { locale: "en", onboarding_completed_at: null, deleting_at: null }, error: null });
+    const response = await GET(request("?code=abc", { "wp-reauth": `delete-account.${OTHER}` }));
+    expect(location(response)).toBe("/onboarding/import");
+    expect(cleared(response, "wp-reauth")).toBe(true);
+    expect(cleared(response, "wp-oauth-return")).toBe(true);
+  });
+  it("keeps no intent and an empty intent on the usual dashboard path", async () => {
+    expect(location(await GET(request("?code=abc")))).toBe("/dashboard");
+    expect(location(await GET(request("?code=abc", { "wp-reauth": "" })))).toBe("/dashboard");
   });
 });
