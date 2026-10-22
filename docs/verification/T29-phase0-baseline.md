@@ -47,6 +47,8 @@ Bagian authorize sempat tertunda: stack Supabase lokal dipakai bersama, dan saat
 - `GET /auth/v1/settings`: `external.google = true`.
 - `GET /auth/v1/authorize?provider=google&redirect_to=http://127.0.0.1:3000/auth/confirm&code_challenge=…&code_challenge_method=s256` (redirect manual): **302** ke `accounts.google.com/o/oauth2/v2/auth`, parameter `client_id` (kosong), `redirect_to`, `redirect_uri`, `response_type`, `scope`, `state`. `redirect_uri` = `http://127.0.0.1:54321/auth/v1/callback`, `scope` = `email profile`.
 
+> **Koreksi (22 Oktober 2026, remediation P3 RV4):** `client_id` tidak kosong. Saat env tidak diset, Supabase CLI meneruskan teks literal `env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)`. Ditemukan di Fase 5 ([receipt](T29-phase5-e2e-regression.md), *Kegagalan di tengah jalan* butir 3).
+
 Temuan untuk plan: `code_challenge` **tidak** diteruskan ke Google. PKCE berlaku antara app dan Supabase; Supabase ke Google memakai `state`. Acceptance 3 dan Fase 5 diperbaiki: E2E memeriksa `code_challenge` pada request ke `/auth/v1/authorize` Supabase, dan memeriksa `redirect_uri` serta `state` pada request ke Google.
 
 Belum terbukti: bahwa `amr` login Google berisi `method = oauth`. Itu hanya bisa dilihat dengan login Google nyata (smoke staging atau credential lokal).

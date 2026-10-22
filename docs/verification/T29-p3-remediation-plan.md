@@ -137,11 +137,11 @@ Baru: `docs/verification/T29-p3-phase{0..4}-*.md`.
 
 ### Fase 3: RV3 dan RV4
 
-- [ ] Implementasi §3.3. Jalankan `pnpm test:e2e:auth-google` dengan provider aktif: semua lulus.
-- [ ] Catat potongan kode pesan error di receipt (jalur gagal tidak dipicu).
-- [ ] RV4 §3.4.
-- [ ] Commit `test(t29): fail the Google suite early when the local provider is off` dan `docs(t29): correct the phase 0 client_id note`.
-- [ ] Receipt `T29-p3-phase3-preflight-docs.md`.
+- [x] Implementasi §3.3. Jalankan `pnpm test:e2e:auth-google` dengan provider aktif: semua lulus.
+- [x] Catat potongan kode pesan error di receipt (jalur gagal tidak dipicu).
+- [x] RV4 §3.4.
+- [x] Commit `test(t29): fail the Google suite early when the local provider is off` dan `docs(t29): correct the phase 0 client_id note`.
+- [x] Receipt `T29-p3-phase3-preflight-docs.md`.
 
 ### Fase 4: Regresi dan draft dokumen
 
