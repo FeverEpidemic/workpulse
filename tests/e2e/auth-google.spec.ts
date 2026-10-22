@@ -29,8 +29,9 @@ function config() {
   if (existsSync(".env.local")) process.loadEnvFile(".env.local");
   const url = process.env["SUPABASE_URL"]?.trim();
   const secretKey = process.env["SUPABASE_SECRET_KEY"]?.trim();
-  if (!url || !secretKey) throw new Error("Local Supabase fixture credentials are required.");
-  return { url, secretKey };
+  const publishableKey = process.env["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"]?.trim();
+  if (!url || !secretKey || !publishableKey) throw new Error("Local Supabase fixture credentials and publishable key are required.");
+  return { url, secretKey, publishableKey };
 }
 
 async function createGoogleUser(label: string, complete: boolean): Promise<User> {
@@ -126,8 +127,15 @@ function expectGoogleRedirect(authorize: string[], google: string[]) {
   return { start, consent };
 }
 
-test.beforeAll(() => {
-  const { url, secretKey } = config();
+test.beforeAll(async () => {
+  const { url, secretKey, publishableKey } = config();
+  const providerOffMessage = "Local Google provider is off or unavailable. The shared stack may have been restarted from a checkout without [auth.external.google]. Run pnpm db:stop then pnpm db:start from a checkout with that block after coordinating shared stack use. In a new worktree, first copy the image version files from supabase/.temp in the main checkout (not project-ref or linked-project.json).";
+  try {
+    const response = await fetch(`${SUPABASE_ORIGIN}/auth/v1/settings`, { headers: { apikey: publishableKey } });
+    if (!response.ok || (await response.json()).external?.google !== true) throw new Error(providerOffMessage);
+  } catch {
+    throw new Error(providerOffMessage);
+  }
   admin = createClient<Database>(url, secretKey, clientOptions);
   mkdirSync(SHOTS, { recursive: true });
 });
@@ -265,6 +273,37 @@ for (const width of [360, 1440]) {
       expect(await horizontalOverflow(page)).toEqual({ page: false, dialog: false });
       await expectNoWcagViolations(page, testInfo, `s12-google-${width}-${theme}`);
       await page.screenshot({ path: `${SHOTS}/s12-delete-google-${width}-${theme}.png`, animations: "disabled" });
+    });
+  }
+}
+
+for (const width of [360, 1440]) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`S12 switched notice at ${width}px in ${theme}: current email, closed dialog, Axe clean`, async ({ page, browser }, testInfo) => {
+      const { user, cookies } = await sessionFor(browser, "delete", true, /\/dashboard$/);
+      await page.context().addCookies(cookies);
+      await setTheme(page, theme);
+      await page.setViewportSize({ width, height: 900 });
+      for (const locale of ["en", "id"] as const) {
+        const updated = await admin.from("profiles").update({ locale }).eq("id", user.id);
+        expect(updated.error).toBeNull();
+        await page.goto("/settings/profile?reauth=switched");
+        await page.waitForLoadState("networkidle");
+        const notice = page.locator('.delete-account > p[role="status"]');
+        await expect(notice).toContainText(user.email);
+        await expect(notice).toContainText(locale === "en" ? "Nothing was deleted." : "Tidak ada yang dihapus.");
+        await expect(page.locator("dialog[open]")).toHaveCount(0);
+        expect(await horizontalOverflow(page)).toEqual({ page: false, dialog: false });
+        await expectNoWcagViolations(page, testInfo, `s12-switched-${locale}-${width}-${theme}`);
+        for (const suffix of ["?reauth=other", ""]) {
+          await page.goto(`/settings/profile${suffix}`);
+          await expect(page.locator('.delete-account > p[role="status"]')).toHaveCount(0);
+          await expect(page.locator("dialog[open]")).toHaveCount(0);
+        }
+      }
+      const restored = await admin.from("profiles").update({ locale: "en" }).eq("id", user.id);
+      expect(restored.error).toBeNull();
+      expect(sql(`select count(*) from internal.account_deletions where user_id = '${user.id}'::uuid`)).toBe("0");
     });
   }
 }

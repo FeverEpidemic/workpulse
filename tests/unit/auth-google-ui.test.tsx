@@ -127,3 +127,17 @@ describe("T29 S12 delete dialog for a Google-only account", () => {
     expect(html).not.toContain("Google");
   });
 });
+
+describe("RV2 switched-account notice", () => {
+  it.each(["en", "id"] as const)("announces the current session email in %s without opening the dialog", (locale) => {
+    const html = renderToStaticMarkup(<DeleteAccountCard accountEmail={EMAIL} locale={locale} reauthNotice="switched" />);
+    expect(html).toMatch(/<p role="status"[^>]*>[^<]*rina@example.com[^<]*<[/]p>/);
+    expect(html).toContain(locale === "en" ? "Nothing was deleted." : "Tidak ada yang dihapus.");
+    expect(html).not.toMatch(/<dialog[^>]* open/);
+  });
+  it("does not render the notice without the switched prop", () => {
+    const html = renderToStaticMarkup(<DeleteAccountCard accountEmail={EMAIL} locale="en" />);
+    expect(html.split("<dialog")[0]).not.toContain('role="status"');
+    expect(html).not.toContain("Nothing was deleted.");
+  });
+});

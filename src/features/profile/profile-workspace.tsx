@@ -26,6 +26,7 @@ export async function ProfileWorkspace({
   locale,
   openRecordId,
   deletionReauth,
+  reauthNotice,
   openDeleteDialog = false,
 }: {
   client: ServerClient;
@@ -34,6 +35,7 @@ export async function ProfileWorkspace({
   locale: Locale;
   openRecordId?: string;
   deletionReauth?: DeletionReauth;
+  reauthNotice?: "switched";
   openDeleteDialog?: boolean;
 }) {
   const [experienceResult, educationResult, certificationResult, skillResult, projectResult] = await Promise.all([
@@ -71,7 +73,7 @@ export async function ProfileWorkspace({
           <AiConsentCard profile={profile} locale={locale} />
         </Card>
         <Card className="space-y-3">
-          <DeleteAccountCard accountEmail={userEmail} locale={locale} reauth={deletionReauth} openOnLoad={openDeleteDialog} />
+          <DeleteAccountCard accountEmail={userEmail} locale={locale} reauth={deletionReauth} reauthNotice={reauthNotice} openOnLoad={openDeleteDialog} />
         </Card>
       </section>
 

@@ -7,6 +7,7 @@ import {
   REAUTH_INTENT_COOKIE,
   googleDisplayNameSuggestion,
   hasRecentOAuthProof,
+  hasOAuthMethod,
   oauthCookieOptions,
   readOAuthReturn,
   readReauthIntent,
@@ -107,5 +108,14 @@ describe("Google sign-in feature flag", () => {
     }
     process.env.WORKPULSE_AUTH_GOOGLE_ENABLED = "true";
     expect(isGoogleAuthEnabled()).toBe(true);
+  });
+});
+
+describe("OAuth callback classification without a time window", () => {
+  it.each([0, -400, 1800000000, Number.MAX_SAFE_INTEGER, undefined])("recognises oauth with any timestamp: %s", (timestamp) => {
+    expect(hasOAuthMethod([{ method: "oauth", timestamp }])).toBe(true);
+  });
+  it.each([null, [], [{ method: "password" }], [{ method: "otp" }], [{ method: "recovery" }], [{}], [{ method: 42 }], [null], ["oauth"]].map((amr) => ({ amr })))("rejects other or malformed methods: $amr", ({ amr }) => {
+    expect(hasOAuthMethod(amr)).toBe(false);
   });
 });

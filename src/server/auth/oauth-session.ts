@@ -35,6 +35,10 @@ export function readReauthIntent(value: string | null | undefined, userId: strin
   return value === reauthIntentValue(userId) ? "delete-account" : null;
 }
 
+export function hasOAuthMethod(amr: unknown): boolean {
+  return Array.isArray(amr) && amr.some((entry) => entry && typeof entry === "object" && "method" in entry && entry.method === "oauth");
+}
+
 /** Account deletion for a Google-only account needs an OAuth sign-in recorded in the last five minutes. */
 export function hasRecentOAuthProof(amr: unknown, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
   return hasRecentMethod(amr, ["oauth"], nowSeconds, OAUTH_REAUTH_WINDOW_SECONDS);
