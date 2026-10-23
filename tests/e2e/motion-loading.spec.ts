@@ -58,7 +58,7 @@ for (const width of [360, 1440]) {
   });
 }
 
-test("T30 page entry excludes chrome and does not replay for a GET filter", async ({ page }) => {
+test("T30 page entry excludes chrome, plays on client navigation only, and never replays painted server HTML", async ({ page }) => {
   await page.addInitScript(() => {
     document.addEventListener("animationstart", (event) => {
       if (event.animationName === "ui-page-enter") {
@@ -66,18 +66,25 @@ test("T30 page entry excludes chrome and does not replay for a GET filter", asyn
       }
     });
   });
-  await signIn(page, user, "/activity");
-  await expect(page.locator(".workspace-page-enter")).toBeVisible();
+  const entries = () => page.evaluate(() => Number(sessionStorage.getItem("t30-page-entries") ?? 0));
+  await signIn(page, user, "/dashboard");
+  // Sign-in reaches the workspace by client navigation, which may enter once; count only from the document load.
+  await page.evaluate(() => sessionStorage.removeItem("t30-page-entries"));
+  // A document load paints the server HTML first; an entry animation after hydration would blink it (gate RV1).
+  await page.goto("/activity");
+  await expect(page.locator(".workspace-page-enter")).toHaveAttribute("data-page-enter", "false");
   await expect(page.locator(".workspace-sidebar .workspace-page-enter, .workspace-tab-bar .workspace-page-enter, .workspace-mobile-header .workspace-page-enter")).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem("t30-page-entries")))).toBeGreaterThan(0);
-  const count = await page.evaluate(() => Number(sessionStorage.getItem("t30-page-entries")));
+  await page.waitForTimeout(300);
+  const count = await entries();
+  expect(count).toBe(0);
   await page.locator("#activity-filter-from").fill("2026-01-01");
   await page.locator(".workspace-filter-form button[type='submit']").click();
   await expect(page).toHaveURL(/\/activity\?from=2026-01-01/);
   await page.waitForTimeout(300);
-  expect(await page.evaluate(() => Number(sessionStorage.getItem("t30-page-entries")))).toBe(count);
+  expect(await entries()).toBe(count);
   await page.locator(".workspace-sidebar").getByRole("link", { name: "Projects", exact: true }).click();
   await expect(page).toHaveURL(/\/projects$/);
-  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem("t30-page-entries")))).toBe(count + 1);
+  await expect(page.locator(".workspace-page-enter")).toHaveAttribute("data-page-enter", "true");
+  await expect.poll(entries).toBe(count + 1);
   expect(career.activityId).toBeTruthy();
 });

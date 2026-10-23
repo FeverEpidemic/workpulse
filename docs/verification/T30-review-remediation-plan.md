@@ -5,7 +5,8 @@
 - Branch: `claude/t30-motion-loading`, HEAD review `a60fa0f` (baseline handoff `dcd146d`, 8 commit pelaksana).
 - Pelaksana: ChatGPT Sol 6.1 (reasoning medium), Fase 0 sampai 5.
 - antislop: during (session override).
-- **Verdict: BELUM LULUS.** Satu P2 terbuka (RV1). T30 tetap **PARTIAL**; Fase 6 belum boleh dimulai.
+- **Verdict awal: BELUM LULUS.** Satu P2 terbuka (RV1).
+- **Verdict setelah remediasi (23 Oktober 2026): LULUS gate**, tanpa P0 sampai P2 terbuka. RV1 ditutup di [Fase 5b](T30-phase5b-remediation.md); N3 dikonfirmasi pengguna; N1, N2, N4 tetap P3 follow-up. Perbaikan RV1 ditulis reviewer sendiri atas permintaan pengguna, jadi independensinya terbatas; buktinya probe sebelum/sesudah dan E2E. Fase 6 (draft dokumen) boleh dimulai. T30 belum DONE sampai closeout.
 
 ## Ringkasan
 
@@ -17,10 +18,10 @@ Satu cacat perilaku lolos dari test pelaksana: animasi masuk halaman diputar ula
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | Animasi halaman diputar ulang setelah hydration pada pemuatan dokumen penuh (kedip) | Terbuka |
+| RV1 | P2 | Animasi halaman diputar ulang setelah hydration pada pemuatan dokumen penuh (kedip) | Ditutup di Fase 5b |
 | N1 | P3 | Escape memanggil `onOpenChange(false)` dua kali | Follow-up |
 | N2 | P3 | Semua `Button` menjadi 8 px lebih lebar, beda dengan link bergaya tombol | Follow-up |
-| N3 | P3 | Perubahan kontrak §2.2.7/§8 berdasar persetujuan di sesi ChatGPT; perlu konfirmasi pengguna di sini | Butuh konfirmasi |
+| N3 | P3 | Perubahan kontrak §2.2.7/§8 berdasar persetujuan di sesi ChatGPT; perlu konfirmasi pengguna di sini | Ditutup: dikonfirmasi pengguna 23 Oktober 2026 |
 | N4 | P3 | Konflik merge dengan T28 di `import-mode-dialog.test.tsx` dan `import-start.tsx` | Catatan merge |
 
 ### RV1 (P2): kedip setelah hydration

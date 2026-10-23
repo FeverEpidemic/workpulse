@@ -8,7 +8,7 @@ const wcagAaTags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag
 async function waitForFiniteAnimations(page: Page): Promise<void> {
   const template = page.locator(".workspace-page-enter");
   if (await template.count()) {
-    // A server-rendered template starts its animation only after hydration.
+    // The template decides its entry while rendering; wait until a workspace page is in the DOM.
     await expect(template).toHaveAttribute("data-page-enter", /^(true|false)$/);
   }
   await page.evaluate(async () => {
