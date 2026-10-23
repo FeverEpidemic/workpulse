@@ -114,6 +114,13 @@ Testing:
 - Risiko: E2E yang ada menjadi flaky karena elemen bergerak. Mitigasi: durasi pendek (maksimal 240ms) dan regresi penuh di Fase 5.
 - Klik-tembus di browser per elemen, light dan dark, desktop dan 360 px (R-35).
 
+## Perubahan saat eksekusi
+
+- Pending navigasi: `useLinkStatus` kembali idle saat `loading.tsx` tampil, jadi link juga pending selama fallback route yang cocok ter-mount (store per workspace frame, tanpa timer). Disetujui pengguna 22 Oktober 2026.
+- Masuk halaman: diputuskan saat render dengan mengenali hydration, sehingga pemuatan dokumen penuh tidak memutar ulang konten yang sudah ter-paint (gate RV1, Fase 5b).
+- Waktu menunggu di `ProgressStatus` dihitung sejak layar mulai menunggu, karena payload job tidak membawa timestamp.
+- Keputusan final tercatat di [decision 0040](../decisions/0040-t30-motion-loading.md).
+
 ## Di luar lingkup
 
 - Progress bar persentase (tidak ada datanya).

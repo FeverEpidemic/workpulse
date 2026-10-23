@@ -4,6 +4,7 @@
 
 - Tanggal: 22 Oktober 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE** 23 Oktober 2026 (acceptance lokal; [bukti](T30-motion-loading.md), [gate review](T30-review-remediation-plan.md), decision [0040](../decisions/0040-t30-motion-loading.md)).
 - Dependensi: T04 (app frame), T07 (Quick log), T27 (tab bar dan sheet mobile) **DONE** di `main`. T28 (import mode choice) dan T29 (Google OAuth) belum merge; T30 tidak menyentuh pilihan mode import atau auth. Bila keduanya merge lebih dulu, rebase dan ulang Fase 0.
 - Asal task: permintaan terarah pengguna pada 21 Oktober 2026 ("nambahin animasi dan loading animation"). T30 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Semua keputusan berasal dari interview di chat dan tercatat di [T30-motion-loading-design.md](T30-motion-loading-design.md).
 - Eksekutor: satu agent **ChatGPT Sol 6.1** (reasoning medium), ditetapkan pengguna 22 Oktober 2026. Semua fase berurutan tanpa delegasi.
@@ -224,11 +225,11 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
-- [ ] `docs/Design.md` dan `Design.md` §28: tambahkan token motion, aturan spinner + teks, dan pola `ProgressStatus`. Jaga kedua salinan identik.
-- [ ] Perbarui [T30-motion-loading-design.md](T30-motion-loading-design.md) bila ada keputusan yang berubah saat eksekusi.
-- [ ] Draft decision `00xx-t30-motion-loading.md` (alasan pulse vs shimmer, `template.tsx` vs View Transitions, `ProgressStatus` tanpa persentase, follow-up `error.tsx`).
-- [ ] `docs/verification/T30-motion-loading.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
-- [ ] Commit.
+- [x] `docs/Design.md` dan `Design.md` §28: tambahkan token motion, aturan spinner + teks, dan pola `ProgressStatus`. Jaga kedua salinan identik.
+- [x] Perbarui [T30-motion-loading-design.md](T30-motion-loading-design.md) bila ada keputusan yang berubah saat eksekusi.
+- [x] Draft decision `00xx-t30-motion-loading.md` (alasan pulse vs shimmer, `template.tsx` vs View Transitions, `ProgressStatus` tanpa persentase, follow-up `error.tsx`).
+- [x] `docs/verification/T30-motion-loading.md` (ringkasan acceptance dan bukti) tanpa klaim DONE; klaim DONE ditambahkan di closeout reviewer.
+- [x] Commit.
 
 ## 6. Fixture
 
