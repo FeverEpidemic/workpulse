@@ -115,7 +115,9 @@ describe("T28 import mode dialog: every upload, and a confirmation before AI is 
   it("shows a withdraw error in the confirmation and a busy state on the confirm button only", () => {
     const html = render("en", { granted: true, step: "confirm", pending: "rules", error: "Reload to see the latest settings." });
     expect(html).toMatch(/<p role="alert"[^>]*>Reload to see the latest settings\.<\/p>/);
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-busy="true"[^>]*>Saving…<\/button>/);
+    // T30: a busy button keeps its label and adds a spinner and a screen-reader status.
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-busy="true"[^>]*>.*?Turn off AI and read CV<span class="sr-only">Saving…<\/span><\/button>/);
+    expect(html).toContain("ui-loading-spinner");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Back<\/button>/);
   });
 
