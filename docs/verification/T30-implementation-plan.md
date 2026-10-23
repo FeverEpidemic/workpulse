@@ -76,7 +76,7 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 4. **Skeleton berdenyut, bukan shimmer.** Spec awal menulis shimmer kiri ke kanan. Shimmer memerlukan `linear-gradient`, dan Design.md §16.1 melarang gradient. Keputusan: `@keyframes ui-skeleton-pulse` mengubah `opacity` 1 → 0.55 → 1 dalam 1.6 s, `ease-in-out`, berulang hanya selama elemen ada. Muncul dengan `animation-delay: 150ms` dan `opacity: 0` sebagai awal. Pengguna diberi tahu perubahan ini di chat 22 Oktober 2026 sebelum eksekusi.
 5. **Teks memuat terlihat.** Setiap `loading.tsx` merender satu baris teks kecil `--color-text-secondary` (key `common.loadingPage`) di samping `sr-only` yang ada. Alasan: skeleton diam di reduced motion harus tetap terbaca sebagai loading.
 6. **Loading lama.** Komponen client `SlowLoadingNotice` (8 s, fake timers di test) dipasang di setiap `loading.tsx`. Isi: teks `common.stillLoading` dan tombol `common.reload` yang memanggil `window.location.reload()`. Alasan: navigasi yang benar-benar macet tidak bisa dipulihkan dengan `router.refresh()`. Tidak ada `error.tsx` di `src/app/` saat plan ditulis; menambah error boundary di luar scope (§2.3).
-7. **Pending navigasi.** `useLinkStatus` di komponen link sidebar (`workspace-navigation.tsx`) dan tab bar (`mobile-tab-bar.tsx`). `pending` → `data-pending="true"` pada link dan spinner 14 px pengganti ikon setelah 150 ms. Bila Fase 0 menemukan `useLinkStatus` tidak memberi `pending` pada build dev/prod, **stop** (§8), jangan mengganti dengan state buatan sendiri.
+7. **Pending navigasi.** `useLinkStatus` di komponen link sidebar (`workspace-navigation.tsx`) dan tab bar (`mobile-tab-bar.tsx`). `pending` → `data-pending="true"` pada link dan spinner 14 px pengganti ikon setelah 150 ms. Perubahan kontrak disetujui pengguna pada pengulangan Fase 5, 22 Oktober 2026: "Boleh, perbaiki dan catat perubahan kontrak". Hook Next boleh dilengkapi pendaftaran lifecycle fallback halaman karena hook kembali idle saat fallback tampil. Fallback mendaftar saat mount dan melepas token miliknya saat unmount; provider dibatasi pada satu workspace frame. Pending tujuan aktif bila hook atau fallback route yang cocok masih aktif. Cleanup fallback lama tidak boleh menghapus mount yang lebih baru. Tidak ada timer untuk menebak selesai, perubahan prefetch, dependency atau flag baru. E2E harus membuktikan pending tetap true ketika hook sudah false, lalu kembali false setelah fallback dilepas.
 8. **Dialog, sheet, toast.**
 
    | Elemen | Masuk | Keluar |
@@ -211,16 +211,16 @@ T30 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 5: E2E, aksesibilitas, regresi, Delivery Gate
 
-> **BLOCKED, 22 Oktober 2026.** Pending hook kembali false ketika fallback sudah tampil tetapi respons RSC masih ditahan. Acceptance 8 gagal pada 360 dan 1440 px. Pelaksana berhenti mengikuti §2.2.7/§8, tanpa fallback state buatan. Lihat [receipt Fase 5](T30-phase5-e2e-regression.md) dan [bukti diagnosis](T30-navigation-pending-blocker.json). Checkbox fase ini belum ditutup; T30 belum DONE.
+> **COMPLETE, 23 Oktober 2026.** Pengulangan selesai setelah persetujuan perubahan kontrak lifecycle fallback di §2.2.7/§8. Seluruh acceptance 1–14 terbukti lokal, release 42/42, CV export terisolasi 12/12 dan Delivery Gate PASS. Riwayat blocker dipertahankan pada [diagnosis awal](T30-navigation-pending-blocker.json); [resolusi](T30-navigation-pending-resolution.json) dan [receipt Fase 5](T30-phase5-e2e-regression.md) memuat bukti akhir. T30 belum DONE; stop untuk gate review Claude.
 
-- [ ] E2E baru atau diperbarui untuk acceptance 2, 3, 4, 6, 8, 10, 11, 12, 13. Route lambat untuk acceptance 8 memakai mekanisme yang sudah ada di suite (cek helper); jangan menambah endpoint produksi.
-- [ ] E2E AI dengan fake provider untuk acceptance 9 (`pnpm test:e2e:ai-review`), export (`pnpm test:e2e:cv-export` bila renderer tersedia; bila tidak, catat dan buktikan lewat unit + Storybook).
-- [ ] Tambah state pending, `ProgressStatus`, dan skeleton ke `release-a11y.spec.ts` (acceptance 14) di 360 px dan 1440 px, light dan dark.
-- [ ] Ganti assertion reduced motion yang hanya mengukur `transitionDuration` bila perlu, tanpa melemahkan: tetap ≤ 0,01 ms, ditambah cek teks status terlihat.
-- [ ] Regresi §7 lengkap. Tidak ada assertion lama yang dilemahkan selain yang mengharapkan label tombol berganti; setiap perubahan disertai alasan.
-- [ ] Jalankan Delivery Gate antislop (core + checklist `antislop-ui`, `antislop-human`) dan tulis laporan PASS/FAIL dengan bukti di receipt, termasuk klik-tembus setiap tombol pending, dialog, sheet, toast, navigasi, dan `ProgressStatus` di 360 px dan 1440 px light/dark.
-- [ ] Screenshot: tombol pending, skeleton, `SlowLoadingNotice`, `ProgressStatus` normal dan lambat, dialog terbuka, highlight item baru; light dan dark; plus versi reduced motion.
-- [ ] Receipt `T30-phase5-e2e-regression.md`, commit. **Stop: gate review Claude.**
+- [x] E2E baru atau diperbarui untuk acceptance 2, 3, 4, 6, 8, 10, 11, 12, 13. Route lambat untuk acceptance 8 memakai mekanisme yang sudah ada di suite (cek helper); jangan menambah endpoint produksi.
+- [x] E2E AI dengan fake provider untuk acceptance 9 (`pnpm test:e2e:ai-review`), export (`pnpm test:e2e:cv-export` bila renderer tersedia; bila tidak, catat dan buktikan lewat unit + Storybook).
+- [x] Tambah state pending, `ProgressStatus`, dan skeleton ke `release-a11y.spec.ts` (acceptance 14) di 360 px dan 1440 px, light dan dark.
+- [x] Ganti assertion reduced motion yang hanya mengukur `transitionDuration` bila perlu, tanpa melemahkan: tetap ≤ 0,01 ms, ditambah cek teks status terlihat.
+- [x] Regresi §7 lengkap. Tidak ada assertion lama yang dilemahkan selain yang mengharapkan label tombol berganti; setiap perubahan disertai alasan.
+- [x] Jalankan Delivery Gate antislop (core + checklist `antislop-ui`, `antislop-human`) dan tulis laporan PASS/FAIL dengan bukti di receipt, termasuk klik-tembus setiap tombol pending, dialog, sheet, toast, navigasi, dan `ProgressStatus` di 360 px dan 1440 px light/dark.
+- [x] Screenshot: tombol pending, skeleton, `SlowLoadingNotice`, `ProgressStatus` normal dan lambat, dialog terbuka, highlight item baru; light dan dark; plus versi reduced motion.
+- [x] Receipt `T30-phase5-e2e-regression.md`, commit. **Stop: gate review Claude.**
 
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
@@ -265,7 +265,7 @@ pnpm build-storybook
 Berhenti dan laporkan bila:
 
 - Path yang akan diubah T30 berisi perubahan pengguna yang belum di-commit.
-- `useLinkStatus` tidak memberi `pending` di Next 16.3.5 (§2.2.7).
+- `useLinkStatus` tidak tersedia atau tidak memberi `pending` di Next 16.3.5, dan lifecycle fallback yang disetujui pengguna pada 22 Oktober 2026 (§2.2.7) juga tidak dapat membuktikan pending sampai konten siap. Timer atau state selesai yang ditebak tetap tidak diizinkan.
 - Tombol `useFormStatus` sendiri hanya bisa dipindah ke `Button` dengan mengubah perilaku form atau server action.
 - Test lama di luar ekspektasi label pending hanya lulus dengan melemahkan assertion.
 - Perlu migration, dependency baru, flag eksperimental Next, atau perubahan server action.

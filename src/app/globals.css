@@ -1265,7 +1265,6 @@ a {
 }
 
 [data-ui-button="true"] { position: relative; padding-inline: calc(var(--space-4) + var(--space-1)); }
-[data-ui-button="true"][aria-busy="true"] { opacity: 1; cursor: progress; }
 .ui-button-spinner { position: absolute; inset-inline-start: var(--space-1); top: 50%; display: inline-flex; transform: translateY(-50%); }
 
 .button-primary:disabled,
@@ -1276,6 +1275,8 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
 }
+
+[data-ui-button="true"][aria-busy="true"] { opacity: 1; cursor: progress; }
 
 .ui-message {
   border: 1px solid;

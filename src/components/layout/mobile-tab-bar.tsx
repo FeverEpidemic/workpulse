@@ -78,7 +78,7 @@ export function MobileTabBar({
                 className={current ? "workspace-tab is-current" : "workspace-tab"}
                 aria-current={current}
               >
-                <PendingLinkContent icon={icon(id, Boolean(current))}>
+                <PendingLinkContent href={href} icon={icon(id, Boolean(current))}>
                   <span className={labelClass}>{label}</span>
                 </PendingLinkContent>
               </Link>

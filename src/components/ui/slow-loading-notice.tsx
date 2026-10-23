@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useNavigationLoadingFallback } from "@/components/layout/navigation-loading";
 import { t, type Locale } from "@/i18n/messages";
 
 export function slowLoadingView(nowMs: number, startedAt: number): boolean {
@@ -21,6 +22,7 @@ export function SlowLoadingContent({ locale, slow }: { locale: Locale; slow: boo
 }
 
 export function SlowLoadingNotice({ locale }: { locale: Locale }) {
+  useNavigationLoadingFallback();
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     const start = Date.now();

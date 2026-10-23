@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-22",
+  "next": "16.3.5",
+  "approval": "Boleh, perbaiki dan catat perubahan kontrak",
+  "mechanism": "useLinkStatus OR mounted route fallback, scoped to workspace frame",
+  "noCompletionTimer": true,
+  "nativeNavigationTestsPassed": 6,
+  "lifecycleUnitTestsPassed": 8,
+  "heldResponseObservation": {
+    "pathname": "/activity",
+    "skeletons": 9,
+    "hook": [
+      "false",
+      "false"
+    ],
+    "combined": [
+      "true",
+      "true"
+    ]
+  },
+  "verifiedDate": "2026-10-23",
+  "fullReleaseTestsPassed": 42
+}

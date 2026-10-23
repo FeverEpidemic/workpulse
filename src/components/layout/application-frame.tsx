@@ -4,6 +4,7 @@ import { MobileChrome } from "@/components/layout/mobile-chrome";
 import { WorkspaceNavigation, WorkspaceTopBar } from "@/components/layout/workspace-navigation";
 import { UnsavedChangesProvider } from "@/components/ui/unsaved-changes";
 import { ToastProvider } from "@/components/ui/toast";
+import { NavigationLoadingProvider } from "@/components/layout/navigation-loading";
 import { t, type Locale } from "@/i18n/messages";
 import type { ThemePreference } from "@/domain/theme/theme-preference";
 
@@ -26,6 +27,7 @@ export function ApplicationFrame({
 }) {
   return (
     <ToastProvider notificationsLabel={t(locale, "common.notifications")}>
+      <NavigationLoadingProvider>
       <UnsavedChangesProvider locale={locale}>
         <a className="skip-link" href="#main-content">{t(locale, "workspace.skipToContent")}</a>
         <div className="workspace-layout">
@@ -52,6 +54,7 @@ export function ApplicationFrame({
           </div>
         </div>
       </UnsavedChangesProvider>
+      </NavigationLoadingProvider>
     </ToastProvider>
   );
 }

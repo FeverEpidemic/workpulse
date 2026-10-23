@@ -334,14 +334,18 @@ export function CvExportPage(props: CvExportPageProps) {
             </section>
           ) : null}
 
-          <div
-            ref={statusRef} tabIndex={-1} role={view?.state === "queued" || view?.state === "running" ? undefined : "status"} aria-live={view?.state === "queued" || view?.state === "running" ? undefined : "polite"} className="cv-export-status"
+          <ProgressStatus
+            clockKey={latest?.id ?? "none"}
+            locale={locale} kind="export" stage={view?.state === "running" ? "running" : "queued"}
+            active={view?.state === "queued" || view?.state === "running"}
+            renderStatus={(progress) => <div
+            ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="cv-export-status"
             data-testid="cv-export-status" data-state={view?.state ?? "none"}
           >
             <p className="text-sm font-semibold">{t(locale, "cv.exportPage.status.heading")}</p>
             {view && latest ? (
               <>
-                {view.state === "queued" || view.state === "running" ? <ProgressStatus key={latest.id} locale={locale} kind="export" stage={view.state} /> : null}
+                {progress}
                 <p className="cv-export-state">
                   {view.state === "queued" || view.state === "running" ? null : <Badge variant={BADGE[view.state]}>
                     <StateIcon state={view.state} />
@@ -362,7 +366,8 @@ export function CvExportPage(props: CvExportPageProps) {
             ) : (
               <p className="field-help">{t(locale, "cv.exportPage.status.none")}</p>
             )}
-          </div>
+          </div>}
+          />
 
           <div className="cv-export-actions" data-testid="cv-export-actions">
             {actions.primary ? <ActionButton {...actionProps} action={actions.primary} primary /> : null}

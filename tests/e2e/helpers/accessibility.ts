@@ -6,6 +6,11 @@ const wcagAaTags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag
 // Axe samples computed colors, so a mid-flight transition (e.g. after a theme switch) yields
 // intermediate colors that are not design tokens. Settle finite animations; skip infinite ones.
 async function waitForFiniteAnimations(page: Page): Promise<void> {
+  const template = page.locator(".workspace-page-enter");
+  if (await template.count()) {
+    // A server-rendered template starts its animation only after hydration.
+    await expect(template).toHaveAttribute("data-page-enter", /^(true|false)$/);
+  }
   await page.evaluate(async () => {
     for (let round = 0; round < 5; round += 1) {
       const pending = document.getAnimations().filter((animation) =>

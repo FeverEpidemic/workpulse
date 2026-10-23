@@ -44,8 +44,11 @@ export function Dialog({
     <dialog
       ref={dialogRef}
       className={["ui-dialog", className].filter(Boolean).join(" ")}
+      aria-hidden={!open || undefined}
+      inert={!open}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
+      onCancel={() => onOpenChange(false)}
       onClose={() => {
         if (dialogRef.current?.open) return;
         onOpenChange(false);

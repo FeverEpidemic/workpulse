@@ -33,7 +33,7 @@ export function NavigationLinks({ locale, pathname, label, hrefs, onNavigate }: 
             aria-current={current ? "page" : undefined}
             onClick={onNavigate}
           >
-            <PendingLinkContent icon={<Icon size={18} strokeWidth={1.8} aria-hidden="true" />}>
+            <PendingLinkContent href={href} icon={<Icon size={18} strokeWidth={1.8} aria-hidden="true" />}>
               <span>{t(locale, key)}</span>
             </PendingLinkContent>
           </Link>
@@ -61,7 +61,7 @@ function ProfileAndSettings({
         className={current ? "workspace-nav-link is-current" : "workspace-nav-link"}
         aria-current={current ? "page" : undefined}
       >
-        <PendingLinkContent icon={<UserRound size={18} strokeWidth={1.8} aria-hidden="true" />}>
+        <PendingLinkContent href="/settings/profile" icon={<UserRound size={18} strokeWidth={1.8} aria-hidden="true" />}>
           <span>{t(locale, "profile.title")}</span>
         </PendingLinkContent>
       </Link>

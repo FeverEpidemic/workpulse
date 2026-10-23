@@ -428,8 +428,11 @@ test("M2 manual journey: note → project → achievement → private evidence �
       const randomId = randomUUID();
       for (const [kind, id] of [["activity", activityId], ["achievements", achievementId], ["projects", projectId]] as const) {
         await otherPage.goto(`/${kind}/${randomId}`);
+        await expect(otherPage.getByRole("heading", { name: "Record unavailable" })).toBeVisible();
+        await expect(otherPage.locator(".ui-page-loading-status")).toHaveCount(0);
         const randomText = await otherPage.locator("main").innerText();
         await otherPage.goto(`/${kind}/${id}`);
+        await expect(otherPage.locator(".ui-page-loading-status")).toHaveCount(0);
         await expect(otherPage.getByRole("heading", { name: "Record unavailable" })).toBeVisible();
         expect(await otherPage.locator("main").innerText(), `${kind} foreign vs random`).toBe(randomText);
       }

@@ -5,6 +5,11 @@ import { progressStatusView } from "@/components/ui/progress-status-view";
 import { t } from "@/i18n/messages";
 
 describe("T30 progress announcements",()=>{
+  it("keeps elapsed time outside a caller-owned live region", () => {
+    const html = renderToStaticMarkup(<ProgressStatusContent locale="en" kind="export" stage="queued" view={progressStatusView(5000, 0, "export", "queued")} renderStatus={(stage) => <div data-testid="cv-export-status" role="status" aria-live="polite">{stage}</div>} />);
+    expect(html.match(/role="status"/g)).toHaveLength(1);
+    expect(html).toMatch(/<div data-testid="cv-export-status" role="status" aria-live="polite">.*<\/p><\/div><span class="field-help" aria-hidden="true">Waiting 5s<\/span>/);
+  });
   it.each(["ai","import","export"] as const)("keeps %s elapsed seconds outside the live region",kind=>{
     const html=renderToStaticMarkup(<ProgressStatusContent locale="en" kind={kind} stage="running" view={progressStatusView(65_000,0,kind,"running")} />);
     const region=html.match(/<[^>]*role="status"[^>]*>(.*?)<\/p>/)?.[1];
