@@ -32,6 +32,9 @@ Setiap variabel di `.env.example` ada di tabel ini, dan sebaliknya (dijaga `test
 | `SUPABASE_SECRET_KEY` | web dan worker | rahasia | kosong | key secret server (`sb_secret_…`); tidak boleh sampai ke browser (diuji: pemindaian bundle) |
 | `WORKPULSE_SITE_URL` | web | konfigurasi | `http://127.0.0.1:3000` | origin tepercaya untuk redirect Auth dan pemeriksaan Origin; wajib diisi domain sebenarnya |
 | `DATABASE_URL` | tes | rahasia | kosong | tidak dibaca aplikasi; migrasi hosted memakai `supabase db push` |
+| `WORKPULSE_AUTH_GOOGLE_ENABLED` | web | konfigurasi | `false` | T29: hanya nilai persis `true` yang menampilkan tombol Google; nyalakan setelah provider hosted lulus smoke (`T29-google-oauth-runbook.md`) |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` | tes (Supabase CLI lokal) | konfigurasi | kosong | dibaca `pnpm db:start` untuk `[auth.external.google]`; hosted memakai dashboard Supabase, bukan variabel ini |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` | tes (Supabase CLI lokal) | rahasia | kosong | pasangan client ID di atas; jangan pernah di-commit |
 | `WORKPULSE_WORKER_ID` | worker | konfigurasi | kosong | tidak dibaca kode v0.1 (dicadangkan) |
 | `LOG_LEVEL` | worker | konfigurasi | info | tidak dibaca kode v0.1 (dicadangkan) |
 | `NODE_ENV` | web dan worker | konfigurasi | production | mode `fake` untuk scanner, AI, dan renderer hanya diterima di `development` atau `test`; jangan set di production |

@@ -8,7 +8,7 @@ import { ActionFeedback, FieldError, fieldErrorControlProps, fieldErrorId } from
 import { LocaleSwitcher } from "@/components/forms/locale-switcher";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { SubmitButton } from "@/components/forms/submit-button";
-import { signInAction, signUpAction, requestRecoveryAction } from "@/server/auth/actions";
+import { signInAction, signUpAction, requestRecoveryAction, signInWithGoogleAction } from "@/server/auth/actions";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 import { AUTH_FIELD_LIMITS } from "@/domain/profile/field-contract";
@@ -20,13 +20,17 @@ export function SignInClient({
   returnTo,
   notice,
   configured,
+  googleEnabled = false,
 }: {
   locale: Locale;
   returnTo: string;
   notice?: MessageKey;
   configured: boolean;
+  /** T29: server flag `WORKPULSE_AUTH_GOOGLE_ENABLED`. */
+  googleEnabled?: boolean;
 }) {
   const [mode, setMode] = useState<AuthMode>("sign-in");
+  const [googleState, signInWithGoogle] = useActionState(signInWithGoogleAction, IDLE_ACTION_STATE);
   const [signInState, signIn, signingIn] = useActionState(signInAction, IDLE_ACTION_STATE);
   const [signUpState, signUp, signingUp] = useActionState(signUpAction, IDLE_ACTION_STATE);
   const [recoveryState, requestRecovery, requestingRecovery] = useActionState(requestRecoveryAction, IDLE_ACTION_STATE);
@@ -63,6 +67,18 @@ export function SignInClient({
 
         {!configured ? <p role="status" className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">{t(locale, "auth.notConfigured")}</p> : null}
         {notice ? <p role="status" className="rounded-lg bg-[var(--wp-subtle)] px-4 py-3 text-sm">{t(locale, notice)}</p> : null}
+
+        {googleEnabled && mode !== "recovery" ? (
+          <>
+            {/* Google both signs in and creates an account, so the same button serves both modes. */}
+            <form id="google-sign-in-form" action={signInWithGoogle} className="auth-google space-y-3">
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <SubmitButton className="button-secondary" pendingLabel={t(locale, "common.loading")}>{t(locale, "auth.google.continue")}</SubmitButton>
+              <ActionFeedback state={googleState} locale={locale} returnTo={returnTo} />
+            </form>
+            <p className="auth-divider">{t(locale, "auth.google.divider")}</p>
+          </>
+        ) : null}
 
         {mode === "sign-in" ? (
           <form id="sign-in-form" action={signIn} className="space-y-4">

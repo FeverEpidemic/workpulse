@@ -155,6 +155,10 @@ async function uploadAndExtract(page: Page, user: User, lines: string[], scenari
   const upload = page.getByRole("button", { name: "Upload and extract" });
   if (keyboard) await activate(upload, page);
   else await upload.click();
+  // T28: the read-mode choice opens on every upload, also with consent; these scenarios read with AI.
+  const useAi = page.getByRole("dialog", { name: "How should we read your CV?" }).getByRole("button", { name: "Use AI" });
+  if (keyboard) await activate(useAi, page);
+  else await useAi.click();
   await expect(page.getByRole("status")).toHaveText("Waiting to start");
   const worker = await drainImportWorker(scenario);
   expect(worker.claimed).toBeGreaterThan(0);

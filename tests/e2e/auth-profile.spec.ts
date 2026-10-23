@@ -162,6 +162,9 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   const profileName = `WorkPulse ${suffix}`;
 
   await page.goto("/sign-in");
+  // T29: this suite runs without WORKPULSE_AUTH_GOOGLE_ENABLED, so Google sign-in stays hidden.
+  await expect(page.locator("#google-sign-in-form")).toHaveCount(0);
+  await expect(page.getByText("Continue with Google")).toHaveCount(0);
   const signInForm = page.locator("#sign-in-form");
   await signInForm.evaluate((form) => { (form as HTMLFormElement).noValidate = true; });
   await page.getByLabel("Email address").fill("not-an-email");

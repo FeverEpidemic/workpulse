@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, startTransition, type FormEvent } from "react";
 
-import { FieldError, fieldErrorControlProps, fieldErrorId } from "@/components/forms/action-feedback";
+import { ActionFeedback, FieldError, fieldErrorControlProps, fieldErrorId } from "@/components/forms/action-feedback";
+import { SubmitButton } from "@/components/forms/submit-button";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/field-control";
@@ -11,11 +12,21 @@ import { InlineError } from "@/components/ui/inline-error";
 import { accountDeletionPreviewSchema, type AccountDeletionPreview } from "@/domain/account/deletion";
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE } from "@/server/action-result";
+import { startGoogleReauthAction } from "@/server/auth/actions";
 
 import { deleteAccountAction, getAccountDeletionPreviewAction } from "./actions";
-import { deletionConfirmEnabled, deletionErrorIsFieldBound, deletionFocusTarget, previewLines, visibleDeletionState } from "./delete-account-state";
+import {
+  deletionConfirmEnabled,
+  deletionErrorIsFieldBound,
+  deletionFocusTarget,
+  deletionReauthView,
+  previewLines,
+  visibleDeletionState,
+  type DeletionReauth,
+} from "./delete-account-state";
 
 const FORM_ID = "delete-account-form";
+const GOOGLE_FORM_ID = "delete-account-google-form";
 const errorIds = {
   password: fieldErrorId(FORM_ID, "password"),
   confirmation: fieldErrorId(FORM_ID, "confirmation"),
@@ -29,21 +40,38 @@ type PreviewState =
 /**
  * S12 "Privacy and account": explains what deletion removes and when, and opens one confirmation dialog.
  * The password and the typed email are only sent with the single submit; a failed attempt clears the password.
+ * A Google-only account confirms with Google first (T29); `openOnLoad` reopens the dialog when it comes back.
  */
-export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: string; locale: Locale }) {
+export function DeleteAccountCard({
+  accountEmail,
+  locale,
+  reauth = { method: "password" },
+  openOnLoad = false,
+  reauthNotice,
+}: {
+  accountEmail: string;
+  locale: Locale;
+  reauth?: DeletionReauth;
+  openOnLoad?: boolean;
+  reauthNotice?: "switched";
+}) {
   const [actionState, formAction, pending] = useActionState(deleteAccountAction, IDLE_ACTION_STATE);
+  const [reauthState, startReauth] = useActionState(startGoogleReauthAction, IDLE_ACTION_STATE);
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [preview, setPreview] = useState<PreviewState>({ status: "loading" });
   const [dismissedError, setDismissedError] = useState<string | null>(null);
   const previewRequest = useRef(0);
   const state = visibleDeletionState(actionState, dismissedError);
+  const view = deletionReauthView(reauth, state);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmationRef = useRef<HTMLInputElement>(null);
+  const googleFormRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
   const handledResult = useRef<string | null>(null);
+  const openedOnLoad = useRef(false);
 
   async function openDialog() {
     setTyped("");
@@ -65,11 +93,22 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
     }
   }
 
-  // Focus enters the password field when the dialog opens and returns to the trigger when it closes.
   useEffect(() => {
-    if (open) passwordRef.current?.focus();
-    else if (wasOpen.current) triggerRef.current?.focus();
+    if (!openOnLoad || openedOnLoad.current) return;
+    openedOnLoad.current = true;
+    void openDialog();
+  }, [openOnLoad]);
+
+  // Focus enters the first step of the dialog when it opens and returns to the trigger when it closes.
+  useEffect(() => {
+    if (open) {
+      if (view.password) passwordRef.current?.focus();
+      else if (view.googleButton) googleFormRef.current?.querySelector<HTMLButtonElement>("button[type=submit]")?.focus();
+      else confirmationRef.current?.focus();
+    } else if (wasOpen.current) triggerRef.current?.focus();
     wasOpen.current = open;
+    // Only an opening or closing moves focus; a view change after an error is handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // A failed attempt clears the password and puts focus on what needs fixing.
@@ -92,12 +131,18 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
   }
 
   const showAlert = state.status === "error" && !deletionErrorIsFieldBound(state);
+  const cancel = <Button variant="secondary" onClick={() => changeOpen(false)}>{t(locale, "account.delete.cancel")}</Button>;
 
   return (
     <div className="delete-account">
       <h2 className="text-xl font-semibold">{t(locale, "account.delete.title")}</h2>
       <p className="text-sm text-[var(--wp-muted)]">{t(locale, "account.privacy.events")}</p>
       <p className="text-sm text-[var(--wp-muted)]">{t(locale, "account.delete.privacy")}</p>
+      {reauthNotice === "switched" && (
+        <p role="status" className="rounded-lg bg-[var(--wp-subtle)] px-4 py-3 text-sm [overflow-wrap:anywhere]">
+          {t(locale, "account.delete.googleSwitched", { email: accountEmail })}
+        </p>
+      )}
       <div>
         <button ref={triggerRef} type="button" className="button-secondary" onClick={() => void openDialog()}>
           {t(locale, "account.delete.trigger")}
@@ -105,7 +150,7 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
       </div>
 
       <Dialog open={open} onOpenChange={changeOpen} title={t(locale, "account.delete.dialogTitle")} description={t(locale, "account.delete.dialogDescription")}>
-        <form id={FORM_ID} className="delete-account-form" onSubmit={submit} noValidate>
+        <div className="delete-account-form">
           <section className="delete-account-preview" aria-labelledby="delete-account-preview-title">
             <h3 id="delete-account-preview-title" className="delete-account-heading">{t(locale, "account.delete.previewHeading")}</h3>
             {preview.status === "loading" ? (
@@ -121,44 +166,6 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
             )}
           </section>
 
-          <div>
-            <label className="field-label" htmlFor="delete-account-password">{t(locale, "account.delete.passwordLabel")}</label>
-            <Input
-              ref={passwordRef}
-              className="mt-1"
-              id="delete-account-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              maxLength={200}
-              {...fieldErrorControlProps(state, "password", errorIds.password, ["delete-account-password-help"])}
-            />
-            <p id="delete-account-password-help" className="field-help">{t(locale, "account.delete.passwordHelp")}</p>
-            <FieldError state={state} field="password" locale={locale} id={errorIds.password} />
-          </div>
-
-          <div>
-            <label className="field-label" htmlFor="delete-account-confirmation">{t(locale, "account.delete.confirmLabel")}</label>
-            <Input
-              ref={confirmationRef}
-              className="mt-1"
-              id="delete-account-confirmation"
-              name="confirmation"
-              type="text"
-              inputMode="email"
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-              {...fieldErrorControlProps(state, "confirmation", errorIds.confirmation, ["delete-account-confirmation-help"])}
-            />
-            <p id="delete-account-confirmation-help" className="field-help delete-account-help">
-              {t(locale, "account.delete.confirmHelp", { email: accountEmail })}
-            </p>
-            <FieldError state={state} field="confirmation" locale={locale} id={errorIds.confirmation} />
-          </div>
-
           <div ref={alertRef} tabIndex={-1} className="delete-account-alert">
             {showAlert && state.status === "error" ? (
               <InlineError correlationId={state.error.correlationId}>
@@ -172,19 +179,77 @@ export function DeleteAccountCard({ accountEmail, locale }: { accountEmail: stri
             ) : null}
           </div>
 
-          <div className="ui-dialog-actions">
-            <Button variant="secondary" onClick={() => changeOpen(false)}>{t(locale, "account.delete.cancel")}</Button>
-            <Button
-              variant="destructive"
-              type="submit"
-              disabled={!deletionConfirmEnabled(accountEmail, typed, pending)}
-              loading={pending}
-              loadingLabel={t(locale, "account.delete.submitting")}
-            >
-              {t(locale, "account.delete.confirm")}
-            </Button>
-          </div>
-        </form>
+          {view.googleButton ? (
+            <form id={GOOGLE_FORM_ID} ref={googleFormRef} action={startReauth} className="delete-account-form-step">
+              <p className="text-sm">{t(locale, "account.delete.googleExplain")}</p>
+              <ActionFeedback state={reauthState} locale={locale} returnTo="/settings/profile" />
+              <div className="ui-dialog-actions">
+                {cancel}
+                <SubmitButton pendingLabel={t(locale, "common.loading")}>{t(locale, "account.delete.googleConfirm")}</SubmitButton>
+              </div>
+            </form>
+          ) : (
+            <form id={FORM_ID} className="delete-account-form-step" onSubmit={submit} noValidate>
+              {view.password ? (
+                <div>
+                  <label className="field-label" htmlFor="delete-account-password">{t(locale, "account.delete.passwordLabel")}</label>
+                  <Input
+                    ref={passwordRef}
+                    className="mt-1"
+                    id="delete-account-password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    maxLength={200}
+                    {...fieldErrorControlProps(state, "password", errorIds.password, ["delete-account-password-help"])}
+                  />
+                  <p id="delete-account-password-help" className="field-help">{t(locale, "account.delete.passwordHelp")}</p>
+                  <FieldError state={state} field="password" locale={locale} id={errorIds.password} />
+                </div>
+              ) : (
+                <>
+                  <input type="hidden" name="method" value="google" />
+                  <p id="delete-account-google-confirmed" className="text-sm">{t(locale, "account.delete.googleConfirmed")}</p>
+                </>
+              )}
+
+              <div>
+                <label className="field-label" htmlFor="delete-account-confirmation">{t(locale, "account.delete.confirmLabel")}</label>
+                <Input
+                  ref={confirmationRef}
+                  className="mt-1"
+                  id="delete-account-confirmation"
+                  name="confirmation"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={typed}
+                  onChange={(event) => setTyped(event.target.value)}
+                  {...fieldErrorControlProps(state, "confirmation", errorIds.confirmation, ["delete-account-confirmation-help"])}
+                />
+                <p id="delete-account-confirmation-help" className="field-help delete-account-help">
+                  {t(locale, "account.delete.confirmHelp", { email: accountEmail })}
+                </p>
+                <FieldError state={state} field="confirmation" locale={locale} id={errorIds.confirmation} />
+              </div>
+
+              <div className="ui-dialog-actions">
+                {cancel}
+                <Button
+                  variant="destructive"
+                  type="submit"
+                  disabled={!deletionConfirmEnabled(accountEmail, typed, pending)}
+                  loading={pending}
+                  loadingLabel={t(locale, "account.delete.submitting")}
+                >
+                  {t(locale, "account.delete.confirm")}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </Dialog>
     </div>
   );

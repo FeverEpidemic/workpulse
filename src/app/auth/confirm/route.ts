@@ -2,8 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { destinationForLifecycle } from "@/domain/auth/route-state";
 import { sanitizeReturnTo } from "@/domain/routes/safe-return";
+import { cookies } from "next/headers";
+
 import { hasRecentRecoveryMethod, hasRecentRecoveryProof } from "@/server/auth/recovery-session";
 import { createAuthAdapter, type ConfirmEmailType } from "@/server/auth/adapter";
+import { clearAuthCookies } from "@/server/auth/clear-cookies";
+import {
+  OAUTH_RETURN_COOKIE,
+  REAUTH_INTENT_COOKIE,
+  hasOAuthMethod,
+  readOAuthReturn,
+  readReauthIntent,
+} from "@/server/auth/oauth-session";
 import { persistLocaleCookie } from "@/server/locale/cookie";
 import { parseLocale } from "@/i18n/messages";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -11,10 +21,14 @@ import { getTrustedSiteUrl } from "@/server/supabase/config";
 
 const validTypes = new Set<ConfirmEmailType>(["email", "signup", "recovery"]);
 
+/** Every callback outcome also ends the Google flow, so its cookies never outlive one attempt. */
 function redirectTo(path: string): NextResponse {
   const response = NextResponse.redirect(new URL(path, getTrustedSiteUrl()), 303);
   response.headers.set("Cache-Control", "no-store");
   response.headers.set("Referrer-Policy", "no-referrer");
+  for (const name of [OAUTH_RETURN_COOKIE, REAUTH_INTENT_COOKIE]) {
+    response.cookies.set(name, "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 0 });
+  }
   return response;
 }
 
@@ -27,7 +41,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const usableTokenHash = Boolean(tokenHash && type && tokenHash.length <= 2048);
   const usableCode = Boolean(code && code.length <= 2048);
   if (!usableTokenHash && !usableCode) {
-    return redirectTo("/sign-in?notice=verificationFailed");
+    // Supabase Auth returns `error` here when Google sign-in is cancelled or fails; its description is not shown.
+    const notice = request.nextUrl.searchParams.has("error") ? "oauthFailed" : "verificationFailed";
+    return redirectTo(`/sign-in?notice=${notice}`);
   }
 
   try {
@@ -51,12 +67,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return redirectTo("/sign-in?notice=verificationFailed");
     }
 
+    const isOAuthSession = !type && usableCode && !isRecoverySession && !claimsError && hasOAuthMethod(claimsData?.claims.amr);
+
     const { data: profile, error: profileError } = await client
       .from("profiles")
-      .select("locale, onboarding_completed_at")
+      .select("locale, onboarding_completed_at, deleting_at")
       .eq("id", user.id)
       .maybeSingle();
     if (profileError || !profile) return redirectTo("/sign-in?notice=verificationFailed");
+
+    if (isOAuthSession && profile.deleting_at) {
+      await auth.signOutLocal();
+      clearAuthCookies(await cookies());
+      return redirectTo("/sign-in?notice=accountDeleting");
+    }
 
     if (isRecoverySession) {
       const response = redirectTo("/update-password");
@@ -79,6 +103,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         // Locale remains available from the canonical profile row.
       }
     }
+    if (isOAuthSession) {
+      const intentCookie = request.cookies.get(REAUTH_INTENT_COOKIE)?.value;
+      const reauth = readReauthIntent(intentCookie, user.id);
+      if (reauth && profile.onboarding_completed_at) return redirectTo("/settings/profile?reauth=delete-account");
+      if (intentCookie && !reauth && profile.onboarding_completed_at) return redirectTo("/settings/profile?reauth=switched");
+      const next = readOAuthReturn(request.cookies.get(OAUTH_RETURN_COOKIE)?.value);
+      return redirectTo(destinationForLifecycle(profile.onboarding_completed_at ? "complete" : "provisional", next));
+    }
+
     const next = sanitizeReturnTo(request.nextUrl.searchParams.get("next"));
     const destination = destinationForLifecycle(profile.onboarding_completed_at ? "complete" : "provisional", next);
     return redirectTo(destination);

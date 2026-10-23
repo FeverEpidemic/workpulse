@@ -11,6 +11,7 @@ export function Dialog({
   children,
   className = "",
   focusTitle = false,
+  dismissible = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,6 +24,8 @@ export function Dialog({
    * showModal() otherwise focuses the first focusable element.
    */
   focusTitle?: boolean;
+  /** False while a request started in the dialog is running: Escape and the backdrop then leave it open. */
+  dismissible?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -48,13 +51,19 @@ export function Dialog({
       inert={!open}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      onCancel={() => onOpenChange(false)}
+      onCancel={(event) => {
+        if (!dismissible) {
+          event.preventDefault();
+          return;
+        }
+        onOpenChange(false);
+      }}
       onClose={() => {
         if (dialogRef.current?.open) return;
         onOpenChange(false);
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) dialogRef.current?.close();
+        if (dismissible && event.target === event.currentTarget) dialogRef.current?.close();
       }}
     >
       <div className="ui-dialog-panel">

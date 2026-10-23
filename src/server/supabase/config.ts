@@ -79,6 +79,24 @@ export function getTrustedSiteUrl(): string {
   }
 }
 
+/** Origin of the Supabase URL the browser uses; OAuth redirects must stay on it. */
+export function getBrowserSupabaseOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+/** Google sign-in stays hidden until this is exactly `true`, so the hosted provider can be smoke-tested first. */
+export function isGoogleAuthEnabled(): boolean {
+  return process.env.WORKPULSE_AUTH_GOOGLE_ENABLED === "true";
+}
+
 export function getAuthCallbackUrl(): string {
   return new URL("/auth/confirm", getTrustedSiteUrl()).toString();
 }

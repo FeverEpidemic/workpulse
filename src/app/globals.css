@@ -168,6 +168,27 @@ a {
   background: var(--color-bg-subtle);
 }
 
+/* T29: Google sign-in spans the auth card; the email form below keeps the one primary button. */
+.auth-google .button-secondary {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--color-border-default);
+}
+
 .workspace-layout {
   min-height: 100vh;
   min-height: 100dvh;
@@ -2232,6 +2253,24 @@ a.dashboard-stat-card:hover,
   margin-top: var(--space-4);
 }
 
+/* T28: the confirmation replaces the two cards inside the same dialog. */
+.import-mode-confirm {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.import-mode-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.import-mode-confirm-actions > button {
+  min-height: 44px;
+}
+
 .ai-analysis {
   display: grid;
   gap: var(--space-3);
@@ -3146,6 +3185,11 @@ a.dashboard-stat-card:hover,
   display: grid;
   gap: var(--space-4);
   margin-top: var(--space-4);
+}
+
+.delete-account-form-step {
+  display: grid;
+  gap: var(--space-4);
 }
 
 .delete-account-preview {

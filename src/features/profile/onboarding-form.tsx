@@ -12,7 +12,10 @@ import type { ProfileRow } from "@/domain/database-types";
 import { t, type Locale } from "@/i18n/messages";
 import { PROFILE_FIELD_LIMITS } from "@/domain/profile/field-contract";
 
-export function OnboardingForm({ profile, locale }: { profile: ProfileRow; locale: Locale }) {
+/** `initialDisplayName` is the Google name (T29). A restored session draft still wins, and nothing is saved until submit. */
+export function OnboardingForm({ profile, locale, initialDisplayName }: { profile: ProfileRow; locale: Locale; initialDisplayName?: string | null }) {
+  const pendingName = profile.display_name === "Pending onboarding";
+  const suggestedName = pendingName && initialDisplayName ? initialDisplayName : null;
   const [state, action, pending] = useActionState(completeOnboardingAction, IDLE_ACTION_STATE);
   const draftStorageKey = sessionDraftStorageKey(profile.id, "onboarding-profile");
   const { formRef, onInputCapture, onChangeCapture } = useSessionDraft("onboarding-profile", profile.id, state);
@@ -53,13 +56,14 @@ export function OnboardingForm({ profile, locale }: { profile: ProfileRow; local
             className="field-input mt-1"
             id="onboarding-display-name"
             name="display_name"
-            defaultValue={profile.display_name === "Pending onboarding" ? "" : profile.display_name}
+            defaultValue={pendingName ? suggestedName ?? "" : profile.display_name}
             autoComplete="name"
             maxLength={PROFILE_FIELD_LIMITS.displayName}
             required
-            {...fieldErrorControlProps(state, "display_name", displayNameErrorId)}
+            {...fieldErrorControlProps(state, "display_name", displayNameErrorId, suggestedName ? ["onboarding-display-name-source"] : [])}
           />
         </label>
+        {suggestedName ? <p id="onboarding-display-name-source" className="field-help">{t(locale, "onboarding.displayNameFromGoogle")}</p> : null}
         <FieldError state={state} field="display_name" locale={locale} id={displayNameErrorId} />
       </div>
       <div>

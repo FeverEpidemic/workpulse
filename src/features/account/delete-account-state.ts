@@ -31,6 +31,23 @@ export function visibleDeletionState(state: ActionState, dismissedCorrelationId:
   return state;
 }
 
+/** How the dialog checks it is the owner: the password (T23), or a Google sign-in from the last five minutes (T29). */
+export type DeletionReauth = { method: "password" } | { method: "google"; fresh: boolean };
+
+export type DeletionReauthView = { password: boolean; googleButton: boolean; finish: boolean };
+
+/**
+ * A Google-only account first confirms with Google; the email step and the delete button appear only while that
+ * confirmation is fresh. When the server reports it expired, the dialog goes back to the Google button.
+ */
+export function deletionReauthView(reauth: DeletionReauth, state: ActionState): DeletionReauthView {
+  if (reauth.method === "password") return { password: true, googleButton: false, finish: true };
+  const expired = state.status === "error" && state.error.messageKey === "account.delete.error.reauthRequired";
+  return reauth.fresh && !expired
+    ? { password: false, googleButton: false, finish: true }
+    : { password: false, googleButton: true, finish: false };
+}
+
 export type PreviewLine = { key: MessageKey; params?: { count: number } };
 
 /** One line per kind of data that is lost, in the order the dialog lists them. */
