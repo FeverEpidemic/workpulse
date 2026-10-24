@@ -92,6 +92,14 @@ const PAIRS: Pair[] = [
 const OVERRIDES = new Set<string>();
 
 describe("theme tokens", () => {
+  it("keeps text readable throughout the new-activity highlight", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const bg = theme === "light" ? "--color-primary-100" : "--color-primary-800";
+      for (const fg of ["--color-text-primary", "--color-text-secondary"]) {
+        expect(contrastRatio(fg, themes[theme][fg]!, bg, themes[theme][bg]!), `${theme} ${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
   it("reads both blocks and resolves every token a pair uses", () => {
     for (const theme of ["light", "dark"] as const) {
       for (const pair of PAIRS) {

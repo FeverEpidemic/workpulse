@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/empty-state";
+import { JustAddedHighlight } from "@/components/ui/just-added-highlight";
 import { activityExcerpt, formatActivityDate } from "@/domain/activity/activity-display";
 import { dashboardLinks } from "@/domain/dashboard/links";
 import type { DashboardData } from "@/domain/dashboard/contracts";
@@ -53,6 +54,7 @@ export function DashboardView({ data, displayName, locale }: { data: DashboardDa
 
   return (
     <div className="dashboard-page">
+      <JustAddedHighlight ids={data.recentActivities.map((activity) => activity.id)} />
       <DashboardHeader locale={locale} displayName={displayName} />
 
       <section className="dashboard-stats" aria-label={t(locale, "dashboard.title")}>
@@ -95,7 +97,7 @@ export function DashboardView({ data, displayName, locale }: { data: DashboardDa
           <ol className="dashboard-rows" aria-labelledby="dashboard-recent-title">
             {data.recentActivities.map((activity) => (
               <li key={activity.id}>
-                <Link className="dashboard-row" href={dashboardLinks.activity(activity.id)}>
+                <Link className="dashboard-row" href={dashboardLinks.activity(activity.id)} data-activity-id={activity.id}>
                   <time dateTime={activity.occurred_on}>{formatActivityDate(activity.occurred_on, locale)}</time>
                   <span>{activityExcerpt(activity.raw_text, 140)}</span>
                 </Link>

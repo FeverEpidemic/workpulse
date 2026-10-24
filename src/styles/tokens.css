@@ -85,8 +85,13 @@
   --shadow-lg: 0 16px 40px rgb(20 30 23 / 0.12);
 
   --touch-target-min: 44px;
+  --motion-instant: 100ms;
   --motion-fast: 120ms;
   --motion-normal: 180ms;
+  --motion-slow: 240ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
   --wp-canvas: var(--color-bg-canvas);
   --wp-surface: var(--color-bg-surface);

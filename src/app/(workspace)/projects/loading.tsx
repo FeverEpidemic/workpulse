@@ -1,9 +1,13 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SlowLoadingNotice } from "@/components/ui/slow-loading-notice";
+import { getRequestLocale } from "@/server/auth/context";
 import { t } from "@/i18n/messages";
 
-export default function ProjectsLoading() {
+export default async function ProjectsLoading() {
+  const locale = await getRequestLocale();
   return (
-    <section className="space-y-4" aria-label={t("en", "project.description")}>
+    <section className="space-y-4" aria-busy="true" aria-label={t(locale, "project.description")}>
+      <SlowLoadingNotice locale={locale} />
       <Skeleton className="h-10 w-48" />
       <Skeleton className="h-12 w-full" />
       <div className="grid gap-3">

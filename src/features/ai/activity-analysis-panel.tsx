@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
-import { useFormStatus } from "react-dom";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
+import { SubmitButton } from "@/components/forms/submit-button";
 import { AiConsentDialog } from "@/components/ui/ai-consent-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/field-control";
 import { InlineError } from "@/components/ui/inline-error";
 import { RevisionConflict } from "@/components/ui/revision-conflict";
+import { ProgressStatus } from "@/components/ui/progress-status";
 import { AiLimitNotice, isAiLimited } from "@/features/ai/ai-limit-notice";
 import type { AnalysisViewPayload } from "@/features/ai/ai-review-service";
 import type { ApplyBlockReason } from "@/domain/ai/analysis-view";
@@ -65,25 +66,6 @@ const BLOCK_KEYS: Record<ApplyBlockReason, MessageKey | null> = {
 };
 
 const ANSWER_LIMITS = { role: 200, scope: 5000, outcome: 5000 } as const;
-
-function SubmitButton({
-  children,
-  variant = "primary",
-  disabled = false,
-  loadingLabel,
-}: {
-  children: ReactNode;
-  variant?: "primary" | "secondary" | "ghost";
-  disabled?: boolean;
-  loadingLabel: string;
-}) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" variant={variant} disabled={disabled} loading={pending} loadingLabel={loadingLabel}>
-      {children}
-    </Button>
-  );
-}
 
 /** Failure or conflict result of one AI action. A conflict offers reload without touching local input. */
 function ActionResult({ state, locale, returnTo, onReload }: {
@@ -360,9 +342,7 @@ export function ActivityAnalysisPanel({
       case "running":
         return (
           <div className="ai-analysis-progress">
-            <p role="status" className="ai-analysis-progress-title">
-              {t(locale, view.state === "queued" ? "ai.analysis.queued" : "ai.analysis.running")}
-            </p>
+            <ProgressStatus key={job?.id} locale={locale} kind="ai" stage={view.state} />
             <p className="field-help">{t(locale, "ai.analysis.progressHelp")}</p>
           </div>
         );
@@ -604,25 +584,21 @@ function ApplyButton({
   label: string;
   loadingLabel: string;
 }) {
-  const { pending } = useFormStatus();
   return (
-    <button
+    <SubmitButton
       ref={buttonRef}
-      type="submit"
-      className={variant === "primary" ? "button-primary" : "button-secondary"}
-      disabled={pending}
-      aria-busy={pending || undefined}
+      variant={variant}
+      loadingLabel={loadingLabel}
     >
-      {pending ? loadingLabel : label}
-    </button>
+      {label}
+    </SubmitButton>
   );
 }
 
 function AllowSubmit({ locale }: { locale: Locale }) {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" name="consent" value="allow" loading={pending} loadingLabel={t(locale, "common.loading")}>
+    <SubmitButton name="consent" value="allow" pendingLabel={t(locale, "common.loading")}>
       {t(locale, "ai.consent.dialogAllow")}
-    </Button>
+    </SubmitButton>
   );
 }

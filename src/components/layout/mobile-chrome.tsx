@@ -8,6 +8,7 @@ import { MobileHeader } from "@/components/layout/mobile-header";
 import { MoreMenuSheet, QuickLogSheet } from "@/components/layout/mobile-sheets";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { useScrollChrome } from "@/components/layout/use-scroll-chrome";
+import { rememberJustAdded } from "@/components/ui/just-added-highlight";
 import type { ThemePreference } from "@/domain/theme/theme-preference";
 import type { Locale } from "@/i18n/messages";
 
@@ -72,7 +73,8 @@ export function MobileChrome({
   }, [quickLogOpen]);
 
   // The form's ActionFeedback already shows the "Activity saved." toast; the sheet only closes and refreshes the page.
-  const onCreated = useCallback(() => {
+  const onCreated = useCallback((activityId: string) => {
+    rememberJustAdded(activityId);
     setQuickLogOpen(false);
     router.refresh();
   }, [router]);

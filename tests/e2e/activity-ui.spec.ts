@@ -217,7 +217,9 @@ test("Activity capture, list, detail, context, and revision recovery work agains
     const saveNoteAction = saveNoteButton.click();
     try {
       await expect.poll(() => noteActionFetched, { timeout: 15_000 }).toBe(true);
-      await expect(saveNoteButton).toHaveText("Saving…");
+      await expect(saveNoteButton).toHaveText(/Save activity\s*Saving…/);
+      await expect(saveNoteButton).toHaveAttribute("aria-busy", "true");
+      await expect(saveNoteButton.locator(".ui-loading-spinner")).toBeVisible();
       await expect(saveNoteButton).toBeDisabled();
     } finally {
       releaseNoteAction();

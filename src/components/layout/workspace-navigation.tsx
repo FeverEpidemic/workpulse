@@ -7,6 +7,7 @@ import { UserRound } from "lucide-react";
 import { SignOutForm } from "@/features/auth/sign-out-form";
 import { isCurrent, navigation } from "@/components/layout/navigation-routes";
 import { QuickLogLink } from "@/components/layout/quick-log-link";
+import { PendingLinkContent } from "@/components/layout/pending-link-content";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { BrandSymbol } from "@/components/ui/brand-logo";
 import { t, type Locale } from "@/i18n/messages";
@@ -32,8 +33,9 @@ export function NavigationLinks({ locale, pathname, label, hrefs, onNavigate }: 
             aria-current={current ? "page" : undefined}
             onClick={onNavigate}
           >
-            <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
-            <span>{t(locale, key)}</span>
+            <PendingLinkContent href={href} icon={<Icon size={18} strokeWidth={1.8} aria-hidden="true" />}>
+              <span>{t(locale, key)}</span>
+            </PendingLinkContent>
           </Link>
         );
       })}
@@ -59,8 +61,9 @@ function ProfileAndSettings({
         className={current ? "workspace-nav-link is-current" : "workspace-nav-link"}
         aria-current={current ? "page" : undefined}
       >
-        <UserRound size={18} strokeWidth={1.8} aria-hidden="true" />
-        <span>{t(locale, "profile.title")}</span>
+        <PendingLinkContent href="/settings/profile" icon={<UserRound size={18} strokeWidth={1.8} aria-hidden="true" />}>
+          <span>{t(locale, "profile.title")}</span>
+        </PendingLinkContent>
       </Link>
       <ThemeToggle locale={locale} initialPreference={initialTheme} />
       <SignOutForm ownerId={ownerId} label={t(locale, "auth.signOut")} />

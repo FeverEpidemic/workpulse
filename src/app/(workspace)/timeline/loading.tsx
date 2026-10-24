@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { SlowLoadingNotice } from "@/components/ui/slow-loading-notice";
 import { getRequestLocale } from "@/server/auth/context";
 import { t } from "@/i18n/messages";
 
@@ -6,6 +7,7 @@ export default async function TimelineLoading() {
   const locale = await getRequestLocale();
   return (
     <section className="timeline-page timeline-loading" aria-busy="true" aria-label={t(locale, "workspace.loading")}>
+      <SlowLoadingNotice locale={locale} />
       <header className="timeline-header">
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-4 w-80 max-w-full" />

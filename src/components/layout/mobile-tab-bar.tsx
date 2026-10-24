@@ -4,6 +4,7 @@ import type { MouseEvent, Ref } from "react";
 
 import { mobileTabCurrent, mobileTabs, type MobileTabId } from "@/components/layout/navigation-routes";
 import { InitialsAvatar } from "@/components/ui/initials-avatar";
+import { PendingLinkContent } from "@/components/layout/pending-link-content";
 import { t, type Locale } from "@/i18n/messages";
 
 const tabIcons = {
@@ -77,8 +78,9 @@ export function MobileTabBar({
                 className={current ? "workspace-tab is-current" : "workspace-tab"}
                 aria-current={current}
               >
-                {icon(id, Boolean(current))}
-                <span className={labelClass}>{label}</span>
+                <PendingLinkContent href={href} icon={icon(id, Boolean(current))}>
+                  <span className={labelClass}>{label}</span>
+                </PendingLinkContent>
               </Link>
             </li>
           );

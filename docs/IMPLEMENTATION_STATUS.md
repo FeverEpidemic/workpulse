@@ -1,5 +1,23 @@
 # WorkPulse Implementation Status
 
+## T30 Animasi dan loading: DONE lokal, 23 Oktober 2026
+
+Status T30: **DONE** (acceptance lokal). Tombol yang ditekan mengecil singkat, tombol yang menunggu server menampilkan spinner dengan label dan lebar tetap dan tidak bisa dikirim dua kali. Skeleton berdenyut tanpa gradient, setiap halaman loading menampilkan teks, dan setelah 8 detik muncul catatan dengan tombol muat ulang. Link sidebar dan tab bar yang diklik menampilkan pending sampai halaman tampil. Job AI, import, dan export memakai `ProgressStatus` (tahap, lama menunggu, catatan bila lambat, tanpa persentase). Modal, sheet, backdrop, dan toast punya transisi masuk/keluar; aktivitas baru dari Quick log diberi highlight sekali; konten halaman masuk singkat hanya pada navigasi di dalam app. Reduced motion mengganti spinner dengan ikon statis dan tetap menampilkan teks status.
+
+- Pelaksana Fase 0-5: ChatGPT Sol 6.1 (reasoning medium). Gate review Claude (Opus 5.5) pada `a60fa0f`: satu P2 (RV1, konten berkedip karena animasi masuk diputar ulang setelah hydration pada pemuatan dokumen penuh) dan empat P3. RV1 diperbaiki Claude di Fase 5b (`05131da`) atas permintaan pengguna, lalu gate **PASS** tanpa P0-P2; independensi terbatas untuk RV1.
+- Dependensi: T04, T07, T27 **DONE**. T30 adalah permintaan terarah pengguna (interview 21 Oktober 2026), tidak ada di `IMPLEMENTATION_PLAN.md` §5. Perubahan kontrak plan §2.2.7/§8 (fallback lifecycle untuk pending navigasi) disetujui pengguna 22 Oktober dan dikonfirmasi 23 Oktober 2026.
+- Scope: token motion dan easing, `Button`/`SubmitButton` pending, `Skeleton`, `SlowLoadingNotice` di sembilan `loading.tsx`, store pending navigasi per workspace frame, `ProgressStatus` di panel AI, export CV, dan status import, transisi `Dialog`/sheet/toast, `JustAddedHighlight`, `src/app/(workspace)/template.tsx`, copy en/id, Design.md §28-§29. Di luar scope: `error.tsx` per route, persentase atau ETA job, library animasi.
+- File: `src/styles/tokens.css`, `src/app/globals.css`, `src/app/(workspace)/template.tsx`, sembilan `loading.tsx`, `src/components/ui/{button,dialog,toast,skeleton stories,loading-indicator,progress-status,progress-status-view,slow-loading-notice,just-added-highlight}.tsx`, `src/components/layout/{navigation-loading,navigation-loading-store,pending-link-content,application-frame,mobile-chrome,mobile-tab-bar,workspace-navigation}.tsx`, `src/components/forms/submit-button.tsx`, `src/features/{ai/activity-analysis-panel,cv/cv-export-page,import/import-start,import/import-review,profile/ai-consent-card,activity/activity-list,dashboard/dashboard-view}.tsx`, `src/i18n/messages.ts`, test unit baru dan `tests/e2e/motion-loading.spec.ts` (masuk ke `test:e2e:release`), `Design.md` dan `docs/Design.md`.
+- Keputusan: [decision 0040](decisions/0040-t30-motion-loading.md). Plan memperkirakan 0039, tetapi 0038 dan 0039 dipakai T28 dan T29 di `main`. Tanpa migration (parity tetap 38), tanpa dependency baru, tanpa script npm baru.
+- Merge `origin/main` (T28, T29) ke branch T30 di `cfeff32`: satu konflik di `dialog.tsx` (`onCancel` T30 vs `dismissible` T29) digabung sehingga `dismissible={false}` tetap mencegah Escape; satu test T28 yang mengharapkan label pending berganti diubah ke pola T30 (`83b235f`).
+- Checks setelah merge: lint, typecheck, build exit 0; unit 153 file lulus; E2E `release` 42 (termasuk 13 test `motion-loading` dan 8 state T30 di `release-a11y`), `import` 18, `auth-google` 17, `ui` 1. Sebelum merge: gate reviewer unit 149/1347, `release` 42/42; receipt Fase 5 `activity` 1, `dashboard` 1, `ai-review` 11, `cv-export` 12 (renderer nyata), `m2` 1, `m5` 1, `build-storybook` dan `worker:check` lulus.
+- Belum dijalankan: Safari, Firefox, perangkat iOS fisik, staging, production; setelah merge tidak diulang `activity`, `dashboard`, `ai-review`, `cv-export`, `m2`, `m5`, `build-storybook` (lulus di receipt Fase 5 sebelum merge; T28/T29 tidak menyentuh area itu).
+- Risiko dan follow-up (P3): N1 Escape memanggil `onOpenChange(false)` dua kali; N2 `[data-ui-button]` menambah padding 4 px per sisi sehingga `Button` berbeda lebar dengan link bergaya tombol; `error.tsx` per route; ambang lambat 30/45/60 detik masih hipotesis.
+
+Berikutnya: review dan merge PR T30, lalu cek animasi dan loading di iPhone/Safari nyata. N1, N2, dan `error.tsx` dapat digabung menjadi satu follow-up kecil.
+
+[Desain](verification/T30-motion-loading-design.md), [rencana](verification/T30-implementation-plan.md), [bukti](verification/T30-motion-loading.md), [gate review](verification/T30-review-remediation-plan.md), receipt [Fase 0](verification/T30-phase0-baseline.md) sampai [5](verification/T30-phase5-e2e-regression.md) dan [5b](verification/T30-phase5b-remediation.md).
+
 ## T29 remediation P3: DONE lokal, 22 Oktober 2026
 
 Status remediation: **DONE** (acceptance lokal). Menutup temuan gate T29 N1, N2, N3, dan N6. RV1: callback mengenali login Google dari `amr` `oauth` tanpa jendela waktu (`hasOAuthMethod`), sehingga cek `deleting_at` dan cookie return tidak terlewat saat jam meleset; bukti hapus akun tetap `oauth` ≤ 5 menit (`hasRecentOAuthProof`, service tidak berubah). RV2: bila reautentikasi S12 berakhir di akun Google lain, callback mengarah ke `/settings/profile?reauth=switched` dan S12 menampilkan notice `role="status"` berisi email session, tanpa membuka dialog atau menghapus data. RV3: `test:e2e:auth-google` gagal di `beforeAll` dengan pesan terarah bila provider Google lokal mati. RV4: koreksi catatan `client_id` di receipt T29 Fase 0.
@@ -1284,6 +1302,8 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T26 | Import CV tanpa AI (parser aturan) | DONE |
 | T27 | Bottom tab bar mobile | DONE |
 | T28 | Pilihan Dengan AI / Tanpa AI di setiap import | DONE |
+| T29 | Masuk dengan Google | DONE |
+| T30 | Animasi dan loading | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

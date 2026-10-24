@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { JustAddedHighlight } from "@/components/ui/just-added-highlight";
 import type { ActivityContextOptions } from "@/domain/activity/activity-display";
 import { activityExcerpt, formatActivityDate, resolveActivityContext } from "@/domain/activity/activity-display";
 import type { ActivityListItem } from "@/domain/activity/contracts";
@@ -53,6 +54,7 @@ export function ActivityList({
 
   return (
     <section className="space-y-4" aria-labelledby="activity-results-title">
+      <JustAddedHighlight ids={items.map((activity) => activity.id)} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="activity-results-title" className="sr-only">{t(locale, "activity.description")}</h2>
         <p className="field-help" role="status">{t(locale, "activity.pageCount", { count: items.length })}</p>
@@ -67,7 +69,7 @@ export function ActivityList({
           const detailHref = `/activity/${activity.id}?${activityReturnQuery(returnTo)}`;
           return (
             <li key={activity.id}>
-              <Link className="activity-list-row" href={detailHref}>
+              <Link className="activity-list-row" href={detailHref} data-activity-id={activity.id}>
                 <span className="activity-list-meta">
                   <time dateTime={activity.occurred_on}>{formatActivityDate(activity.occurred_on, locale)}</time>
                   <Badge>{t(locale, `activity.${activity.capture_mode === "note" ? "noteMode" : activity.capture_mode === "form" ? "formMode" : "chatMode"}`)}</Badge>

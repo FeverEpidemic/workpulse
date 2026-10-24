@@ -8,6 +8,7 @@ import { startTransition, useCallback, useEffect, useId, useRef, useState, useSy
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InlineError } from "@/components/ui/inline-error";
+import { ProgressStatus } from "@/components/ui/progress-status";
 import type { CvExportReadiness, CvExportRow, CvLocale } from "@/domain/cv/contracts";
 import { isExportExpired } from "@/domain/cv/export";
 import { blockerLink, exportActions, exportStatusView, type ExportAction, type ExportViewState } from "@/domain/cv/export-view";
@@ -333,18 +334,23 @@ export function CvExportPage(props: CvExportPageProps) {
             </section>
           ) : null}
 
-          <div
+          <ProgressStatus
+            clockKey={latest?.id ?? "none"}
+            locale={locale} kind="export" stage={view?.state === "running" ? "running" : "queued"}
+            active={view?.state === "queued" || view?.state === "running"}
+            renderStatus={(progress) => <div
             ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="cv-export-status"
             data-testid="cv-export-status" data-state={view?.state ?? "none"}
           >
             <p className="text-sm font-semibold">{t(locale, "cv.exportPage.status.heading")}</p>
             {view && latest ? (
               <>
+                {progress}
                 <p className="cv-export-state">
-                  <Badge variant={BADGE[view.state]}>
+                  {view.state === "queued" || view.state === "running" ? null : <Badge variant={BADGE[view.state]}>
                     <StateIcon state={view.state} />
                     <span>{t(locale, view.messageKey)}</span>
-                  </Badge>
+                  </Badge>}
                   <span className="field-help">{t(locale, "cv.exportPage.history.revision", { revision: latest.cv_revision })}</span>
                 </p>
                 {view.state === "failed" && latest.error_code ? (
@@ -360,7 +366,8 @@ export function CvExportPage(props: CvExportPageProps) {
             ) : (
               <p className="field-help">{t(locale, "cv.exportPage.status.none")}</p>
             )}
-          </div>
+          </div>}
+          />
 
           <div className="cv-export-actions" data-testid="cv-export-actions">
             {actions.primary ? <ActionButton {...actionProps} action={actions.primary} primary /> : null}

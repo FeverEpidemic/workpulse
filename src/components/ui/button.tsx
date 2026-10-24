@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
 
@@ -7,6 +8,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
   loadingLabel?: string;
   children: ReactNode;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const variantClass: Record<ButtonVariant, string> = {
@@ -34,8 +36,11 @@ export function Button({
       className={classes}
       disabled={loading || disabled}
       aria-busy={loading || undefined}
+      data-ui-button="true"
     >
-      {loading && loadingLabel ? loadingLabel : children}
+      {loading ? <span className="ui-button-spinner" aria-hidden="true"><LoadingIndicator size={14} /></span> : null}
+      {children}
+      {loading && loadingLabel ? <span className="sr-only">{loadingLabel}</span> : null}
     </button>
   );
 }

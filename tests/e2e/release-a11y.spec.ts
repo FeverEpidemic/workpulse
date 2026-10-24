@@ -11,6 +11,7 @@ import {
   admin, consent, createUser, removeUsers, requestExport, seedCareer, seedCv, signIn, type Career, type User,
 } from "./helpers/release-fixture";
 import { CV_LINES, cvPdf } from "../import-fixtures";
+import { verifyNavigationLoading, verifyPendingAndProgress } from "./helpers/motion-loading";
 
 // T25 plan sections 1.8, 1.10, 1.11, 1.12 and D6: every reachable screen S01 to S14 at 360 and 1440 px, light and dark,
 // against a production build. One run reports every finding; the test fails at the end if there is any.
@@ -71,6 +72,21 @@ const SCREENS: Screen[] = [
 ];
 
 let world: World;
+
+for (const width of [360, 1440]) {
+  for (const theme of THEMES) {
+    test(`T30 pending and progress accessibility ${width} ${theme}`, async ({ page }, testInfo) => {
+      const actor = await createUser(`t30-progress-${width}-${theme}`);
+      try {
+        await consent(actor);
+        await verifyPendingAndProgress(page, actor, testInfo, width, theme);
+      } finally { await removeUsers([actor]); }
+    });
+    test(`T30 skeleton and reload accessibility ${width} ${theme}`, async ({ page }, testInfo) => {
+      await verifyNavigationLoading(page, world.users.rich, testInfo, width, theme, false);
+    });
+  }
+}
 
 test.beforeAll(async ({ browser }, testInfo) => {
   await requireRealRenderer();

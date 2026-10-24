@@ -7,6 +7,7 @@ import type { DragEvent, KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { ProgressStatus } from "@/components/ui/progress-status";
 import type { AiUsageWindow } from "@/domain/ai/usage";
 import { IMPORT_ENTITY_TYPES, IMPORT_MAX_BYTES, type ImportExtractionMode } from "@/domain/import/contracts";
 import { withConsentWithdrawn, type ImportView } from "@/domain/import/import-view";
@@ -352,7 +353,7 @@ export function ImportStart({ locale, initialView, consent, onboarded = false, u
 
           {progress ? (
             <>
-              <h2 id={statusId} className="text-xl font-semibold" role="status">{t(locale, progress)}</h2>
+              <ProgressStatus key={view.batchId} locale={locale} kind="import" stage={view.state === "waiting" ? "queued" : "running"} label={t(locale, progress)} headingId={statusId} />
               <p className="field-help">{t(locale, "import.progressHelp")}</p>
             </>
           ) : null}

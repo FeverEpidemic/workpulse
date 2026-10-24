@@ -130,10 +130,11 @@ a {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    transform var(--motion-instant) var(--ease-standard);
 }
 
 .button-primary {
@@ -312,9 +313,9 @@ a {
   font-weight: 500;
   text-decoration: none;
   transition:
-    background-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .workspace-nav-link:hover {
@@ -431,7 +432,7 @@ a {
   /* Narrow gutters leave each slot about 70 px at 360 px, enough for the bold "Dashboard" label. */
   padding: 0 var(--space-1);
   list-style: none;
-  transition: height var(--motion-normal) ease-out;
+  transition: height var(--motion-normal) var(--ease-out);
 }
 
 .workspace-tab-bar[data-compact="true"] {
@@ -464,9 +465,9 @@ a {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .workspace-tab:active {
@@ -1156,7 +1157,7 @@ a {
     border-bottom: 1px solid var(--color-border-default);
     background: var(--color-bg-surface);
     padding: 0 var(--space-4);
-    transition: transform var(--motion-normal) ease-out;
+    transition: transform var(--motion-normal) var(--ease-out);
   }
 
   /* Keyboard focus inside the header always brings it back, even before React hears about it. */
@@ -1279,9 +1280,13 @@ a {
 .button-primary:active:not(:disabled),
 .button-secondary:active:not(:disabled),
 .button-danger:active:not(:disabled),
-.ui-button-ghost:active:not(:disabled) {
-  transform: translateY(1px);
+.ui-button-ghost:active:not(:disabled),
+.ui-icon-button:active:not(:disabled) {
+  transform: scale(0.97);
 }
+
+[data-ui-button="true"] { position: relative; padding-inline: calc(var(--space-4) + var(--space-1)); }
+.ui-button-spinner { position: absolute; inset-inline-start: var(--space-1); top: 50%; display: inline-flex; transform: translateY(-50%); }
 
 .button-primary:disabled,
 .button-secondary:disabled,
@@ -1291,6 +1296,8 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
 }
+
+[data-ui-button="true"][aria-busy="true"] { opacity: 1; cursor: progress; }
 
 .ui-message {
   border: 1px solid;
@@ -1352,12 +1359,30 @@ button:disabled {
   color: var(--color-text-primary);
   padding: 0;
   box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: scale(1);
+  transition:
+    opacity var(--motion-fast) var(--ease-in),
+    transform var(--motion-fast) var(--ease-in),
+    display var(--motion-fast) allow-discrete,
+    overlay var(--motion-fast) allow-discrete;
+}
+
+.ui-dialog[open] { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--ease-out); }
+
+@starting-style {
+  .ui-dialog[open] { opacity: 0; transform: scale(0.98); }
 }
 
 .ui-dialog::backdrop {
   background: var(--color-bg-overlay);
   backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-in), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
 }
+
+.ui-dialog[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); }
+@starting-style { .ui-dialog[open]::backdrop { opacity: 0; } }
 
 .ui-dialog-panel {
   padding: var(--space-6);
@@ -1372,7 +1397,12 @@ button:disabled {
   border-bottom: 0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(100%);
+  transition-duration: var(--motion-normal);
 }
+
+.ui-dialog.workspace-sheet-dialog[open] { transform: translateY(0); transition-duration: var(--motion-slow); }
+@starting-style { .ui-dialog.workspace-sheet-dialog[open] { transform: translateY(100%); } }
 
 .workspace-sheet-dialog .ui-dialog-panel {
   position: relative;
@@ -1416,6 +1446,42 @@ button:disabled {
   display: block;
   border-radius: var(--radius-sm);
   background: var(--color-bg-subtle);
+  opacity: 0;
+  animation: ui-skeleton-pulse 1.6s ease-in-out 150ms infinite;
+}
+
+@keyframes ui-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+@keyframes ui-indicator-enter { to { opacity: 1; } }
+@keyframes ui-nav-icon-out { to { opacity: 0; } }
+
+.ui-loading-indicator { display: inline-flex; flex: none; }
+.ui-loading-spinner {
+  opacity: 0;
+  animation: ui-spin 800ms linear infinite, ui-indicator-enter var(--motion-instant) var(--ease-out) 150ms forwards;
+}
+.ui-loading-static { display: none; }
+.ui-progress-stage { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
+.ui-progress-stage .ui-loading-indicator { order: -1; }
+.ui-progress-slow { flex-basis: 100%; font-weight: 400; }
+.ui-progress-status, .ui-page-loading-status, .ui-slow-loading { display: grid; gap: var(--space-2); }
+.ui-slow-loading { justify-items: start; font-size: var(--font-size-sm); }
+.pending-link-content { display: contents; }
+.pending-link-icon { display: inline-flex; flex: none; }
+.workspace-nav-link, .workspace-tab { position: relative; }
+.pending-link-spinner { position: absolute; inset-inline-start: var(--space-3); top: 50%; transform: translateY(-50%); }
+.workspace-tab .pending-link-spinner { inset-inline-start: 50%; top: var(--space-1); transform: translateX(-50%); }
+.pending-link-content[data-pending="true"] .pending-link-icon { animation: ui-nav-icon-out var(--motion-instant) var(--ease-standard) 150ms forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton { animation: none !important; opacity: 1; }
+  .ui-loading-spinner { display: none; animation: none !important; }
+  .ui-loading-static { display: block; }
+  .pending-link-content[data-pending="true"] .pending-link-icon { opacity: 0; }
 }
 
 .ui-toast-region {
@@ -1445,6 +1511,29 @@ button:disabled {
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   pointer-events: auto;
+  animation: ui-toast-enter var(--motion-normal) var(--ease-out);
+  transition: opacity var(--motion-fast) var(--ease-in);
+}
+
+.ui-toast[data-leaving] { opacity: 0; }
+@keyframes ui-toast-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.workspace-page-enter[data-page-enter="true"] { animation: ui-page-enter var(--motion-normal) var(--ease-out); }
+@keyframes ui-page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+[data-just-added] { --just-added-bg: var(--color-primary-100); animation: ui-just-added 1.2s var(--ease-out); }
+[data-theme="dark"] [data-just-added] { --just-added-bg: var(--color-primary-800); }
+@keyframes ui-just-added { from { background-color: var(--just-added-bg); transform: translateY(4px); } to { background-color: transparent; transform: translateY(0); } }
+
+.workspace-content details::details-content {
+  height: 0;
+  opacity: 0;
+  overflow: clip;
+  interpolate-size: allow-keywords;
+  transition: height var(--motion-normal) var(--ease-out), opacity var(--motion-normal) var(--ease-out), content-visibility var(--motion-normal) allow-discrete;
+}
+.workspace-content details[open]::details-content { height: auto; opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-content details::details-content { transition: none !important; }
+  .workspace-page-enter, [data-just-added], .ui-toast { animation: none !important; }
 }
 
 .ui-toast--success {
@@ -1502,6 +1591,7 @@ button:disabled {
   background: transparent;
   color: var(--color-text-primary);
   cursor: pointer;
+  transition: transform var(--motion-instant) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
 }
 
 .ui-icon-button:hover {

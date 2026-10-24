@@ -1155,6 +1155,13 @@ Use a small animated AI indicator.
 
 Avoid blocking full-screen loading states for routine AI operations.
 
+Long jobs (AI analysis, CV import, PDF export) use one shared progress status (decision 0040):
+
+- The current stage in words (waiting in line, then working).
+- How long the user has been waiting on this screen, shown after 3 seconds.
+- A calm note when the job takes longer than usual, so slow is not mistaken for broken.
+- Never a percentage or an ETA: the jobs report no real progress, and an invented number misleads.
+
 ---
 
 ## 28.3 Page Transitions
@@ -1162,6 +1169,8 @@ Avoid blocking full-screen loading states for routine AI operations.
 Page transitions may be more expressive than a simple fade, but must remain fast and restrained.
 
 Do not let transitions delay interaction.
+
+Only the page content enters; navigation chrome (sidebar, tab bar, mobile header) stays still. The entry plays on in-app navigation only. A page that arrived as a full document load is already painted and must not be faded in again.
 
 ---
 
@@ -1175,6 +1184,24 @@ Always respect:
 
 Remove or substantially simplify non-essential transitions.
 
+A loading indicator must never rely on motion alone. Under reduced motion a spinner becomes a static icon, and visible text (loading, the stage, the waiting time) carries the signal that work is still running.
+
+---
+
+## 28.5 Motion Tokens
+
+```css
+--motion-instant: 100ms;  /* press feedback */
+--motion-fast:    120ms;  /* hover, exits */
+--motion-normal:  180ms;  /* entries, state changes */
+--motion-slow:    240ms;  /* sheets, drawers */
+--ease-out:      cubic-bezier(0.2, 0, 0, 1);    /* entering */
+--ease-in:       cubic-bezier(0.4, 0, 1, 1);    /* leaving */
+--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* state changes */
+```
+
+Interaction transitions stay at or under 240ms. Nothing loops except an indicator that is visible only while something is loading.
+
 ---
 
 # 29. Loading
@@ -1186,6 +1213,11 @@ Primary loading pattern:
 Use spinners only for actions where a skeleton would not represent the expected result.
 
 Avoid generic full-page spinners wherever existing layout can be preserved.
+
+- Skeletons pulse through opacity, never a gradient shimmer, and appear after about 150ms so fast loads do not flash.
+- Each loading page shows a short visible line of text. After 8 seconds it adds a still-loading note with a reload action.
+- A busy button keeps its label and width, shows a small spinner, and cannot be submitted twice. It must not look disabled.
+- A navigation link that was activated shows a pending state until the page or its skeleton replaces the current view.
 
 ---
 
