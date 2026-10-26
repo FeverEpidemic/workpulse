@@ -4,6 +4,7 @@
 
 - Tanggal: 26 Oktober 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE**, 27 Oktober 2026 ([bukti](T31-floating-tab-bar.md), [decision 0041](../decisions/0041-t31-floating-tab-bar.md)). Gutter akhir 8 px, bukan 12 px (pilihan pengguna di Fase 0).
 - Dependensi: T27 (bottom tab bar mobile) dan T30 (motion dan loading) **DONE** di `main` (`97ee13c`).
 - Asal task: permintaan terarah pengguna pada 26 Oktober 2026 ("Navigation Bar untuk mobile layout itu Floating dengan animation yang sama"). T31 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Semua keputusan di §2.2 berasal dari interview di chat pada tanggal yang sama.
 - Eksekutor: satu agent **Claude Sonnet 5.5** (`claude-sonnet-5-5`), ditetapkan pengguna 26 Oktober 2026. Semua fase berurutan tanpa delegasi.
