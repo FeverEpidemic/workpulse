@@ -1,5 +1,23 @@
 # WorkPulse Implementation Status
 
+## T31 Tab bar mobile mengambang: DONE lokal, 27 Oktober 2026
+
+Status T31: **DONE** (acceptance lokal). Di ≤ 880 px tab bar menjadi kapsul solid yang mengambang 8 px dari kiri, kanan, dan bawah (ditambah safe area), maksimal 480 px di tablet, dengan border 1 px, radius `--radius-lg`, satu `--shadow-md`, dan tanpa blur. Saat scroll ke bawah kapsul menyempit ke 268 px (lima target 44 px, jarak 8 px) bersamaan dengan tinggi 64 → 52 px, 180 ms `--ease-out`. Tap di samping kapsul sampai ke konten. Reduced motion mengganti state tanpa transisi.
+
+- Pelaksana Fase 0-3: Claude Sonnet 5.5. Gate review Claude Opus 5.5 pada `8d1565f`: **PASS** tanpa P0-P2, empat P3. Fase 4 dan closeout oleh Claude Opus 5.5.
+- Dependensi: T27 dan T30 **DONE**. T31 adalah permintaan terarah pengguna (interview 26 Oktober 2026), tidak ada di `IMPLEMENTATION_PLAN.md` §5.
+- Penyimpangan: gutter 8 px, bukan 12 px dari plan. Fase 0 mengukur label tebal "Dashboard" 64,5 px melawan isi tab 63,2 px pada kapsul 336 px, berhenti di stop condition, dan pengguna memilih 8 px pada 26 Oktober 2026.
+- Scope: CSS tab bar mobile, ruang bawah konten, posisi toast. Di luar scope: + sebagai tombol terpisah, header mengambang, blur, perubahan `useScrollChrome`.
+- File: `src/app/globals.css`, `tests/unit/floating-tab-bar-css.test.ts` (baru), `tests/e2e/mobile-tab-bar.spec.ts` (screenshot pindah ke `docs/verification/T31-screenshots/`, satu test 768 px baru), `Design.md` dan `docs/Design.md` §4.3. Tanpa perubahan TSX atau copy.
+- Keputusan: [decision 0041](decisions/0041-t31-floating-tab-bar.md), mengganti posisi full-width dari decision 0035 #7. Tanpa migration (parity tetap 38), tanpa dependency, tanpa script npm baru.
+- Checks: lint, typecheck, build exit 0; unit 154 file / 1446 test; E2E `release` 43 (receipt dan run ulang reviewer), `ui` 1, `activity` 1, `m2` 1 (receipt Fase 3).
+- Belum dijalankan: perangkat sentuh nyata (safe area), Safari, Firefox, staging, production. Fase 4 hanya dokumen; test tidak diulang setelahnya.
+- Remediation P3 (27 Oktober 2026, pilihan pengguna): G1 list expanded tanpa padding samping, ruang label Dashboard tebal 0,3 → 1,9 px; G2 E2E tap di kapsul memeriksa lebar 344 px; G3 border `--color-border-strong` di dark mode. Setelahnya unit 154 file / 1448 test, `release` 43 lulus. Masih terbuka: G4 safe area di perangkat nyata.
+
+Berikutnya: review dan merge PR T31, lalu cek kapsul di iPhone nyata (safe area dan gestur).
+
+[Rencana](verification/T31-implementation-plan.md), [bukti](verification/T31-floating-tab-bar.md), [gate review](verification/T31-gate-review.md), receipt [Fase 0](verification/T31-phase0-baseline.md) sampai [3](verification/T31-phase3-regression.md).
+
 ## T30 Animasi dan loading: DONE lokal, 23 Oktober 2026
 
 Status T30: **DONE** (acceptance lokal). Tombol yang ditekan mengecil singkat, tombol yang menunggu server menampilkan spinner dengan label dan lebar tetap dan tidak bisa dikirim dua kali. Skeleton berdenyut tanpa gradient, setiap halaman loading menampilkan teks, dan setelah 8 detik muncul catatan dengan tombol muat ulang. Link sidebar dan tab bar yang diklik menampilkan pending sampai halaman tampil. Job AI, import, dan export memakai `ProgressStatus` (tahap, lama menunggu, catatan bila lambat, tanpa persentase). Modal, sheet, backdrop, dan toast punya transisi masuk/keluar; aktivitas baru dari Quick log diberi highlight sekali; konten halaman masuk singkat hanya pada navigasi di dalam app. Reduced motion mengganti spinner dengan ikon statis dan tetap menampilkan teks status.
@@ -1304,6 +1322,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T28 | Pilihan Dengan AI / Tanpa AI di setiap import | DONE |
 | T29 | Masuk dengan Google | DONE |
 | T30 | Animasi dan loading | DONE |
+| T31 | Tab bar mobile mengambang | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

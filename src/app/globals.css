@@ -416,7 +416,7 @@ a {
   white-space: nowrap;
 }
 
-/* T27 mobile chrome. Solid surfaces without blur, so tab labels keep their contrast over any content. */
+/* T27 mobile chrome. Solid surfaces without blur, so tab labels keep their contrast over any content. The T31 tab bar is a floating capsule. */
 .workspace-mobile-header,
 .workspace-tab-bar {
   display: none;
@@ -429,10 +429,13 @@ a {
   align-items: center;
   gap: 0;
   margin: 0;
-  /* Narrow gutters leave each slot about 70 px at 360 px, enough for the bold "Dashboard" label. */
-  padding: 0 var(--space-1);
+  /* No side padding: the 344 px capsule leaves each slot 68.4 px at 360 px, and the bold "Dashboard" label needs 64.5 px of the 66.4 px inside the tab border. */
+  padding: 0;
   list-style: none;
-  transition: height var(--motion-normal) var(--ease-out);
+  transition:
+    height var(--motion-normal) var(--ease-out),
+    column-gap var(--motion-normal) var(--ease-out),
+    padding var(--motion-normal) var(--ease-out);
 }
 
 .workspace-tab-bar[data-compact="true"] {
@@ -1172,21 +1175,49 @@ a {
     white-space: nowrap;
   }
 
-  .workspace-tab-bar {
-    position: fixed;
-    z-index: 30;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    display: block;
-    border-top: 1px solid var(--color-border-default);
-    background: var(--color-bg-surface);
-    padding-bottom: env(safe-area-inset-bottom);
+  /* T31: the bar floats 8 px off the left, right and bottom edges (plus the bottom safe area). */
+  :root {
+    --tab-bar-gutter: var(--space-2);
+    --tab-bar-offset: calc(var(--tab-bar-gutter) + env(safe-area-inset-bottom));
   }
 
-  /* Room for the expanded bar, so the last row or button is never under it. */
+  /* The nav is the capsule, so the gutter around it stays tappable page. The 480 px cap keeps five slots close together on a tablet. */
+  .workspace-tab-bar {
+    --tab-bar-width: min(calc(100% - 2 * var(--tab-bar-gutter)), 480px);
+    --tab-bar-compact-width: calc(5 * var(--touch-target-min) + 6 * var(--space-2));
+
+    position: fixed;
+    z-index: 30;
+    bottom: var(--tab-bar-offset);
+    left: 50%;
+    display: block;
+    width: var(--tab-bar-width);
+    transform: translateX(-50%);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-surface);
+    box-shadow: var(--shadow-md);
+    transition: width var(--motion-normal) var(--ease-out);
+  }
+
+  /* The dark shadow barely shows on the dark canvas, so the stronger border draws the capsule's edge. */
+  [data-theme="dark"] .workspace-tab-bar {
+    border-color: var(--color-border-strong);
+  }
+
+  /* Scrolled down: the capsule closes in on five 44 px targets with 8 px between them. The list loses 1 px of padding per side for the border. */
+  .workspace-tab-bar[data-compact="true"] {
+    --tab-bar-width: var(--tab-bar-compact-width);
+  }
+
+  .workspace-tab-bar[data-compact="true"] .workspace-tab-list {
+    column-gap: var(--space-2);
+    padding: 0 calc(var(--space-2) - 1px);
+  }
+
+  /* Room for the expanded bar and its offset, so the last row or button is never under it. */
   .workspace-content {
-    padding: var(--space-6) var(--space-4) calc(64px + env(safe-area-inset-bottom) + var(--space-10));
+    padding: var(--space-6) var(--space-4) calc(64px + var(--tab-bar-offset) + var(--space-10));
   }
 
   .workspace-filter-form {
@@ -1498,7 +1529,7 @@ button:disabled {
 /* Toasts sit above the T27 tab bar instead of on it. */
 @media (max-width: 880px) {
   .ui-toast-region {
-    bottom: calc(64px + env(safe-area-inset-bottom) + var(--space-3));
+    bottom: calc(64px + var(--tab-bar-offset) + var(--space-3));
   }
 }
 
