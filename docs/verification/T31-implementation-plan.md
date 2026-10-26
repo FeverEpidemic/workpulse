@@ -6,8 +6,8 @@
 - Status saat plan ditulis: **TODO**.
 - Dependensi: T27 (bottom tab bar mobile) dan T30 (motion dan loading) **DONE** di `main` (`97ee13c`).
 - Asal task: permintaan terarah pengguna pada 26 Oktober 2026 ("Navigation Bar untuk mobile layout itu Floating dengan animation yang sama"). T31 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Semua keputusan di §2.2 berasal dari interview di chat pada tanggal yang sama.
-- Eksekutor: satu agent **Claude** (Opus 5.5), kecuali pengguna menetapkan lain sebelum Fase 0. Semua fase berurutan tanpa delegasi.
-- Reviewer: **Claude** (Opus). Gate review read-only wajib setelah Fase 3; Fase 4 (draft dokumen) setelah gate. Bila eksekutor juga Claude, independensi review terbatas dan harus ditulis di gate review.
+- Eksekutor: satu agent **Claude Sonnet 5.5** (`claude-sonnet-5-5`), ditetapkan pengguna 26 Oktober 2026. Semua fase berurutan tanpa delegasi.
+- Reviewer: **Claude** (Opus 5.5). Gate review read-only wajib setelah Fase 3; Fase 4 (draft dokumen) setelah gate.
 - antislop: mode **during** (dipilih pengguna 26 Oktober 2026 untuk sesi interview). Pelaksana membaca `antislop`, `antislop-ui`, `antislop-human`, dan `antislop-layoutmobile` dari `.claude/skills/<nama>/SKILL.md`, lalu menjalankan Delivery Gate di Fase 3.
 - Acuan:
   - `docs/Design.md` §4.3 (navigasi mobile), §28 (motion, token §28.5), §28.4 (reduced motion), §31 (target sentuh 44 px), *Compact width* (sekitar baris 1255).
