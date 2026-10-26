@@ -12,9 +12,9 @@ Status T31: **DONE** (acceptance lokal). Di ≤ 880 px tab bar menjadi kapsul so
 - Keputusan: [decision 0041](decisions/0041-t31-floating-tab-bar.md), mengganti posisi full-width dari decision 0035 #7. Tanpa migration (parity tetap 38), tanpa dependency, tanpa script npm baru.
 - Checks: lint, typecheck, build exit 0; unit 154 file / 1446 test; E2E `release` 43 (receipt dan run ulang reviewer), `ui` 1, `activity` 1, `m2` 1 (receipt Fase 3).
 - Belum dijalankan: perangkat sentuh nyata (safe area), Safari, Firefox, staging, production. Fase 4 hanya dokumen; test tidak diulang setelahnya.
-- Risiko dan follow-up (P3): G1 label Dashboard tebal bersisa 0,3 px; G2 E2E tap di kapsul tidak memeriksa lebar; G3 tepi kapsul di dark mode hanya ditopang border; G4 safe area di perangkat nyata.
+- Remediation P3 (27 Oktober 2026, pilihan pengguna): G1 list expanded tanpa padding samping, ruang label Dashboard tebal 0,3 → 1,9 px; G2 E2E tap di kapsul memeriksa lebar 344 px; G3 border `--color-border-strong` di dark mode. Setelahnya unit 154 file / 1448 test, `release` 43 lulus. Masih terbuka: G4 safe area di perangkat nyata.
 
-Berikutnya: review dan merge PR T31, lalu cek kapsul di iPhone nyata (safe area dan gestur). G1-G3 dapat digabung menjadi satu follow-up kecil.
+Berikutnya: review dan merge PR T31, lalu cek kapsul di iPhone nyata (safe area dan gestur).
 
 [Rencana](verification/T31-implementation-plan.md), [bukti](verification/T31-floating-tab-bar.md), [gate review](verification/T31-gate-review.md), receipt [Fase 0](verification/T31-phase0-baseline.md) sampai [3](verification/T31-phase3-regression.md).
 

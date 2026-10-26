@@ -51,6 +51,27 @@ Tidak dijalankan ulang oleh reviewer: `pnpm build` (sudah dibangun oleh config r
 | G3 | P3 | Di dark mode tepi kapsul hanya ditopang border 1 px `--color-border-default`; `--shadow-md` hampir tak terlihat. Sesuai plan (tanpa token baru), dicatat untuk keputusan desain berikutnya. | Follow-up |
 | G4 | P3 | `env(safe-area-inset-bottom)` dan gestur sentuh belum diverifikasi di perangkat nyata; Chromium desktop mengembalikan 0. | Follow-up |
 
+### Remediation P3, 27 Oktober 2026
+
+Pilihan pengguna untuk G1 dan G3; dikerjakan Claude Opus 5.5 setelah closeout (decision 0041 keputusan 9).
+
+| ID | Status | Perbaikan | Bukti |
+| --- | --- | --- | --- |
+| G1 | Ditutup | List expanded `padding: 0`; ruang label tebal "Dashboard" 0,3 → 1,9 px. Pengukuran canvas: Plus Jakarta Sans tebal 64,5 px, Arial tebal 62,7 px, jadi font fallback muat | E2E baru: ruang label aktif ≥ 1,5 px (Range vs `clientWidth` tab) |
+| G2 | Ditutup | E2E tap di dalam kapsul kini juga menunggu lebar 344 px | `mobile-tab-bar.spec.ts`, setelah klik `box.x + 2` |
+| G3 | Ditutup | `[data-theme="dark"] .workspace-tab-bar { border-color: var(--color-border-strong) }`, token yang sudah ada | Unit CSS dan E2E: warna border = `--color-border-strong` di dark, `--color-border-default` di light |
+| G4 | Terbuka | Butuh perangkat sentuh nyata | - |
+
+| Command | Exit | Hasil |
+| --- | --- | --- |
+| `pnpm lint --ignore-pattern ".claude/**"` | 0 | bersih |
+| `pnpm typecheck` | 0 | bersih |
+| `pnpm test` | 0 | 154 file, 1448 test |
+| `pnpm test:e2e:release` | 0 | 43 lulus (8,8 menit), termasuk axe light/dark expanded dan compact |
+| `git diff --check` | 0 | bersih |
+
+Screenshot `docs/verification/T31-screenshots` ditulis ulang oleh run ini dan menunjukkan perubahan; screenshot T25/T27/T30 dikembalikan.
+
 ## Berikutnya
 
 1. Fase 4 oleh eksekutor: `Design.md` dan `docs/Design.md` §4.3 (gutter 8 px), decision nomor bebas berikutnya, `T31-floating-tab-bar.md`. Checkout utama punya perubahan belum di-commit di kedua Design.md; edit di worktree saja.

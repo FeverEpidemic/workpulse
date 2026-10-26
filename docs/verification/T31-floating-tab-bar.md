@@ -55,4 +55,4 @@ Flaky: tidak ada. Log server `The destination stream closed early` muncul juga d
 
 ## Follow-up P3
 
-G1 label Dashboard bersisa 0,3 px; G2 E2E tap di kapsul tidak memeriksa lebar; G3 tepi kapsul di dark mode hanya ditopang border; G4 safe area di perangkat nyata. Rincian di [gate review](T31-gate-review.md).
+G1, G2, dan G3 ditutup 27 Oktober 2026: list expanded tanpa padding samping (ruang label Dashboard 1,9 px), E2E tap memeriksa lebar 344 px, dan border kuat di dark mode; unit 154 file / 1448 test dan `test:e2e:release` 43 lulus setelahnya. G4 (safe area di perangkat nyata) tetap terbuka. Rincian di [gate review](T31-gate-review.md).

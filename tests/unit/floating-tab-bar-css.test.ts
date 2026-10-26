@@ -80,6 +80,14 @@ describe("T31 floating tab bar", () => {
     expect(compact).toMatch(/padding:\s*0 calc\(var\(--space-2\) - 1px\)/);
   });
 
+  it("gives the expanded list no side padding, so the bold Dashboard label has room (gate G1)", () => {
+    expect(rule(css, ".workspace-tab-list")).toMatch(/(?:^|[\s;])padding:\s*0;/);
+  });
+
+  it("draws the dark capsule edge with the strong border, since the shadow barely shows (gate G3)", () => {
+    expect(rule(mobileCss, '[data-theme="dark"] .workspace-tab-bar')).toMatch(/border-color:\s*var\(--color-border-strong\)/);
+  });
+
   it("never animates the capsule's position or opacity", () => {
     const bar = rule(mobileCss, ".workspace-tab-bar");
     const transition = bar.match(/transition:[^;]+;/)?.[0] ?? "";

@@ -190,7 +190,7 @@ Use a **bottom tab bar** with five slots, not a persistent desktop-style sidebar
 - The **+** slot is the persistent primary creation control and the only accent in the bar. It opens a bottom sheet composer with the note focused, saves in place, and links to the full form.
 - The current tab uses the same sage background as the desktop sidebar, plus a heavier icon and label.
 - Labels show at the top of the page and when scrolling up or tapping the bar; scrolling down shrinks the bar to icons. Labels stay available to screen readers in both states.
-- The bar floats as a capsule 8 px from the left, right and bottom edges (plus the bottom safe area), up to 480 px wide on tablets. It stays solid, with a 1 px border, the `--radius-lg` corners and one `--shadow-md`, and no blur. Taps beside it reach the page (decision 0041, T31).
+- The bar floats as a capsule 8 px from the left, right and bottom edges (plus the bottom safe area), up to 480 px wide on tablets. It stays solid, with a 1 px border, the `--radius-lg` corners and one `--shadow-md`, and no blur. In dark mode the border uses `--color-border-strong`, because the shadow barely shows on the dark canvas. Taps beside it reach the page (decision 0041, T31).
 - When the labels hide, the capsule narrows to fit five 44 px targets with 8 px between them, in step with the height change (`--motion-normal`, `--ease-out`). It does not move up or down. Reduced motion switches the state without the transition.
 - A compact header shows the page title and hides with the bar while scrolling down, but never while keyboard focus is inside it or a sheet is open.
 - Achievements, Timeline, CV, theme and sign out live in a labelled **More** sheet opened from the Profile header.

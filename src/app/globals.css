@@ -429,8 +429,8 @@ a {
   align-items: center;
   gap: 0;
   margin: 0;
-  /* The 344 px capsule leaves each slot 66.8 px at 360 px; the bold "Dashboard" label needs 64.5 px of it. */
-  padding: 0 var(--space-1);
+  /* No side padding: the 344 px capsule leaves each slot 68.4 px at 360 px, and the bold "Dashboard" label needs 64.5 px of the 66.4 px inside the tab border. */
+  padding: 0;
   list-style: none;
   transition:
     height var(--motion-normal) var(--ease-out),
@@ -1198,6 +1198,11 @@ a {
     background: var(--color-bg-surface);
     box-shadow: var(--shadow-md);
     transition: width var(--motion-normal) var(--ease-out);
+  }
+
+  /* The dark shadow barely shows on the dark canvas, so the stronger border draws the capsule's edge. */
+  [data-theme="dark"] .workspace-tab-bar {
+    border-color: var(--color-border-strong);
   }
 
   /* Scrolled down: the capsule closes in on five 44 px targets with 8 px between them. The list loses 1 px of padding per side for the border. */

@@ -25,6 +25,8 @@ Pengguna meminta tab bar mobile yang mengambang dengan animasi yang sama. Bar T2
 7. **Ruang bawah dari tinggi expanded.** `.workspace-content` mobile memakai `calc(64px + var(--tab-bar-offset) + var(--space-10))` dan `.ui-toast-region` `calc(64px + var(--tab-bar-offset) + var(--space-3))`. *Alasan:* kontrol terakhir dan toast tidak boleh berada di bawah kapsul saat label kembali.
 8. **+ tetap di dalam bar.** Memisahkan + menjadi tombol bulat bertentangan dengan Design.md *Compact width* dan butuh keputusan desain baru.
 
+9. **Remediation P3 (27 Oktober 2026, pilihan pengguna).** List expanded tanpa padding samping (`padding: 0`), sehingga label tebal "Dashboard" (64,5 px) punya ruang 1,9 px di isi tab 66,4 px, bukan 0,3 px; tab aktif kini menyentuh border kapsul. Di dark mode kapsul memakai `border-color: var(--color-border-strong)`. *Alasan:* G1 dan G3 dari gate review; keduanya memakai token yang sudah ada. Font fallback bukan risiko (Arial tebal 62,7 px); teks sistem yang diperbesar tetap bisa memotong label dengan ellipsis.
+
 ## Not promised
 
 - `env(safe-area-inset-bottom)` dan gestur sentuh belum diuji di perangkat nyata; Chromium desktop mengembalikan 0.
@@ -32,7 +34,5 @@ Pengguna meminta tab bar mobile yang mengambang dengan animasi yang sama. Bar T2
 
 ## Follow-up (P3 dari gate review)
 
-- G1: label tebal "Dashboard" hanya bersisa 0,3 px; font fallback atau teks diperbesar bisa memotongnya.
-- G2: E2E tap di dalam kapsul hanya memeriksa `data-compact`, bukan lebar 344 px.
-- G3: di dark mode tepi kapsul hanya ditopang border; `--shadow-md` hampir tak terlihat.
-- G4: safe area di perangkat nyata (lihat di atas).
+- G1, G2, G3: ditutup 27 Oktober 2026 (keputusan 9; E2E tap kini memeriksa lebar 344 px).
+- G4: safe area di perangkat nyata (lihat di atas), masih terbuka karena butuh perangkat.

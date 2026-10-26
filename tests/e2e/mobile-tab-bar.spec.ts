@@ -115,6 +115,13 @@ test("five tabs, the current tab, labels and header that follow the scroll", asy
   const clipped = await bar.locator(".workspace-tab-label:not(.sr-only)").evaluateAll((labels) =>
     labels.filter((label) => label.scrollWidth > label.clientWidth).map((label) => label.textContent));
   expect(clipped).toEqual([]);
+  // T31 G1: the bold current "Dashboard" label keeps real room inside its tab, not a rounding error.
+  const room = await bar.locator('a[aria-current="page"]').evaluate((tab) => {
+    const range = document.createRange();
+    range.selectNodeContents(tab.querySelector(".workspace-tab-label")!);
+    return tab.clientWidth - range.getBoundingClientRect().width;
+  });
+  expect(room, "room left for the bold current label").toBeGreaterThanOrEqual(1.5);
 
   // T31 acceptance 1: a floating capsule 8 px off the left, right and bottom, border on four sides, no blur.
   const expanded = await capsule(page);
@@ -201,6 +208,8 @@ test("five tabs, the current tab, labels and header that follow the scroll", asy
   const box = await bar.boundingBox();
   await page.mouse.click(box!.x + 2, box!.y + box!.height / 2);
   await expect(bar).toHaveAttribute("data-compact", "false");
+  // T31 G2: the tap widens the capsule back, not only the attribute.
+  await expect.poll(async () => Math.round((await capsule(page)).width), "capsule widens after a tap").toBe(PHONE.width - 2 * GUTTER);
   await expect(page).toHaveURL(/\/activity$/);
 
   // A tab navigates in the compact state too, and the new page starts expanded at the top.
@@ -431,6 +440,16 @@ test("axe finds nothing on the bar, both sheets and Profile at 360 px in light a
     await page.goto("/dashboard");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expectNoWcagViolations(page, testInfo, `t27-dashboard-${theme}`);
+    // T31 G3: in dark the shadow barely shows, so the capsule takes the stronger border.
+    const edge = await tabBar(page).evaluate((element, token) => {
+      const probe = document.createElement("div");
+      probe.style.color = getComputedStyle(document.documentElement).getPropertyValue(token);
+      document.body.append(probe);
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      return { actual: getComputedStyle(element).borderTopColor, expected };
+    }, theme === "dark" ? "--color-border-strong" : "--color-border-default");
+    expect(edge.actual).toBe(edge.expected);
     await shot(page, `bar-expanded-360-${theme}`);
     // T31 acceptance 10: the compact capsule too, in both themes.
     await scrollBy(page, 600);
