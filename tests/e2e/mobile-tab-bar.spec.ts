@@ -8,10 +8,14 @@ import { expectNoWcagViolations } from "./helpers/accessibility";
 import { createUser, removeUsers, seedCareer, signIn, type Career, type User } from "./helpers/release-fixture";
 
 // T27 plan section 1: the mobile tab bar, header, composer sheet and More menu at 360 px against a production build.
+// T31 turns the bar into a floating capsule that narrows when compact (docs/verification/T31-implementation-plan.md).
 // One account with a two-word name and 23 activities, so /activity is long enough to scroll at 360 x 640.
 
-const SHOTS = "docs/verification/T27-screenshots";
+const SHOTS = "docs/verification/T31-screenshots";
 const PHONE = { width: 360, height: 640 };
+// T31: 8 px between the capsule and the screen edges, 268 px wide when compact (5 targets of 44 px, 6 gaps of 8 px).
+const GUTTER = 8;
+const COMPACT_WIDTH = 268;
 
 let user: User;
 let career: Career;
@@ -59,6 +63,31 @@ async function scrollBy(page: Page, deltaY: number): Promise<void> {
   await page.waitForTimeout(250);
 }
 
+async function capsule(page: Page): Promise<{ left: number; right: number; bottom: number; width: number }> {
+  const box = await tabBar(page).boundingBox();
+  return { left: box!.x, right: box!.x + box!.width, bottom: box!.y + box!.height, width: box!.width };
+}
+
+async function expectCompactCapsule(page: Page): Promise<void> {
+  const viewport = page.viewportSize()!;
+  await expect.poll(async () => Math.round((await capsule(page)).width), "capsule narrows to five targets").toBe(COMPACT_WIDTH);
+  const box = await capsule(page);
+  expect(Math.abs(box.left - (viewport.width - box.right)), "capsule stays centred").toBeLessThanOrEqual(1);
+  expect(Math.abs(box.bottom - (viewport.height - GUTTER)), "capsule keeps its distance from the bottom").toBeLessThanOrEqual(1);
+}
+
+async function expectTargets(page: Page, minGap: number): Promise<void> {
+  const boxes = await tabBar(page).locator("a, button").evaluateAll((controls) =>
+    controls.map((control) => control.getBoundingClientRect().toJSON() as DOMRect));
+  for (const box of boxes) {
+    expect(box.width, "target width").toBeGreaterThanOrEqual(44);
+    expect(box.height, "target height").toBeGreaterThanOrEqual(44);
+  }
+  for (let index = 1; index < boxes.length; index += 1) {
+    expect(boxes[index]!.left - boxes[index - 1]!.right, `gap between target ${index} and ${index + 1}`).toBeGreaterThanOrEqual(minGap - 0.5);
+  }
+}
+
 async function draftNote(page: Page): Promise<string | null> {
   return page.evaluate(() => {
     const key = Object.keys(sessionStorage).find((entry) => entry.endsWith(":quick-log-note"));
@@ -86,6 +115,44 @@ test("five tabs, the current tab, labels and header that follow the scroll", asy
   const clipped = await bar.locator(".workspace-tab-label:not(.sr-only)").evaluateAll((labels) =>
     labels.filter((label) => label.scrollWidth > label.clientWidth).map((label) => label.textContent));
   expect(clipped).toEqual([]);
+
+  // T31 acceptance 1: a floating capsule 8 px off the left, right and bottom, border on four sides, no blur.
+  const expanded = await capsule(page);
+  expect(expanded.left).toBeCloseTo(GUTTER, 0);
+  expect(expanded.right).toBeCloseTo(PHONE.width - GUTTER, 0);
+  expect(expanded.bottom).toBeCloseTo(PHONE.height - GUTTER, 0);
+  const surface = await bar.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const radius = getComputedStyle(document.documentElement).getPropertyValue("--radius-lg").trim();
+    return {
+      borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth],
+      radius: style.borderTopLeftRadius,
+      radiusToken: radius,
+      shadow: style.boxShadow,
+      blur: style.backdropFilter,
+      transition: { property: style.transitionProperty, duration: style.transitionDuration, easing: style.transitionTimingFunction },
+    };
+  });
+  expect(surface.borders).toEqual(["1px", "1px", "1px", "1px"]);
+  expect(surface.radius).toBe(surface.radiusToken);
+  expect(surface.shadow).not.toBe("none");
+  expect(surface.blur).toBe("none");
+  // T31 acceptance 3: width eases with the T30 normal duration and ease-out curve.
+  expect(surface.transition).toEqual({ property: "width", duration: "0.18s", easing: "cubic-bezier(0.2, 0, 0, 1)" });
+  const listTransition = await bar.locator(".workspace-tab-list").evaluate((list) => {
+    const style = getComputedStyle(list);
+    return { property: style.transitionProperty, duration: style.transitionDuration };
+  });
+  expect(listTransition.property.split(", ")).toEqual(expect.arrayContaining(["height", "column-gap", "padding"]));
+  expect(new Set(listTransition.duration.split(", "))).toEqual(new Set(["0.18s"]));
+  await expectTargets(page, 0);
+
+  // T31 acceptance 5: a tap beside the capsule reaches the page, not the bar.
+  const beside = await page.evaluate(({ x, y }) => {
+    const hit = document.elementFromPoint(x, y);
+    return { insideBar: hit?.closest(".workspace-tab-bar") !== null, tag: hit?.tagName ?? null };
+  }, { x: GUTTER / 2, y: expanded.bottom - 32 });
+  expect(beside.insideBar, `gutter hit ${beside.tag}`).toBe(false);
 
   // Acceptance 8: initials from the two-word name, hidden from screen readers; the tab is named Profile.
   const profileTab = bar.getByRole("link", { name: "Profile", exact: true });
@@ -118,11 +185,15 @@ test("five tabs, the current tab, labels and header that follow the scroll", asy
   await expect(bar.locator(".workspace-tab-label.sr-only")).toHaveCount(5);
   await expect(bar.getByRole("link", { name: "Activity", exact: true })).toBeVisible();
   await expect.poll(() => bar.locator(".workspace-tab-list").evaluate((list) => list.getBoundingClientRect().height)).toBe(52);
+  // T31 acceptance 2 and 7: the capsule closes in on five targets with 8 px between them.
+  await expectCompactCapsule(page);
+  await expectTargets(page, 8);
   await shot(page, "bar-compact-360-light");
   await scrollBy(page, -200);
   await expect(bar).toHaveAttribute("data-compact", "false");
   await expect(header(page)).toHaveAttribute("data-hidden", "false");
   await expect.poll(() => bar.locator(".workspace-tab-list").evaluate((list) => list.getBoundingClientRect().height)).toBe(64);
+  await expect.poll(async () => Math.round((await capsule(page)).width), "capsule widens again").toBe(PHONE.width - 2 * GUTTER);
 
   // A tap on the bar outside the tabs brings the labels back without navigating.
   await scrollBy(page, 600);
@@ -184,7 +255,8 @@ test("content is never under the bar and nothing scrolls sideways at 360 x 640",
     });
     expect(result.painted, `${route}: controls in view at the end of the page`).toBeGreaterThan(0);
     expect(result.lowestBottom, `${route}: no control under the bar`).toBeLessThanOrEqual(result.barTop);
-    expect(result.padding, `${route}: room for the expanded bar`).toBeGreaterThanOrEqual(64);
+    // T31: the 64 px bar plus its 8 px offset.
+    expect(result.padding, `${route}: room for the expanded bar and its offset`).toBeGreaterThanOrEqual(64 + GUTTER);
     expect(result.overflow, `${route}: horizontal scroll`).toBeLessThanOrEqual(0);
   }
 });
@@ -316,9 +388,16 @@ test("controls are at least 44 px, reduced motion turns transitions off, and 144
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/dashboard");
-  const durations = await page.evaluate(() => [".workspace-tab-list", ".workspace-mobile-header", ".workspace-tab"]
-    .map((selector) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).transitionDuration) * 1000));
+  const durations = await page.evaluate(() => [".workspace-tab-bar", ".workspace-tab-list", ".workspace-mobile-header", ".workspace-tab"]
+    .map((selector) => Math.max(...getComputedStyle(document.querySelector(selector)!).transitionDuration.split(",").map((value) => Number.parseFloat(value) * 1000))));
   for (const duration of durations) expect(duration).toBeLessThanOrEqual(0.01);
+  // T31 acceptance 4: the compact state still switches, without a transition.
+  await page.goto("/activity");
+  await expect(page.locator("main")).toContainText("Catatan kerja nomor 20");
+  await scrollBy(page, 600);
+  await expect(tabBar(page)).toHaveAttribute("data-compact", "true");
+  await expectCompactCapsule(page);
+  await expectTargets(page, 8);
   await page.emulateMedia({ reducedMotion: "no-preference" });
 
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -327,6 +406,21 @@ test("controls are at least 44 px, reduced motion turns transitions off, and 144
   await expect(header(page)).toBeHidden();
   await expect(page.locator(".workspace-sidebar").getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveCount(6);
   await expect(page.locator(".workspace-topbar").getByRole("link", { name: "Quick log", exact: true })).toHaveAttribute("href", "/activity/new");
+});
+
+test("at 768 px the capsule stops at 480 px and stays centred, and it narrows the same way", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 800 });
+  await signIn(page, user, "/activity");
+  await expect(page.locator("main")).toContainText("Catatan kerja nomor 20");
+  await page.waitForLoadState("networkidle");
+  const expanded = await capsule(page);
+  expect(expanded.width).toBeCloseTo(480, 0);
+  expect(Math.abs(expanded.left - (768 - expanded.right))).toBeLessThanOrEqual(1);
+  expect(expanded.bottom).toBeCloseTo(800 - GUTTER, 0);
+  await shot(page, "bar-expanded-768-light");
+  await scrollBy(page, 600);
+  await expect(tabBar(page)).toHaveAttribute("data-compact", "true");
+  await expectCompactCapsule(page);
 });
 
 test("axe finds nothing on the bar, both sheets and Profile at 360 px in light and dark", async ({ page }, testInfo) => {
@@ -338,12 +432,13 @@ test("axe finds nothing on the bar, both sheets and Profile at 360 px in light a
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expectNoWcagViolations(page, testInfo, `t27-dashboard-${theme}`);
     await shot(page, `bar-expanded-360-${theme}`);
-    if (theme === "dark") {
-      await scrollBy(page, 600);
-      await expect(tabBar(page)).toHaveAttribute("data-compact", "true");
-      await shot(page, "bar-compact-360-dark");
-      await page.evaluate(() => window.scrollTo(0, 0));
-    }
+    // T31 acceptance 10: the compact capsule too, in both themes.
+    await scrollBy(page, 600);
+    await expect(tabBar(page)).toHaveAttribute("data-compact", "true");
+    await expectCompactCapsule(page);
+    await expectNoWcagViolations(page, testInfo, `t31-dashboard-compact-${theme}`);
+    await shot(page, `bar-compact-360-${theme}-dashboard`);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await tabBar(page).getByRole("button", { name: "Quick log", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Quick log" })).toBeVisible();
     await expectNoWcagViolations(page, testInfo, `t27-composer-${theme}`);
