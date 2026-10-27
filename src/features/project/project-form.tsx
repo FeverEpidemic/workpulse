@@ -87,6 +87,9 @@ export function ProjectForm({
   project,
   linkedActivityCount = 0,
   returnTo,
+  onCancel,
+  onSaved,
+  onDraftRestored,
 }: {
   locale: Locale;
   ownerId: string;
@@ -94,6 +97,11 @@ export function ProjectForm({
   project?: ProjectRow;
   linkedActivityCount?: number;
   returnTo: string;
+  /** Set when the form lives in a dialog: Cancel discards the draft and calls this instead of leaving the page. */
+  onCancel?: () => void;
+  onSaved?: () => void;
+  /** Called once when an edit draft from this browser session is restored, so a closed dialog can show it. */
+  onDraftRestored?: () => void;
 }) {
   const isEditing = Boolean(project);
   const formId = project ? `project-edit-form-${project.id}` : "project-create-form";
@@ -110,6 +118,7 @@ export function ProjectForm({
   const [expectedRevisionOverride, setExpectedRevisionOverride] = useState<number | null>(null);
   const [draftRevisionState, setDraftRevisionState] = useState<"none" | "same" | "mismatch" | "unknown">("none");
   const projectDraftRestored = useRef(false);
+  const draftRestoreAnnounced = useRef(false);
   const projectDraftMetadata = useRef<SessionDraftMetadataState>({ status: "missing" });
   const contextConfirmed = useRef(false);
   const handledSuccess = useRef("");
@@ -136,6 +145,10 @@ export function ProjectForm({
         }
         projectDraftRestored.current = restored;
         projectDraftMetadata.current = metadata;
+        if (restored && !draftRestoreAnnounced.current) {
+          draftRestoreAnnounced.current = true;
+          onDraftRestored?.();
+        }
         setDraftRevisionState(
           !restored
             ? "none"
@@ -155,7 +168,7 @@ export function ProjectForm({
       projectDraftMetadata.current = { status: "missing" };
       setDraftRevisionState("none");
     }
-  }, [formKey, formRef, ownerId, project, state, storageKey]);
+  }, [formKey, formRef, onDraftRestored, ownerId, project, state, storageKey]);
 
   useEffect(() => {
     if (state.status !== "error") return;
@@ -179,8 +192,9 @@ export function ProjectForm({
       if (receipt?.projectId) router.push(`/projects/${receipt.projectId}?${new URLSearchParams({ returnTo }).toString()}`);
       return;
     }
+    onSaved?.();
     router.refresh();
-  }, [formId, isEditing, returnTo, router, state]);
+  }, [formId, isEditing, onSaved, returnTo, router, state]);
 
   const latestConflict = state.status === "error" && state.error.code === "CONFLICT" && state.error.latestRecord
     ? state.error.latestRecord as ProjectRow
@@ -218,6 +232,12 @@ export function ProjectForm({
     setDraftRevisionState("same");
     clearUnsavedForm(formId);
     window.requestAnimationFrame(() => formRef.current?.requestSubmit());
+  }
+
+  function discardEdits() {
+    clearSessionDraftForForm(ownerId, formKey);
+    clearUnsavedForm(formId);
+    onCancel?.();
   }
 
   function confirmContextChange() {
@@ -322,7 +342,9 @@ export function ProjectForm({
           <SubmitButton disabled={(!project && !operationKey) || restoredDraftMismatch} pendingLabel={t(locale, "project.saving")}>
             {project ? t(locale, "project.saveChanges") : t(locale, "project.save")}
           </SubmitButton>
-          <a className="button-secondary" href={returnTo}>{t(locale, "common.cancel")}</a>
+          {onCancel
+            ? <Button type="button" variant="secondary" onClick={discardEdits}>{t(locale, "common.cancel")}</Button>
+            : <a className="button-secondary" href={returnTo}>{t(locale, "common.cancel")}</a>}
         </div>
       </form>
       <Dialog open={contextDialogOpen} onOpenChange={setContextDialogOpen} title={t(locale, "project.contextWarning").replace("{count}", String(linkedActivityCount))} description={t(locale, "project.contextWarningDescription")}>

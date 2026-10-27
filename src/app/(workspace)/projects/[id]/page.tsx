@@ -7,7 +7,6 @@ import type { ProjectDetail as ProjectDetailData, ProjectExperienceSummary, Proj
 import { sanitizeProjectDetailReturnTo, sanitizeProjectReturnTo } from "@/domain/routes/safe-return";
 import { AchievementServiceError, createAchievementService } from "@/features/achievement/achievement-service";
 import { ProjectDetail } from "@/features/project/project-detail";
-import { ProjectForm } from "@/features/project/project-form";
 import { ProjectPageIssue } from "@/features/project/project-page-issue";
 import { ProjectServiceError, createProjectService } from "@/features/project/project-service";
 import { requireCompletedWorkspace } from "@/server/auth/workspace-page";
@@ -55,8 +54,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         <Link className="button-secondary mb-4" href={returnTo}>{t(locale, "project.back")}</Link>
         <p>{t(locale, "project.description")}</p>
       </header>
-      <ProjectForm locale={locale} ownerId={profile.id} experiences={experiences} project={detail.project} linkedActivityCount={detail.dependencyCount} returnTo={returnTo} />
-      <ProjectDetail locale={locale} ownerId={profile.id} detail={detail} candidates={candidates} achievementCandidates={achievementCandidates} returnTo={returnTo} />
+      <ProjectDetail locale={locale} ownerId={profile.id} detail={detail} experiences={experiences} candidates={candidates} achievementCandidates={achievementCandidates} returnTo={returnTo} />
     </section>
   );
 }

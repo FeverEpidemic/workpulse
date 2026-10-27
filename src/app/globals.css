@@ -1045,6 +1045,15 @@ a {
   width: min(100% - 32px, 720px);
 }
 
+/* The edit form keeps its two-column grid, so the dialog needs more room than the 480px default. */
+.ui-dialog.project-edit-dialog {
+  width: min(100% - 32px, 880px);
+}
+
+.project-edit-dialog .project-form {
+  margin-top: var(--space-5);
+}
+
 .project-candidate-row {
   align-items: flex-start;
 }

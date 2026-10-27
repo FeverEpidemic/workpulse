@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
 import { ActionFeedback } from "@/components/forms/action-feedback";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -14,11 +14,12 @@ import { NamedDeleteDialog } from "@/components/ui/named-delete-dialog";
 import { formatActivityDate, activityExcerpt } from "@/domain/activity/activity-display";
 import type { AchievementRelinkCandidatePage } from "@/domain/achievement/contracts";
 import { formatProjectDateRange, projectExperienceLabel, projectNeedsOutcome } from "@/domain/project/project-display";
-import type { ProjectDetail as ProjectDetailData, ProjectRelinkCandidatePage } from "@/domain/project/contracts";
+import type { ProjectDetail as ProjectDetailData, ProjectExperienceSummary, ProjectRelinkCandidatePage } from "@/domain/project/contracts";
 import { achievementDateLabel, achievementStatusLabel } from "@/domain/achievement/achievement-display";
 import { listAchievementRelinkCandidatesAction, relinkAchievementAction } from "@/features/achievement/actions";
 import { deleteProjectAction, listRelinkCandidatesAction, relinkActivityProjectAction } from "@/features/project/actions";
 import { EvidenceAttachments } from "@/features/evidence/evidence-attachments";
+import { ProjectForm } from "@/features/project/project-form";
 import { t, type Locale } from "@/i18n/messages";
 import { IDLE_ACTION_STATE, type ActionState } from "@/server/action-result";
 
@@ -331,10 +332,56 @@ function DeleteProjectForm({
   );
 }
 
+function EditProjectDialog({
+  locale,
+  ownerId,
+  project,
+  experiences,
+  linkedActivityCount,
+  returnTo,
+}: {
+  locale: Locale;
+  ownerId: string;
+  project: ProjectDetailData["project"];
+  experiences: ProjectExperienceSummary[];
+  linkedActivityCount: number;
+  returnTo: string;
+}) {
+  const [open, setOpen] = useState(false);
+  // Cancel and a finished save remount the form so the next open starts clean. Not keyed on the revision: a save
+  // returns the new revision in the same render as its result, and remounting then would skip the form's draft cleanup.
+  const [formVersion, setFormVersion] = useState(0);
+  const openEditor = useCallback(() => setOpen(true), []);
+  const resetEditor = useCallback(() => {
+    setOpen(false);
+    setFormVersion((version) => version + 1);
+  }, []);
+  return (
+    <>
+      <Button variant="secondary" onClick={openEditor}>{t(locale, "project.editDetails")}</Button>
+      <Dialog open={open} onOpenChange={setOpen} title={t(locale, "project.editTitle")} description={t(locale, "project.editDescription")} className="project-edit-dialog">
+        <ProjectForm
+          key={formVersion}
+          locale={locale}
+          ownerId={ownerId}
+          experiences={experiences}
+          project={project}
+          linkedActivityCount={linkedActivityCount}
+          returnTo={returnTo}
+          onCancel={resetEditor}
+          onSaved={resetEditor}
+          onDraftRestored={openEditor}
+        />
+      </Dialog>
+    </>
+  );
+}
+
 export function ProjectDetail({
   locale,
-  ownerId: _ownerId,
+  ownerId,
   detail,
+  experiences,
   candidates,
   achievementCandidates,
   returnTo,
@@ -342,6 +389,7 @@ export function ProjectDetail({
   locale: Locale;
   ownerId: string;
   detail: ProjectDetailData;
+  experiences: ProjectExperienceSummary[];
   candidates: ProjectRelinkCandidatePage;
   achievementCandidates: AchievementRelinkCandidatePage;
   returnTo: string;
@@ -373,6 +421,7 @@ export function ProjectDetail({
           <Link className="button-primary" href={`/activity/new?${new URLSearchParams({ project: project.id, returnTo: projectActivityReturn }).toString()}`}>
             {t(locale, "project.logRelatedWork")}
           </Link>
+          <EditProjectDialog locale={locale} ownerId={ownerId} project={project} experiences={experiences} linkedActivityCount={dependencyCount} returnTo={returnTo} />
           <AttachDialog key={`${project.revision}:${dependencyCount}:${candidates.items.at(0)?.id ?? "none"}:${candidates.nextCursor ?? "end"}`} locale={locale} projectId={project.id} candidatePage={candidates} returnTo={detailReturnTo} />
           <AchievementAttachDialog key={`${project.revision}:${achievements.length}:${achievementCandidates.items.at(0)?.achievement.id ?? "none"}:${achievementCandidates.nextCursor ?? "end"}`} locale={locale} projectId={project.id} candidatePage={achievementCandidates} returnTo={detailReturnTo} />
           <DeleteProjectForm locale={locale} project={project} dependencyCount={dependencyCount} achievementCount={achievements.length} evidenceCount={evidenceCount} returnTo={returnTo} />
