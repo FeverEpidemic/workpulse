@@ -2,7 +2,7 @@
 
 Date: 22 Oktober 2026
 
-Status: Accepted. Keputusan produk §2.2 butir 6, 7, dan 9 disetujui pengguna di chat pada 21 Oktober 2026: "Setuju dengan §2.2 butir 6, 7, dan 9 seperti di plan T29." Gate review 22 Oktober 2026 PASS tanpa P0-P2 (independensi terbatas: reviewer sama dengan pelaksana). Closeout 22 Oktober 2026: DONE lokal atas permintaan pengguna ("Tutup T29 sebagai DONE lokal sekarang (seperti T26/T27), smoke staging dicatat sebagai langkah berikutnya"). Smoke staging dengan Google nyata belum dijalankan. Task: T29 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T29-implementation-plan.md), [bukti](../verification/T29-google-oauth.md), [gate review](../verification/T29-gate-review.md), [runbook provider](../verification/T29-google-oauth-runbook.md). Tanpa migration (parity tetap 38).
+Status: Accepted. Keputusan produk §2.2 butir 6, 7, dan 9 disetujui pengguna di chat pada 21 Oktober 2026: "Setuju dengan §2.2 butir 6, 7, dan 9 seperti di plan T29." Gate review 22 Oktober 2026 PASS tanpa P0-P2 (independensi terbatas: reviewer sama dengan pelaksana). Closeout 22 Oktober 2026: DONE lokal atas permintaan pengguna ("Tutup T29 sebagai DONE lokal sekarang (seperti T26/T27), smoke staging dicatat sebagai langkah berikutnya"). Smoke staging dengan Google nyata dijalankan 25 Oktober 2026 (lihat pembaruan di akhir). Task: T29 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T29-implementation-plan.md), [bukti](../verification/T29-google-oauth.md), [gate review](../verification/T29-gate-review.md), [runbook provider](../verification/T29-google-oauth-runbook.md). Tanpa migration (parity tetap 38).
 
 Nomor: 0038 dipakai draft decision T28 di branch `claude/t28-import-mode-choice`. Bila urutan merge berbeda, nomor dicek ulang saat merge.
 
@@ -59,3 +59,7 @@ RV1 menggantikan batas waktu klasifikasi pada keputusan #5: callback dengan code
 RV2 melengkapi keputusan #8: cookie niat nonkosong yang tidak cocok dengan user sesi, untuk profil complete, diarahkan ke /settings/profile?reauth=switched. Notice role=status pada kartu Privacy and account hanya memakai email session server, tidak membuka dialog dan tidak menghapus data. Profil provisional tetap menuju onboarding; cookie niat milik user sendiri tetap memakai jalur delete-account. Copy tersedia en dan id.
 
 Bukti pelaksana ada di [receipt Fase 4](../verification/T29-p3-phase4-regression.md). [Gate review remediation](../verification/T29-p3-gate-review.md) 22 Oktober 2026: PASS tanpa P0-P2 (pelaksana ChatGPT Sol 6.1, reviewer Claude); remediation DONE lokal. Pembaruan ini bukan bukti smoke Google nyata di staging.
+
+## Pembaruan 25 Oktober 2026 (smoke staging)
+
+Pemilik produk menjalankan runbook T29 di staging dengan Google nyata: 5.1-5.5 dan 5.7 lulus, 5.6 (opsional) tidak dijalankan. Batas pertama di *Batas yang diterima* kini terbukti untuk login, return path, batal, jalur penuh hapus akun Google, dan bentuk `amr` OAuth. Penautan akun (acceptance 7) terbukti dari UI, bukan dari query `auth.identities`. Tag image tidak dicatat. Bukti: [receipt Fase 7](../verification/T29-phase7-staging.md).

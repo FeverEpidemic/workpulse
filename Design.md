@@ -662,6 +662,10 @@ Illustration usage is minimal and reserved primarily for:
 - Onboarding
 - Empty states
 
+The published WorkPulse Design System (https://claude.ai/artifact/3xSj9rHCMG9U2msCqFdaR3) holds the tokens, component guidelines and live previews taken from the code. When it and this document differ on a value, `src/styles/tokens.css` and `src/app/globals.css` win.
+
+Design dials: **ENERGY 1 / RHYTHM 1 / MOTION 2**. Quiet surfaces with one sage accent; uniform work screens on purpose; functional motion only (section 28).
+
 ---
 
 ## 16.2 Logo
@@ -698,6 +702,19 @@ Rules:
 - Below 32px use the three-dot favicon, not the five-dot symbol.
 - Do not recolor the dots outside the sage ramp, add gradients or shadows, animate the
   dots on a loop, or fill in the blank day.
+
+---
+
+## 16.3 Intentional Patterns
+
+A few patterns that often read as generated UI are kept on purpose. Use them only for these reasons:
+
+- **Left stripe on quoted source text.** `.achievement-source-preview` (3px `--color-action-primary`) and the import excerpt `blockquote` (3px `--color-border-strong`) mark the user's own words, unchanged (section 32.4).
+- **Left stripe on a view notice.** `.timeline-notice` (4px `--color-action-primary` on `--color-bg-subtle`) explains why the current view is incomplete. It is a note about the view, not a status.
+- **Left stripe on evidence progress.** `.evidence-message` (3px `--color-info` on `--color-info-surface`) reports upload and screening progress without a bordered panel competing with the file rows.
+- **Equal cards for an unsteered choice.** The CV import mode dialog shows "With AI" and "Without AI" with the same border, size and secondary button.
+
+Do not add a left stripe anywhere else, and never to a card or list row.
 
 ---
 
@@ -742,13 +759,17 @@ Primary hover:
 
 --color-text-primary:    #1A211C;
 --color-text-secondary:  #59635C;
---color-text-tertiary:   #7D887F;
+--color-text-tertiary:   #657168;
 
 --color-border-default:  #DDE5DC;
 --color-border-strong:   #C9D5C8;
+--color-border-control:  #7B897E;
+--color-selection-bg:    #D1E0CC;
 ```
 
 The canvas may carry a very light sage tint while content surfaces remain predominantly white.
+
+Tertiary text was darkened from the original `#7D887F` so placeholders pass WCAG AA. `--color-border-default` is a decorative hairline (1.3:1); any control that needs a visible edge (inputs, selects, secondary buttons, chips) uses `--color-border-control` (3:1 or better).
 
 ---
 
@@ -764,11 +785,15 @@ Dark mode is required for MVP.
 
 --color-dark-text-primary:   #F1F5F2;
 --color-dark-text-secondary: #B6C0B8;
---color-dark-text-tertiary:  #8F9B92;
+--color-dark-text-tertiary:  #A8B3AA;
 
 --color-dark-border:      #2B352E;
 --color-dark-border-strong:#3A463D;
+--color-dark-border-control:#6A796F;
+--color-dark-selection-bg: #435E45;
 ```
+
+In code these are the same token names as light, redefined under `[data-theme="dark"]` in `src/styles/tokens.css`. Dark actions use `--color-primary-400` with `#111613` labels.
 
 Avoid pure black except when required for media or system contexts.
 
@@ -776,12 +801,14 @@ Avoid pure black except when required for media or system contexts.
 
 ## 17.4 Semantic Colors
 
-```css
---color-success: #3F7A55;
---color-info:    #4D6F91;
---color-warning: #A36D24;
---color-danger:  #B44A4A;
-```
+Each semantic color is a triple: text, `-surface` fill and `-border` edge. The shipped values (darkened from the first draft so text passes AA on its surface):
+
+| Token | Light | Dark |
+| --- | --- | --- |
+| `--color-success` / `-surface` / `-border` | `#27623B` / `#EDF6EF` / `#C8DFCE` | `#92C99E` / `#1E3124` / `#375640` |
+| `--color-warning` / `-surface` / `-border` | `#80530F` / `#FFF7E9` / `#EAD7AD` | `#EDC27D` / `#3A2D1C` / `#5B472C` |
+| `--color-danger` / `-surface` / `-border` | `#9B3030` / `#FFF1F0` / `#EDC6C3` | `#F0A3A3` / `#3A2221` / `#623A38` |
+| `--color-info` / `-surface` / `-border` | `#3E5F84` / `#EEF4FA` / `#D1DEEC` | `#A5C1E4` / `#1E2E40` / `#344C67` |
 
 Semantic colors must always be paired with at least one of:
 
@@ -947,16 +974,12 @@ Do not give every card a strong shadow.
 
 # 22. Iconography
 
-Use one consistent icon family.
+Use one consistent icon family: **Lucide** (`lucide-react`). Its even stroke and plain geometry match the quiet visual direction and stay legible at 18px.
 
-Preferred visual character:
-
-- Simple
-- Geometric
-- Filled where useful
-- Recognizable at small sizes
-
-Technology is intentionally not locked.
+- Stroke 1.8 at 18px in desktop navigation and buttons; 20px in the mobile header and sheet close; 22px in the tab bar (stroke 2.4 when current).
+- Pick each icon for its meaning; navigation icons are fixed per destination (see the design system's Iconography section).
+- Icons are `aria-hidden`; the adjacent text or `aria-label` carries the meaning.
+- No sparkle or magic icons for AI, and no emoji in errors, destructive flows or dense data views.
 
 Icons that are not immediately understandable must provide a tooltip on desktop.
 
@@ -1024,9 +1047,11 @@ Keyboard focus must be highly visible.
 Recommended focus treatment:
 
 ```css
-outline: 2px solid var(--color-primary-500);
+outline: 2px solid var(--color-focus-ring); /* primary-700 light, primary-300 dark */
 outline-offset: 2px;
 ```
+
+`--color-focus-ring` is at least 6.8:1 on canvas and surface in both themes. `--color-primary-500` was too light (3.4:1 on white).
 
 Focus behavior must support keyboard navigation throughout primary workflows.
 
@@ -1230,9 +1255,9 @@ Responsive behavior should be defined by **content behavior**, not rigid device 
 Use sensible implementation breakpoints, but preserve these rules:
 
 ### Compact width
-- Drawer navigation
+- Bottom tab bar navigation (section 4.3), at 880px and below in code
 - Single-column content
-- Floating Add Activity
+- Quick log as the tab bar's + slot, not a floating button
 - Cards become full width
 - Secondary detail collapses
 - Touch-first actions

@@ -18,6 +18,10 @@ Berikutnya: review dan merge PR T31, lalu cek kapsul di iPhone nyata (safe area 
 
 [Rencana](verification/T31-implementation-plan.md), [bukti](verification/T31-floating-tab-bar.md), [gate review](verification/T31-gate-review.md), receipt [Fase 0](verification/T31-phase0-baseline.md) sampai [3](verification/T31-phase3-regression.md).
 
+## Smoke hosted lewat browser: 26 Oktober 2026
+
+Pengujian terarah pengguna pada `myworkpulse.my.id`: import DOCX `rules` sampai commit satu experience TEST lulus (nol job AI); export saved revision 10 sampai download PDF dua halaman A4 lulus, enam anchor teks cocok dan kedua halaman diperiksa; evidence bersih sampai Ready/download dengan hash identik lulus; kontrol EICAR dalam DOCX ditolak dan objeknya dibersihkan (receipt database read-only). Varian PDF dengan signature EICAR setelah `%%EOF` justru dinilai clean dan memerlukan investigasi; engine/config scanner belum diperiksa. Pengguna mengizinkan akun saat ini dan pencabutan consent AI; consent kini mati, satu experience dan satu activity TEST dibiarkan untuk inspeksi, master CV tidak diedit. Tes hapus akun dilewati sesuai instruksi. Backup, p95, konfigurasi Auth, dan tag image belum diverifikasi. Bukan penutupan authoritative blocker/gate. [Receipt dan batas bukti](verification/hosted-browser-smoke-2026-10-26.md).
+
 ## T30 Animasi dan loading: DONE lokal, 23 Oktober 2026
 
 Status T30: **DONE** (acceptance lokal). Tombol yang ditekan mengecil singkat, tombol yang menunggu server menampilkan spinner dengan label dan lebar tetap dan tidak bisa dikirim dua kali. Skeleton berdenyut tanpa gradient, setiap halaman loading menampilkan teks, dan setelah 8 detik muncul catatan dengan tombol muat ulang. Link sidebar dan tab bar yang diklik menampilkan pending sampai halaman tampil. Job AI, import, dan export memakai `ProgressStatus` (tahap, lama menunggu, catatan bila lambat, tanpa persentase). Modal, sheet, backdrop, dan toast punya transisi masuk/keluar; aktivitas baru dari Quick log diberi highlight sekali; konten halaman masuk singkat hanya pada navigasi di dalam app. Reduced motion mengganti spinner dengan ikon statis dan tetap menampilkan teks status.
@@ -48,7 +52,7 @@ Status remediation: **DONE** (acceptance lokal). Menutup temuan gate T29 N1, N2,
 - Belum dijalankan: smoke staging dengan Google nyata (N5); `test:e2e:m5`, `ui` (jalur tidak berubah); NVDA, WebKit.
 - Risiko dan follow-up: R1 flaky `auth-google`; R2 environment proses pelaksana sempat membawa `SUPABASE_URL` hosted (ditolak karena kunci lokal; perlu penjaga URL lokal di helper E2E); R4 komentar `hasOAuthMethod`; R5 test `switched` mengubah locale fixture bersama tanpa `finally`.
 
-Berikutnya: merge PR remediation. Smoke staging T29 tetap menunggu pemilik produk (runbook T29). R1, R2, R4, R5 dapat digabung menjadi satu follow-up kecil.
+Berikutnya: merge PR remediation. Smoke staging T29 dijalankan pemilik produk 25 Oktober 2026 (lihat entry T29). R1, R2, R4, R5 dapat digabung menjadi satu follow-up kecil.
 
 [Plan](verification/T29-p3-remediation-plan.md), [gate review](verification/T29-p3-gate-review.md), receipt [Fase 0](verification/T29-p3-phase0-baseline.md) sampai [4](verification/T29-p3-phase4-regression.md).
 
@@ -62,10 +66,11 @@ Status T29: **DONE** (acceptance lokal). S01 punya tombol **Continue with Google
 - File: `src/server/auth/{oauth-session,adapter,actions,recovery-session}.ts`, `src/server/supabase/config.ts`, `src/app/auth/confirm/route.ts`, `src/app/sign-in/page.tsx`, `src/app/(workspace)/settings/profile/page.tsx`, `src/features/auth/sign-in-client.tsx`, `src/features/profile/{onboarding-form,profile-workspace}.tsx`, `src/features/account/*`, `src/domain/account/deletion.ts`, copy en/id, CSS; `supabase/config.toml` (`[auth.external.google]`, credential dari env), `.env.example`, baris variabel di runbook T25; suite baru `pnpm test:e2e:auth-google` (config port 3016, flag menyala).
 - Keputusan: [decision 0039](decisions/0039-t29-google-oauth.md) membuka batas OAuth decision 0003 untuk Google saja. Plan menulis 0038, tetapi nomor itu dipakai draft decision T28; dicek ulang saat merge. Tanpa migration (parity tetap 38), tanpa dependency baru, tanpa logo merek.
 - Checks (gate review, worktree bersih `363293f`): lint, typecheck, build, worker check exit 0; unit 139/1322; E2E `auth-google` 13, `auth` 1, `account-deletion` 7; integration `account-deletion` 15/15; `git diff --check` bersih. Receipt Fase 5: E2E `ui` 1, `release` 21, `m5` 1 dengan flag mati dan menyala.
-- Belum dijalankan: smoke staging dengan Google nyata (acceptance 7 penautan akun, bentuk `amr` OAuth, jalur penuh hapus akun Google); WebKit/Safari; NVDA manusia; `db:test` (tanpa migration; database lokal bersama gagal 3 assertion karena M5-N3).
+- Smoke staging dengan Google nyata, 25 Oktober 2026 ([receipt Fase 7](verification/T29-phase7-staging.md)): runbook 5.1-5.5 dan 5.7 lulus, termasuk jalur penuh hapus akun Google dan bentuk `amr` OAuth. Penautan akun (acceptance 7) terbukti dari UI tanpa query `auth.identities`; 5.6 tidak dijalankan; tag image tidak dicatat.
+- Belum dijalankan: WebKit/Safari; NVDA manusia; `db:test` (tanpa migration; database lokal bersama gagal 3 assertion karena M5-N3).
 - Risiko: N1 klasifikasi sesi OAuth bergantung jendela waktu `amr`; N2 memilih akun Google lain saat reautentikasi mengganti session tanpa pemberitahuan; N3 E2E Google bergantung pada blok Google di stack lokal bersama dan pin versi image `supabase/.temp` saat restart dari worktree (tanpa itu Storage gagal `42P10`).
 
-Berikutnya: review dan merge PR T29. Lalu pemilik produk menjalankan [runbook T29](verification/T29-google-oauth-runbook.md) di staging (OAuth client, provider di dashboard, flag di `web.env`, smoke 5.1-5.7, hapus akun uji) sebelum flag dinyalakan untuk pilot. Verifikasi brand consent screen Google dan URL kebijakan privasi masuk checklist production.
+Berikutnya: review dan merge PR T29. Lalu pemilik produk menjalankan [runbook T29](verification/T29-google-oauth-runbook.md) di staging (OAuth client, provider di dashboard, flag di `web.env`, smoke 5.1-5.7, hapus akun uji) sebelum flag dinyalakan untuk pilot (smoke selesai 25 Oktober 2026). Verifikasi brand consent screen Google dan URL kebijakan privasi masuk checklist production.
 
 [Rencana](verification/T29-implementation-plan.md), [bukti](verification/T29-google-oauth.md), [gate review](verification/T29-gate-review.md), receipt [Fase 0](verification/T29-phase0-baseline.md) sampai [6](verification/T29-phase6-docs.md).
 
