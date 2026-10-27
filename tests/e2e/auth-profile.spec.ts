@@ -367,8 +367,8 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await partialDateForm.locator('[name="role_title"]').fill(partialDateRole);
   await partialDateForm.locator('[name="start_precision"]').selectOption("day");
   await partialDateForm.locator('[name="start_year"]').fill("2021");
-  await partialDateForm.locator('[name="start_month"]').fill("2");
-  await partialDateForm.locator('[name="start_day"]').fill("30");
+  await partialDateForm.locator('[name="start_month"]').selectOption("2");
+  await partialDateForm.locator('[name="start_day"]').selectOption("30");
   await partialDateForm.getByRole("button", { name: "Save record" }).click();
   const partialDayError = partialDateForm.locator(".field-error").filter({ hasText: "Enter a complete date for the selected precision." });
   await expect(partialDayError).toHaveCount(1);
@@ -379,7 +379,7 @@ test("email auth, onboarding, profile recovery, conflict recovery, and foundatio
   await expect(partialDateForm.locator('[name="start_year"]')).toHaveValue("2021");
   await expect(partialDateForm.locator('[name="start_month"]')).toHaveValue("2");
   await expect(partialDateForm.locator('[name="start_day"]')).toHaveValue("30");
-  await partialDateForm.locator('[name="start_day"]').fill("28");
+  await partialDateForm.locator('[name="start_day"]').selectOption("28");
   await partialDateForm.getByRole("button", { name: "Save record" }).click();
   await expect(partialDateForm.getByRole("status")).toContainText("Record saved.");
   await deleteRecord(experiences, `${partialDateRole} · ${partialDateOrganization}`, true);

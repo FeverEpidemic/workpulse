@@ -95,7 +95,7 @@ test("Projects create, context prefill, completed warning, and dependency delete
     await createForm.locator('[name="status"]').selectOption("completed");
     await createForm.locator('[name="end_precision"]').selectOption("month");
     await createForm.locator('[name="end_year"]').fill("2024");
-    await createForm.locator('[name="end_month"]').fill("6");
+    await createForm.locator('[name="end_month"]').selectOption("6");
     await createForm.getByRole("button", { name: "Create project", exact: true }).click();
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}/i);
     await expect(page.getByText("Needs outcome", { exact: true }).first()).toBeVisible();

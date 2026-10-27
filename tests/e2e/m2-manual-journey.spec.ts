@@ -247,7 +247,9 @@ test("M2 manual journey: note → project → achievement → private evidence �
     await page.keyboard.type("Month");
     await expect(projectForm.locator('[name="start_precision"]')).toHaveValue("month");
     await keyboardType(page, projectForm.locator('[name="start_year"]'), "2026");
-    await keyboardType(page, projectForm.locator('[name="start_month"]'), "9");
+    await tabTo(page, projectForm.locator('[name="start_month"]'));
+    await page.keyboard.type("September");
+    await expect(projectForm.locator('[name="start_month"]')).toHaveValue("9");
     await expectAiFree(page, "project create");
     await keyboardPress(page, projectForm.getByRole("button", { name: "Create project", exact: true }));
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}/i);

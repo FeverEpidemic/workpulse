@@ -20,6 +20,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Select, Textarea } from "@/components/ui/field-control";
 import { RevisionConflict } from "@/components/ui/revision-conflict";
 import { clearUnsavedForm, useUnsavedForm } from "@/components/ui/unsaved-changes";
+import { DAY_OPTIONS, monthOptions } from "@/domain/dates/date-part-options";
 import type { ProjectExperienceSummary } from "@/domain/project/contracts";
 import type { ProjectRow } from "@/domain/database-types";
 import { t, type Locale } from "@/i18n/messages";
@@ -49,29 +50,35 @@ function DateFields({ prefix, label, date, precision, formId, state, locale }: {
   const helpId = `${formId}-${prefix}-help`;
   const dateError = fieldErrorId(formId, `${prefix}_date`);
   return (
-    <fieldset className="space-y-2">
+    <fieldset className="date-fields space-y-2">
       <legend className="field-label">{label}</legend>
-      <div className="grid gap-2 sm:grid-cols-4">
-        <label className="text-xs font-medium">
+      <div className="date-fields-grid">
+        <label className="date-part-precision text-xs font-medium">
           {t(locale, "profile.precision")}
-          <Select className="mt-1" name={`${prefix}_precision`} defaultValue={parts.precision} {...fieldErrorControlProps(state, `${prefix}_date`, dateError, [helpId])}>
+          <Select className="date-precision mt-1" name={`${prefix}_precision`} defaultValue={parts.precision} {...fieldErrorControlProps(state, `${prefix}_date`, dateError, [helpId])}>
             <option value="unknown">{t(locale, "profile.unknownDate")}</option>
             <option value="year">{t(locale, "profile.year")}</option>
             <option value="month">{t(locale, "profile.month")}</option>
             <option value="day">{t(locale, "profile.day")}</option>
           </Select>
         </label>
-        <label className="text-xs font-medium">
+        <label className="date-part-year text-xs font-medium">
           {t(locale, "profile.year")}
           <Input className="mt-1" name={`${prefix}_year`} inputMode="numeric" pattern="[0-9]{4}" maxLength={4} defaultValue={parts.year} aria-label={`${label}: ${t(locale, "profile.year")}`} />
         </label>
-        <label className="text-xs font-medium">
+        <label className="date-part-month text-xs font-medium">
           {t(locale, "profile.month")}
-          <Input className="mt-1" name={`${prefix}_month`} inputMode="numeric" pattern="[0-9]{1,2}" maxLength={2} defaultValue={parts.month} aria-label={`${label}: ${t(locale, "profile.month")}`} />
+          <Select className="mt-1" name={`${prefix}_month`} defaultValue={parts.month} aria-label={`${label}: ${t(locale, "profile.month")}`}>
+            <option value="">—</option>
+            {monthOptions(locale).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </Select>
         </label>
-        <label className="text-xs font-medium">
+        <label className="date-part-day text-xs font-medium">
           {t(locale, "profile.day")}
-          <Input className="mt-1" name={`${prefix}_day`} inputMode="numeric" pattern="[0-9]{1,2}" maxLength={2} defaultValue={parts.day} aria-label={`${label}: ${t(locale, "profile.day")}`} />
+          <Select className="mt-1" name={`${prefix}_day`} defaultValue={parts.day} aria-label={`${label}: ${t(locale, "profile.day")}`}>
+            <option value="">—</option>
+            {DAY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </Select>
         </label>
       </div>
       <p id={helpId} className="field-help">{t(locale, "profile.dateHelp")}</p>

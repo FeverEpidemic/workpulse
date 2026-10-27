@@ -10,6 +10,7 @@ import { useUnsavedForm } from "@/components/ui/unsaved-changes";
 import { useCreateOperationKey } from "@/components/forms/operation-key";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { useSessionDraft } from "@/components/forms/session-draft";
+import { DAY_OPTIONS, monthOptions } from "@/domain/dates/date-part-options";
 import type {
   CertificationRow,
   EducationRow,
@@ -52,13 +53,13 @@ function DateFields({ record, prefix, formId, label, locale, state }: { record?:
     : "";
   const day = datePrecision === "day" ? String(Number(date.slice(8, 10))) : "";
   return (
-    <fieldset className="space-y-2">
+    <fieldset className="date-fields space-y-2">
       <legend className="field-label">{label}</legend>
-      <div className="grid gap-2 sm:grid-cols-4">
-        <div className="sm:col-span-1">
+      <div className="date-fields-grid">
+        <div className="date-part-precision">
           <label className="text-xs font-medium" htmlFor={`${formId}-${prefix}-precision`}>
             {t(locale, "profile.precision")}
-            <select className="field-input mt-1" id={`${formId}-${prefix}-precision`} name={`${prefix}_precision`} defaultValue={datePrecision} {...fieldErrorControlProps(state, `${prefix}_precision`, precisionErrorId, [helpId])}>
+            <select className="field-input date-precision mt-1" id={`${formId}-${prefix}-precision`} name={`${prefix}_precision`} defaultValue={datePrecision} {...fieldErrorControlProps(state, `${prefix}_precision`, precisionErrorId, [helpId])}>
               <option value="unknown">{t(locale, "profile.unknownDate")}</option>
               <option value="year">{t(locale, "profile.year")}</option>
               <option value="month">{t(locale, "profile.month")}</option>
@@ -67,24 +68,30 @@ function DateFields({ record, prefix, formId, label, locale, state }: { record?:
           </label>
           <FieldError state={state} field={`${prefix}_precision`} locale={locale} id={precisionErrorId} />
         </div>
-        <div>
+        <div className="date-part-year">
           <label className="text-xs font-medium">
             {t(locale, "profile.year")}
             <input className="field-input mt-1" name={`${prefix}_year`} inputMode="numeric" pattern="[0-9]{4}" maxLength={4} defaultValue={year} aria-label={`${label}: ${t(locale, "profile.year")}`} {...fieldErrorControlProps(state, `${prefix}_year`, yearErrorId, [helpId])} />
           </label>
           <FieldError state={state} field={`${prefix}_year`} locale={locale} id={yearErrorId} />
         </div>
-        <div>
+        <div className="date-part-month">
           <label className="text-xs font-medium">
             {t(locale, "profile.month")}
-            <input className="field-input mt-1" name={`${prefix}_month`} inputMode="numeric" pattern="[0-9]{1,2}" maxLength={2} defaultValue={month} aria-label={`${label}: ${t(locale, "profile.month")}`} {...fieldErrorControlProps(state, `${prefix}_month`, monthErrorId, [helpId])} />
+            <select className="field-input mt-1" name={`${prefix}_month`} defaultValue={month} aria-label={`${label}: ${t(locale, "profile.month")}`} {...fieldErrorControlProps(state, `${prefix}_month`, monthErrorId, [helpId])}>
+              <option value="">—</option>
+              {monthOptions(locale).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
           </label>
           <FieldError state={state} field={`${prefix}_month`} locale={locale} id={monthErrorId} />
         </div>
-        <div>
+        <div className="date-part-day">
           <label className="text-xs font-medium">
             {t(locale, "profile.day")}
-            <input className="field-input mt-1" name={`${prefix}_day`} inputMode="numeric" pattern="[0-9]{1,2}" maxLength={2} defaultValue={day} aria-label={`${label}: ${t(locale, "profile.day")}`} {...fieldErrorControlProps(state, `${prefix}_day`, dayErrorId, [helpId])} />
+            <select className="field-input mt-1" name={`${prefix}_day`} defaultValue={day} aria-label={`${label}: ${t(locale, "profile.day")}`} {...fieldErrorControlProps(state, `${prefix}_day`, dayErrorId, [helpId])}>
+              <option value="">—</option>
+              {DAY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
           </label>
           <FieldError state={state} field={`${prefix}_day`} locale={locale} id={dayErrorId} />
         </div>

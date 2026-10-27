@@ -98,6 +98,29 @@ a {
   font-weight: 600;
 }
 
+/* Parts the chosen precision does not use stay in the form (so drafts keep them) but leave view and tab order. */
+.date-fields:has(.date-precision option[value="unknown"]:checked) :is(.date-part-year, .date-part-month, .date-part-day),
+.date-fields:has(.date-precision option[value="year"]:checked) :is(.date-part-month, .date-part-day),
+.date-fields:has(.date-precision option[value="month"]:checked) .date-part-day {
+  display: none;
+}
+
+/* Wraps instead of truncating: month names and "Unknown" need more room than a fixed four-column split gives. */
+.date-fields-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.date-fields-grid > * {
+  min-width: 0;
+}
+
+.date-fields-grid > .date-part-precision { flex: 1 1 10rem; }
+.date-fields-grid > .date-part-year { flex: 1 1 6rem; }
+.date-fields-grid > .date-part-month { flex: 1 1 9rem; }
+.date-fields-grid > .date-part-day { flex: 1 1 5rem; }
+
 .field-help {
   margin-top: var(--space-1);
   color: var(--color-text-secondary);
@@ -954,7 +977,7 @@ a {
 .project-form-grid,
 .project-date-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
