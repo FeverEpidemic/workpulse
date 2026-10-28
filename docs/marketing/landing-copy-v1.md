@@ -2,7 +2,7 @@
 
 Copy untuk T32, `id` dan `en` berdampingan. Urutan mengikuti §3.2 plan T32 dan [mockup](https://claude.ai/artifact/D1ugHFSU15aeh6bCG2mK9G). Gaya `id`: santai seperti reels ("kamu", "gak", "udah"). Gaya `en`: polos dan langsung. Semua nama orang, perusahaan, dan isi kerja di data contoh fiktif.
 
-Status: **menunggu persetujuan pemilik produk.** Setelah disetujui, teks ini masuk ke `src/i18n/messages.ts` dengan prefix `landing.` dan `legal.`.
+Status: **disetujui pemilik produk, 29 Oktober 2026.** Teks ini masuk ke `src/i18n/messages.ts` dengan prefix `landing.` dan `legal.`.
 
 ## Metadata
 
@@ -42,7 +42,7 @@ Tombol toggle menampilkan `ID` dan `EN`. Nama lengkapnya dipakai sebagai `aria-l
 | Bagian | id | en |
 | --- | --- | --- |
 | Meta Activity | Kam, 14 Agu 2025 · Retur Gudang | Thu, 14 Aug 2025 · Warehouse returns |
-| Catatan yang diketik (≤ 90 karakter) | Cek data retur bareng tim gudang. Banyak yang balik karena label alamat kepotong. | Went through returns with the warehouse team. Many came back because address labels were cut off. |
+| Catatan yang diketik (≤ 90 karakter) | Cek data retur bareng tim gudang. Banyak yang balik karena label alamat kepotong. | Checked returns with the warehouse team. Many were cut-off address labels. |
 | Label bawah Activity | Activity · disimpan apa adanya | Activity · saved as written |
 | Penghubung | AI usulin achievement | AI suggests an achievement |
 | Badge usulan | Usulan AI | AI suggestion |
@@ -52,7 +52,7 @@ Tombol toggle menampilkan `ID` dan `EN`. Nama lengkapnya dipakai sebagai `aria-l
 | Tombol | Konfirmasi · Edit dulu | Confirm · Edit first |
 | Status akhir | Disetujui | Approved |
 
-Versi `en` catatan yang diketik 96 karakter. Kalau batas 90 karakter harus dipegang, pakai: "Checked returns with the warehouse team. Many were cut-off address labels." (74).
+Catatan yang diketik: `id` 82 karakter, `en` 74 karakter. Versi `en` 96 karakter ("Went through returns with the warehouse team. Many came back because address labels were cut off.") tidak dipakai karena melewati batas 90.
 
 ## Panel demo
 
@@ -94,7 +94,7 @@ Versi `en` catatan yang diketik 96 karakter. Kalau batas 90 karakter harus dipeg
 | Tombol | Simpan activity | Save activity |
 | Hasil | Template label baru diusulkan ke supervisor dan diuji di satu lini packing. | A new label template was proposed to the supervisor and tried on one packing line. |
 | Kalimat CV | Menganalisis data retur pengiriman dan mengusulkan perbaikan template label alamat bersama tim gudang. | Analysed shipping return data and proposed a fix to the address label template with the warehouse team. |
-| Kutipan sumber | Catatan asli: "Cek data retur bareng tim gudang…" | Original note: "Went through returns with the warehouse team…" |
+| Kutipan sumber | Catatan asli: "Cek data retur bareng tim gudang…" | Original note: "Checked returns with the warehouse team…" |
 | CV: nama dan peran | Rani Prameswari · Operations Analyst · Surabaya | Rani Prameswari · Operations Analyst · Surabaya |
 | CV: pengalaman | Operations Analyst · PT Contoh Logistik; Staf Data Entry · PT Contoh Niaga | Operations Analyst · PT Contoh Logistik; Data Entry Staff · PT Contoh Niaga |
 | CV: pendidikan | S1 Manajemen · Universitas Contoh | Bachelor of Management · Universitas Contoh |

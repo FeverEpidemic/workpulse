@@ -58,10 +58,16 @@ Dicek manual di copy deck kedua bahasa: tidak ada "ATS", testimoni, persen, "x l
 
 Tidak ada kode yang berubah, jadi tidak ada test yang dijalankan.
 
+## Persetujuan
+
+29 Oktober 2026, pengguna: "Setuju, lanjut". Yang disetujui: copy deck, kedua terjemahan legal, keputusan 1-4, dan pemecahan `ActivityListRow`/`AchievementListRow` dengan `href` opsional (Fase 0, menyentuh stop condition §8 butir 3).
+
+Untuk keputusan 1, pengguna tidak memilih versi `en`. Yang dipakai versi 74 karakter karena acceptance 10 membatasi catatan ≤ 90 karakter. Copy deck dan kutipan sumber di panel sudah disesuaikan.
+
 ## Blocker
 
-Menunggu persetujuan pengguna atas copy deck, kedua terjemahan, dan keputusan 1-4 di atas (stop wajib akhir Fase 1).
+Tidak ada.
 
 ## Berikutnya
 
-Setelah disetujui: Fase 2 (route, locale, mode sign-in).
+Fase 2 (route, locale, mode sign-in).
