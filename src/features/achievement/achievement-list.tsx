@@ -35,7 +35,6 @@ export function AchievementList({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="achievement-results-title" className="sr-only">{t(locale, "achievement.description")}</h2>
         <p className="field-help" role="status">{t(locale, "achievement.pageCount", { count: items.length })}</p>
-        <Link className="button-primary" href={`/achievements/new?${new URLSearchParams({ returnTo }).toString()}`}>{t(locale, "achievement.add")}</Link>
       </div>
       <ul className="achievement-list" aria-label={t(locale, "achievement.description")}>
         {items.map(({ achievement, projectTitle, experienceLabel, skills }) => {
