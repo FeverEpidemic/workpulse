@@ -5,7 +5,7 @@
 - Tanggal: 28 Oktober 2026
 - Status saat plan ditulis: **TODO**.
 - Dependensi: T03 (auth dan locale), T04 (design system), T23 (hapus akun), T29 (Google), T30 (motion), T31 (tab bar) **DONE** di `main` (`19caca7`).
-- Asal task: permintaan terarah pengguna. T32 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Keputusan produk berasal dari interview 20 Oktober 2026 (`docs/marketing/landing-page-brief-v1.md`), jawaban item terbuka dan interview referensi parloa.com pada 28 Oktober 2026 (dicatat di brief yang sama).
+- Asal task: permintaan terarah pengguna. T32 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Keputusan produk berasal dari interview 20 Oktober 2026 (`docs/marketing/landing-page-brief-v1.md`), jawaban item terbuka, interview referensi parloa.com, dan interview animasi pada 28 Oktober 2026 (semuanya dicatat di brief yang sama).
 - Eksekutor: satu agent Claude; model ditetapkan pengguna saat mulai. Semua fase berurutan tanpa delegasi.
 - Reviewer: **Claude** (Opus 5.5). Gate review read-only wajib setelah Fase 5; Fase 6 (draft dokumen) setelah gate.
 - antislop: mode **during** (dipilih pengguna 28 Oktober 2026). Pelaksana membaca `antislop`, `antislop-ui`, `antislop-copywriting`, `antislop-human`, dan `antislop-layoutmobile` dari `.claude/skills/<nama>/SKILL.md`. Delivery Gate dijalankan di Fase 1 (copy) dan Fase 5 (UI).
@@ -17,7 +17,7 @@
 
 **Goal:** Pengunjung yang belum login dan membuka `/` melihat landing page WorkPulse, bukan redirect ke `/sign-in`. Landing bercerita seperti reels (mau update CV, lupa setahun kemarin ngerjain apa), menunjukkan potongan UI asli dengan data contoh berlabel "contoh", dan mengajak daftar pilot gratis di `/sign-in` dalam mode buat akun. Pengguna yang sudah login tetap diarahkan seperti sekarang. Halaman `/privacy` dan `/terms` tersedia dalam Indonesia dan English, ditandai draf sampai isian legal lengkap.
 
-**Architecture:** `src/app/page.tsx` merender landing bila `context.user` kosong; cabang login tidak berubah. Landing adalah Server Component di `src/features/marketing/` yang memakai `t(locale, ...)` dan komponen app yang sudah ada (`ActivityList`, `AchievementList`, `CvPreview`) dengan data fiktif statis. Satu Client Component kecil untuk panel demo bertab, satu untuk reveal saat scroll. Locale kunjungan pertama ditambah dari header `Accept-Language` di `getRequestLocale` (profil, lalu cookie, lalu header). Toggle bahasa memakai `saveLocalePreference` yang ada. Halaman legal adalah route statis yang merender konten terstruktur dari modul TS. Tidak ada migration, worker, atau dependency baru.
+**Architecture:** `src/app/page.tsx` merender landing bila `context.user` kosong; cabang login tidak berubah. Landing adalah Server Component di `src/features/marketing/` yang memakai `t(locale, ...)` dan komponen app yang sudah ada (`ActivityList`, `AchievementList`, `CvPreview`) dengan data fiktif statis. Gerak ditangani beberapa Client Component kecil: cerita hero, panel demo bertab dengan titik langkah, reveal bertahap saat scroll, dan toggle bahasa. Semuanya memakai CSS transition dan `IntersectionObserver`; server selalu merender keadaan akhir, jadi tanpa JavaScript atau dengan reduced motion halaman tampil lengkap. Locale kunjungan pertama ditambah dari header `Accept-Language` di `getRequestLocale` (profil, lalu cookie, lalu header). Toggle bahasa memakai `saveLocalePreference` yang ada. Halaman legal adalah route statis yang merender konten terstruktur dari modul TS. Tidak ada migration, worker, atau dependency baru.
 
 **Tech stack:** Next.js 16.3.5 App Router, React 19.3.0, CSS di `globals.css` dengan token `tokens.css`, Plus Jakarta Sans saja, lucide-react, Vitest env `node` (`renderToStaticMarkup` dan CSS sebagai teks), Playwright + axe-core. **Tidak ada dependency baru** (tanpa parser Markdown, tanpa library animasi, tanpa font tambahan).
 
@@ -32,6 +32,7 @@ Kutipan sumber yang mengikat (parafrase ringkas):
 - **Brief, Keputusan:** landing di `/` untuk tamu; bahasa `en`/`id`, kunjungan pertama ikut bahasa browser (Indonesia dapat `id`, sisanya `en`) dengan toggle; status "Pilot gratis" tanpa menyebut freemium; CTA daftar langsung tanpa waitlist atau kuota; section video disembunyikan sampai file ada; bukti visual dari komponen app dengan data fiktif berlabel "contoh"; AI tidak mengubah apa pun tanpa persetujuan, catatan asli tetap tersimpan, akun bisa dihapus; nama provider AI dan lokasi server tidak disebut; tanpa FAQ.
 - **Brief, Pembuat:** Ilham Aisy Rasyid, paragraf pembuat dari pengguna: "Semoga dengan adanya tools ini, kalian jadi tidak lupa apa aja sih yang pernah dikerjakan selama kalian bekerja". Email `halo@myworkpulse.my.id`. Teks paragraf boleh dirapikan ejaannya untuk versi `id` dan diterjemahkan untuk `en`, tapi maknanya tetap; tampilkan hasilnya ke pengguna di Fase 1.
 - **Brief, Referensi parloa.com:** ambil UI asli melayang di hero, label kecil di atas judul, panel demo produk bertab. Jangan ambil foto/video sinematik, serif, aksen oranye, testimoni, rating, angka hasil, daftar alasan bernomor.
+- **Brief, Motion (interview animasi):** cerita hero sekali jalan dengan tombol putar ulang; tab panel demo geser mengikuti arah; isi section muncul bertahap; lima titik langkah terpisah dari logo; tempo tenang 200-300 ms; kartu UI terangkat saat hover, panah CTA bergeser, indikator toggle meluncur. Reduced motion dan tanpa JavaScript menampilkan keadaan akhir.
 - **Brief, Yang tidak boleh muncul:** klaim "lolos ATS" (yang boleh: satu kolom, teks asli); angka hasil, jumlah user, testimoni; nama merek pembanding; link nav ke halaman yang belum ada.
 - **Design.md §16.1:** tanpa gradient. **§16.2:** jangan animasikan titik logo dalam loop, jangan isi titik kosong. **§28.4:** reduced motion mematikan gerak, status tetap terbaca.
 - **AGENTS.md:** WCAG 2.2 AA, target sentuh 44 px, verifikasi 360 px dan 1440 px light/dark. Batas MVP tidak berubah; landing tidak menambah fitur produk.
@@ -49,14 +50,18 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 5. **CTA daftar.** Setiap CTA daftar menuju `/sign-in?mode=create-account`, dan halaman itu langsung menampilkan form buat akun (heading "Create account"/"Buat akun", input `#sign-up-email` terlihat). `/sign-in` tanpa parameter tetap mode masuk; nilai `mode` lain diabaikan. Link "Masuk" menuju `/sign-in`. Dibuktikan E2E dan unit parsing parameter; `test:e2e:auth` tetap lulus.
 6. **Isi sesuai brief.** Urutan section §3.2 terpenuhi. Teks halaman (en dan id) tidak memuat "ATS", "testimoni"/"testimonial", angka persen atau "x lebih", jumlah pengguna, nama provider AI, nama region/negara server, kata "freemium"/"berbayar"/"premium", "waitlist", atau "kuota". Section video tidak ada di DOM. Tidak ada FAQ. Setiap link internal di landing menuju route yang membalas 200. Dibuktikan unit (scan string pesan landing) dan E2E (crawl link).
 7. **Bukti visual dari komponen app.** Hero dan panel demo merender `ActivityList`, `AchievementList`, dan `CvPreview` (atau komponen app lain yang tercatat di Fase 0) dengan data fiktif, masing-masing dengan label "contoh"/"example" yang terlihat dan diumumkan screen reader. Data contoh tidak memuat nama orang nyata, perusahaan nyata, atau email nyata. Potongan UI tidak bisa memicu aksi app (tidak ada form, tombol submit, atau link ke route terlindungi di dalamnya). Dibuktikan unit (markup) dan E2E.
-8. **Panel demo bertab.** Tab Activity, Achievement, CV mengikuti pola ARIA tabs: `role="tablist"`, panah kiri/kanan berpindah tab, Home/End, `aria-selected`, satu panel terlihat. Tanpa JavaScript, ketiga panel tetap terbaca berurutan. Dibuktikan E2E (keyboard) dan unit (markup server).
-9. **Motion.** Section yang masuk layar mendapat satu fade dan geser vertikal ≤ 16 px dengan `--motion-normal` (atau token §28.5 yang ada) dan `--ease-out`, sekali saja. Dengan `reducedMotion: "reduce"` tidak ada transisi (durasi ≤ 0,01 ms) dan semua section langsung terlihat. Tanpa JavaScript, semua section terlihat (opacity 1). Logo tidak beranimasi. Dibuktikan E2E (computed style dan `javaScriptEnabled: false`) dan unit CSS.
-10. **Permukaan hangat tanpa aksen baru.** Hero dan minimal satu section jeda memakai token permukaan hangat §2.2.6 di light dan dark; CTA utama memakai `--color-action-primary`; tidak ada gradient, warna oranye, atau token aksen baru. Kontras teks di atas permukaan hangat ≥ 4,5:1 di kedua tema. Dibuktikan unit CSS, axe, dan pengukuran kontras di receipt.
-11. **Pembuat dan kontak.** Section pembuat menampilkan "Ilham Aisy Rasyid", paragraf yang disetujui di Fase 1, dan link `mailto:halo@myworkpulse.my.id`. Footer memuat Privasi, Syarat, dan kontak yang sama. Dibuktikan E2E.
-12. **Halaman legal.** `/privacy` dan `/terms` membalas 200 untuk tamu dan pengguna login, mengikuti locale yang sama dengan landing, merender seluruh bagian draf (12 bagian masing-masing) dengan heading berurutan, dan menampilkan label draf yang terlihat selama ada isian kosong (§2.2.9). Selama berstatus draf, kedua halaman punya `robots` `noindex`. Nama dan email pengelola sudah terisi. Dibuktikan unit (parity jumlah bagian dengan draf ID) dan E2E.
-13. **Responsif dan aksesibilitas.** Tanpa scroll horizontal dan tanpa teks terpotong di 360, 768, dan 1440 px; target sentuh ≥ 44 px; satu `h1`; landmark `header`, `main`, `footer`; link skip ke konten; axe tanpa pelanggaran WCAG 2.2 AA di landing, `/privacy`, dan `/terms` pada 360 dan 1440 px, light dan dark, en dan id. Dibuktikan E2E (masuk ke `test:e2e:release`).
-14. **Metadata.** `/` untuk tamu punya `title` dan `description` per locale dari copy Fase 1; Open Graph tetap memakai `src/app/opengraph-image.tsx`. Dibuktikan unit `generateMetadata` atau E2E membaca `<head>`.
-15. **Tidak ada regresi.** `test:e2e:release`, `test:e2e:auth`, `test:e2e:ui`, `test:e2e:m2`, dan unit yang ada lulus tanpa assertion dilemahkan. Test yang dulu mengandalkan redirect `/` → `/sign-in` untuk tamu diperbarui dengan alasan di receipt.
+8. **Panel demo bertab.** Tab Activity, Achievement, CV mengikuti pola ARIA tabs: `role="tablist"`, panah kiri/kanan berpindah tab, Home/End, `aria-selected`, satu panel terlihat. Pindah ke tab di kanan membuat panel baru masuk dari kanan (dan sebaliknya) dengan fade, `--motion-slow`; perpindahan cepat beruntun tidak menyisakan dua panel terlihat setelah transisi selesai. Fokus tetap di tab. Tanpa JavaScript, ketiga panel tetap terbaca berurutan. Dibuktikan E2E (keyboard, arah `transform` awal panel) dan unit (markup server).
+9. **Reveal bertahap.** Saat section masuk layar, anak bertanda `data-reveal-item` (judul, teks, UI) muncul berurutan dengan fade dan geser vertikal ≤ 16 px, jeda 80 ms antar item, durasi `--motion-slow` dan `--ease-out`, sekali per section. Section yang sudah di viewport saat mount langsung terlihat tanpa animasi. Tanpa JavaScript semua item terlihat (opacity 1). Logo tidak beranimasi. Dibuktikan E2E (computed style, urutan `transition-delay`, `javaScriptEnabled: false`) dan unit CSS.
+10. **Cerita hero.** Setelah load (JavaScript aktif, tanpa reduced motion), hero menjalankan urutan sekali: teks catatan Activity muncul seperti diketik, status tersimpan, kartu Achievement usulan AI masuk, lalu tanda disetujui. Total ≤ 3,5 detik, tidak berulang sendiri. Setelah selesai muncul tombol "Putar ulang"/"Replay" (≥ 44 × 44 px, bisa dengan keyboard) yang menjalankan urutan sekali lagi. Screen reader hanya menerima teks akhir (lapisan ketik `aria-hidden`, teks lengkap tersedia sejak awal); tidak ada `aria-live` yang mengumumkan tiap karakter. Server merender keadaan akhir; urutan dimulai dari keadaan awal hanya setelah hydration, tanpa kedip konten akhir ke awal yang terlihat (cerita dimulai sebelum paint pertama setelah hydration atau hero disembunyikan maksimal satu frame). Dibuktikan E2E (timeline lewat `page.clock`, keadaan akhir, tombol replay, aksesibilitas nama) dan unit (reducer urutan).
+11. **Titik langkah.** Deretan lima titik terpisah dari logo (bukan `BrandSymbol`) di panel demo menandai lima langkah alur: catat, AI usulkan, setujui, pilih ke CV, PDF. Tab Activity menyalakan titik 1, Achievement titik 1-3, CV titik 1-5; titik yang menyala berganti dengan transisi warna/ukuran `--motion-slow`. Status langkah juga tersedia sebagai teks (misalnya "Langkah 2-3 dari 5") dan tidak hanya lewat warna. Titik tidak bergerak dalam loop. Dibuktikan E2E dan unit markup.
+12. **Interaksi mikro.** Di pointer `hover: hover`, potongan UI naik 2 px dengan bayangan satu tingkat lebih tebal dari token yang ada; panah di CTA daftar bergeser 2-4 px saat hover dan `:focus-visible`; indikator toggle bahasa meluncur ke pilihan baru. Di perangkat sentuh kartu tidak terangkat. Dibuktikan unit CSS (media query, token) dan E2E (computed style setelah hover).
+13. **Reduced motion dan tanpa JavaScript.** Dengan `reducedMotion: "reduce"`: hero langsung di keadaan akhir tanpa efek ketik dan tanpa tombol replay, tab berganti tanpa geser, reveal tidak terjadi, titik berganti tanpa transisi, kartu tidak terangkat; durasi transisi ≤ 0,01 ms. Dengan `javaScriptEnabled: false`: hero di keadaan akhir, semua panel dan section terlihat. Dibuktikan E2E.
+14. **Permukaan hangat tanpa aksen baru.** Hero dan minimal satu section jeda memakai token permukaan hangat §2.2.6 di light dan dark; CTA utama memakai `--color-action-primary`; tidak ada gradient, warna oranye, atau token aksen baru. Kontras teks di atas permukaan hangat ≥ 4,5:1 di kedua tema. Dibuktikan unit CSS, axe, dan pengukuran kontras di receipt.
+15. **Pembuat dan kontak.** Section pembuat menampilkan "Ilham Aisy Rasyid", paragraf yang disetujui di Fase 1, dan link `mailto:halo@myworkpulse.my.id`. Footer memuat Privasi, Syarat, dan kontak yang sama. Dibuktikan E2E.
+16. **Halaman legal.** `/privacy` dan `/terms` membalas 200 untuk tamu dan pengguna login, mengikuti locale yang sama dengan landing, merender seluruh bagian draf (12 bagian masing-masing) dengan heading berurutan, dan menampilkan label draf yang terlihat selama ada isian kosong (§2.2.9). Selama berstatus draf, kedua halaman punya `robots` `noindex`. Nama dan email pengelola sudah terisi. Dibuktikan unit (parity jumlah bagian dengan draf ID) dan E2E.
+17. **Responsif dan aksesibilitas.** Tanpa scroll horizontal dan tanpa teks terpotong di 360, 768, dan 1440 px; target sentuh ≥ 44 px; satu `h1`; landmark `header`, `main`, `footer`; link skip ke konten; axe tanpa pelanggaran WCAG 2.2 AA di landing, `/privacy`, dan `/terms` pada 360 dan 1440 px, light dan dark, en dan id. Dibuktikan E2E (masuk ke `test:e2e:release`).
+18. **Metadata.** `/` untuk tamu punya `title` dan `description` per locale dari copy Fase 1; Open Graph tetap memakai `src/app/opengraph-image.tsx`. Dibuktikan unit `generateMetadata` atau E2E membaca `<head>`.
+19. **Tidak ada regresi.** `test:e2e:release`, `test:e2e:auth`, `test:e2e:ui`, `test:e2e:m2`, dan unit yang ada lulus tanpa assertion dilemahkan. Test yang dulu mengandalkan redirect `/` → `/sign-in` untuk tamu diperbarui dengan alasan di receipt.
 
 ## 2. Scope dan keputusan yang dibekukan
 
@@ -66,7 +71,8 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - Fallback locale `Accept-Language` dan toggle bahasa di landing.
 - Parameter `mode=create-account` di `/sign-in`.
 - `/privacy` dan `/terms` (id dan en), termasuk terjemahan English draf legal di `docs/legal/`.
-- Token permukaan hangat, CSS landing, reveal saat scroll.
+- Token permukaan hangat dan CSS landing.
+- Motion landing: cerita hero dengan replay, tab bergeser, reveal bertahap, titik langkah, interaksi mikro (§2.2.8).
 - Copy en/id di `messages.ts`.
 - Unit, E2E, screenshot, Design.md, decision record.
 
@@ -84,7 +90,13 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
    - Panel demo: panel lebar berlatar `--color-bg-warm-subtle` berisi tablist dan satu panel UI. Ini menggantikan "satu alur yang mengalir" di urutan brief butir 3; urutan tab mengikuti alur (Activity, Achievement, CV), dan teks pendek di tiap tab menyebut langkahnya. Bukan tiga kartu bernomor.
    - Ritme: section bergantian antara kanvas dan permukaan hangat; minimal satu section dengan komposisi beda (judul kiri, isi kanan) sebagai jeda.
    - Tidak ada gradient, foto, ilustrasi, kartu testimoni, deretan logo, atau angka.
-8. **Reveal saat scroll.** Atribut `data-reveal` pada section. CSS default: terlihat. Client Component `RevealOnScroll` menambah kelas `is-reveal-ready` ke `<html>` setelah mount bila `matchMedia("(prefers-reduced-motion: reduce)")` tidak cocok; hanya di bawah kelas itu section mulai `opacity: 0; transform: translateY(12px)` dan menjadi terlihat ketika `IntersectionObserver` melaporkan masuk. Section yang sudah di viewport saat mount langsung terlihat tanpa animasi. Satu kali per section; observer dilepas setelahnya. Alasan: konten tidak boleh hilang bila JavaScript gagal atau reduced motion aktif; hindari kedip seperti P2 RV1 T30.
+8. **Motion landing (interview animasi 28 Oktober 2026).** Prinsip bersama: server merender keadaan akhir; gerak hanya ditambahkan setelah mount bila `matchMedia("(prefers-reduced-motion: reduce)")` tidak cocok; tempo tenang memakai `--motion-slow` (240 ms) dan `--ease-out` yang sudah ada, tanpa token durasi baru; jeda dan kecepatan ketik adalah konstanta TS di `src/features/marketing/motion.ts`, bukan durasi literal di CSS. Tanpa library animasi.
+   - **Reveal bertahap.** Atribut `data-reveal` pada section dan `data-reveal-item` pada judul, teks, dan UI di dalamnya. CSS default: terlihat. `RevealOnScroll` menambah kelas `is-reveal-ready` ke `<html>` setelah mount; hanya di bawah kelas itu item mulai `opacity: 0; transform: translateY(12px)`, dan `transition-delay: calc(var(--reveal-index) * 80ms)` dihitung dari `--reveal-index` yang diisi server. Section yang sudah di viewport saat mount langsung terlihat tanpa animasi. Satu kali per section; observer dilepas setelahnya. Alasan: konten tidak boleh hilang bila JavaScript gagal; hindari kedip seperti P2 RV1 T30.
+   - **Cerita hero.** `HeroStory` (client) memegang state `idle | typing | saved | suggested | approved | done` lewat reducer murni yang diuji unit. Urutan: ketik catatan Activity (sekitar 25-30 ms per karakter, catatan contoh ≤ 90 karakter), jeda, status tersimpan, kartu Achievement usulan AI masuk (fade + geser, `--motion-slow`), jeda, tanda disetujui, lalu tombol "Putar ulang" muncul. Total ≤ 3,5 detik. Teks lengkap ada di DOM sejak server render untuk screen reader; lapisan yang diketik `aria-hidden="true"`. Tombol replay memulai ulang dari `idle`; tombol tetap di DOM dengan `aria-disabled="true"` selama cerita berjalan sehingga fokus tidak hilang. Untuk mencegah kedip keadaan akhir ke awal, hero di-mount dengan atribut `data-story="pending"` yang disembunyikan CSS hanya di bawah `.is-reveal-ready`, lalu langsung di-set ke `idle` pada effect pertama. Cerita berhenti (langsung ke `done`) bila tab disembunyikan (`visibilitychange`) agar tidak berjalan di latar.
+   - **Tab bergeser.** `DemoTabs` mencatat indeks tab sebelumnya; panel baru masuk dari `translateX(±24px)` sesuai arah, dengan fade, `--motion-slow`; panel lama keluar tanpa menahan layout (diposisikan absolut selama transisi). Tinggi wadah tidak dianimasikan. Perpindahan beruntun membatalkan transisi sebelumnya.
+   - **Titik langkah.** `StepDots` merender lima `span` dengan `data-on` dan satu teks visually hidden yang menyebut langkah aktif. Titik menyala memakai `--color-primary-600`/`--color-primary-400` (dark) dan sedikit membesar (`scale(1.15)`), transisi `--motion-slow`. Komponen terpisah dari `BrandSymbol`; tidak ada titik "kosong" permanen karena ini bukan logo.
+   - **Interaksi mikro.** Di dalam `@media (hover: hover) and (pointer: fine)`: `.landing-example:hover` naik `translateY(-2px)` dengan `box-shadow` naik dari `--shadow-md` ke `--shadow-lg` (keduanya sudah ada di `tokens.css:84-85`). Panah CTA (`lucide-react` `ArrowRight`) `translateX(3px)` saat hover dan `:focus-visible` (yang terakhir berlaku juga di perangkat sentuh). Toggle bahasa: indikator absolut di belakang tombol aktif yang bergeser dengan `transform`.
+   - Blok reduced motion global `globals.css` sudah memaksa `transition-duration: 0.01ms`; selain itu JavaScript tidak menambah `is-reveal-ready` dan `HeroStory` langsung `done` tanpa tombol replay saat reduced motion.
 9. **Halaman legal.**
    - Konten di `src/features/legal/content/{privacy,terms}.{id,en}.ts` sebagai data terstruktur (`{ title, effectiveDate, sections: { heading, blocks: ({ type: "p", text } | { type: "ul", items })[] }[] }`), disalin dari `docs/legal/*-draft.md`. Draf Markdown di `docs/legal/` tetap sumber; tidak ada parser Markdown.
    - Isian `[KURUNG SIKU]` yang belum diisi tetap ditampilkan apa adanya. Halaman menampilkan label "Draf, belum berlaku" / "Draft, not yet in effect" dan `robots: { index: false }` selama konstanta `LEGAL_DRAFT` bernilai `true`. Unit test gagal bila `LEGAL_DRAFT` `false` sementara konten masih memuat `[`. Alasan: link legal dibutuhkan di footer dan halaman daftar, tapi teksnya belum boleh terbaca sebagai berlaku.
@@ -92,7 +104,7 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
    - Terjemahan English: pelaksana menulis `docs/legal/privacy-policy-en-draft.md` dan `docs/legal/terms-of-service-en-draft.md` di Fase 1, setara bagian per bagian dengan versi ID, dengan catatan draf yang sama. Pengguna me-review di akhir Fase 1.
 10. **Copy.** Semua teks landing dan legal UI di `messages.ts` dengan prefix `landing.` dan `legal.`. Copy deck ditulis dulu di `docs/marketing/landing-copy-v1.md` (en dan id berdampingan) dan disetujui pengguna di akhir Fase 1. Gaya: Indonesia santai seperti reels untuk `id`, English polos untuk `en`; satu ide per section; CTA "Daftar pilot gratis" / setara English. Antislop-copywriting berlaku.
 11. **Section video.** Tidak ada komponen video atau placeholder di T32. Section ditambah setelah file video ada (di luar scope).
-12. **Dial antislop.** Design Read brief: *landing produk personal untuk karyawan aktif, fresh graduate, dan freelancer di Indonesia; bahasa visual app (sage, tenang); ENERGY 2 / RHYTHM 2 / MOTION 2*. Motif identitas: ritme lima titik logo boleh dipakai statis (misalnya pemisah section), tidak beranimasi, tanpa mengisi titik kosong.
+12. **Dial antislop.** Design Read brief: *landing produk personal untuk karyawan aktif, fresh graduate, dan freelancer di Indonesia; bahasa visual app (sage, tenang); ENERGY 2 / RHYTHM 2 / MOTION 3*. MOTION 3 hanya berlaku di landing; app tetap MOTION 2 (Design.md §16.1). Setiap gerak punya alasan: cerita hero menjelaskan alur produk, tab bergeser menunjukkan arah langkah, reveal bertahap mengatur urutan baca, titik langkah menandai posisi dalam alur, interaksi mikro memberi umpan balik. Tidak ada loop, parallax, atau gerak yang terikat posisi scroll. Logo tidak beranimasi.
 13. **Nomor.** Decision memakai nomor bebas berikutnya saat Fase 6 (0041 terakhir di `main`, perkiraan **0042**). Tidak ada migration (parity tetap 38/38). Script npm baru: tidak ada; spec E2E baru masuk ke `testMatch` `playwright.release.config.ts`.
 
 ### 2.3 Di luar scope
@@ -138,7 +150,7 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### 3.4 UI
 
-- `src/features/marketing/`: `landing-page.tsx`, `landing-header.tsx`, `locale-toggle.tsx` (client), `demo-tabs.tsx` (client), `reveal-on-scroll.tsx` (client), `example-frame.tsx`, `sample-data.ts`.
+- `src/features/marketing/`: `landing-page.tsx`, `landing-header.tsx`, `locale-toggle.tsx` (client), `hero-story.tsx` (client), `hero-story-state.ts` (reducer murni), `demo-tabs.tsx` (client), `step-dots.tsx`, `reveal-on-scroll.tsx` (client), `motion.ts` (konstanta jeda dan kecepatan ketik), `example-frame.tsx`, `sample-data.ts`.
 - `src/features/legal/`: `legal-page.tsx`, `content/*.ts`, `legal-status.ts` (`LEGAL_DRAFT`).
 - `src/app/privacy/page.tsx`, `src/app/terms/page.tsx` dengan `generateMetadata`.
 - `src/app/page.tsx` dengan `generateMetadata` untuk tamu.
@@ -150,7 +162,7 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 | --- | --- |
 | Modify | `src/app/page.tsx`, `src/app/sign-in/page.tsx`, `src/features/auth/sign-in-client.tsx`, `src/server/auth/context.ts`, `src/i18n/messages.ts`, `src/styles/tokens.css`, `src/app/globals.css`, `playwright.release.config.ts` |
 | Create | `src/domain/routes/root-destination.ts`, `src/i18n/accept-language.ts`, `src/features/marketing/*`, `src/features/legal/*`, `src/app/privacy/page.tsx`, `src/app/terms/page.tsx` |
-| Create | `tests/unit/{root-destination,accept-language,landing-copy,landing-markup,legal-content,landing-css}.test.ts`, `tests/e2e/landing.spec.ts` |
+| Create | `tests/unit/{root-destination,accept-language,landing-copy,landing-markup,legal-content,landing-css,hero-story-state}.test.ts`, `tests/e2e/landing.spec.ts`, `tests/e2e/landing-motion.spec.ts` |
 | Modify | test lama yang mengandalkan redirect tamu `/` → `/sign-in` (inventaris Fase 0) |
 | Create | `docs/marketing/landing-copy-v1.md`, `docs/legal/privacy-policy-en-draft.md`, `docs/legal/terms-of-service-en-draft.md` (Fase 1) |
 | Modify | `Design.md`, `docs/Design.md` (Fase 6: permukaan hangat, pola landing) |
@@ -172,7 +184,7 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 1: Copy dan terjemahan legal (dokumen, persetujuan pengguna)
 
-- [ ] Tulis `docs/marketing/landing-copy-v1.md`: per section §3.2, teks `id` dan `en` berdampingan, termasuk label kecil, CTA, label "contoh", isi data contoh (persona fiktif, activity, achievement), teks tab, paragraf pembuat (§0), metadata title/description, label toggle, label draf legal.
+- [ ] Tulis `docs/marketing/landing-copy-v1.md`: per section §3.2, teks `id` dan `en` berdampingan, termasuk label kecil, CTA, label "contoh", isi data contoh (persona fiktif, activity, achievement), teks tab, label lima langkah dan teks status titik, catatan Activity yang diketik di hero (≤ 90 karakter), label tombol putar ulang, paragraf pembuat (§0), metadata title/description, label toggle, label draf legal.
 - [ ] Tulis `docs/legal/privacy-policy-en-draft.md` dan `docs/legal/terms-of-service-en-draft.md` dari draf ID: bagian sama, isian kosong tetap dalam kurung siku English (misal `[CITY]`), catatan draf di atas.
 - [ ] Delivery Gate `antislop-copywriting` atas copy deck dan kedua terjemahan, PASS/FAIL dengan bukti di receipt. Cek manual daftar kata terlarang acceptance 6.
 - [ ] Receipt `T32-phase1-copy.md`, commit. **Stop: minta pengguna menyetujui copy deck dan terjemahan.** Catat revisi pengguna di receipt; Fase 2 memakai versi yang disetujui.
@@ -190,9 +202,19 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 - [ ] Copy ke `messages.ts` (en dan id, key paritas dicek test yang ada untuk dictionary).
 - [ ] Test gagal `landing-copy.test.ts` (kata terlarang acceptance 6 pada semua key `landing.*` di kedua locale; tidak ada key `landing.video*`) dan `landing-markup.test.ts` (urutan section, satu `h1`, label contoh, potongan UI tanpa `form`/`button[type=submit]`/link ke path terlindungi, tablist server markup menampilkan tiga panel).
 - [ ] Token §2.2.6 dan test gagal `landing-css.test.ts` (token warm di light dan dark, tanpa `gradient`, reveal hanya di bawah `.is-reveal-ready`, durasi dari token).
-- [ ] Implementasi §2.2.3, §2.2.5, §2.2.7, §2.2.8 dan §3.2.
+- [ ] Implementasi §2.2.3, §2.2.5, §2.2.7 dan §3.2 dalam keadaan akhir (tanpa gerak; `HeroStory`, `DemoTabs`, dan `StepDots` merender keadaan akhir/tab pertama).
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus; `motion-tokens.test.ts` tetap lulus.
 - [ ] Receipt `T32-phase3-landing-ui.md`, commit.
+
+### Fase 3b: Motion landing (TDD unit dan E2E)
+
+- [ ] Test gagal `hero-story-state.test.ts`: urutan state, total durasi dari konstanta `motion.ts` ≤ 3500 ms, replay kembali ke `idle`, reduced motion dan `visibilitychange` langsung ke `done`.
+- [ ] Perluas `landing-css.test.ts`: item reveal hanya disembunyikan di bawah `.is-reveal-ready`, `transition-delay` memakai `--reveal-index`, durasi `--motion-slow`, hover kartu di dalam `(hover: hover) and (pointer: fine)`, tanpa `@keyframes` berulang (`infinite`), logo tanpa animasi, tanpa durasi literal baru (`motion-tokens.test.ts` tetap lulus).
+- [ ] Implementasi §2.2.8 (reveal bertahap, cerita hero, tab bergeser, titik langkah, interaksi mikro).
+- [ ] `tests/e2e/landing-motion.spec.ts` untuk acceptance 9-13 dengan `page.clock` untuk timeline hero, `reducedMotion: "reduce"`, `javaScriptEnabled: false`, dan pengecekan tidak ada kedip (snapshot opacity hero pada frame pertama setelah load). Tambah ke `testMatch` `playwright.release.config.ts`.
+- [ ] Rekam satu video Playwright (`video: "on"` untuk test cerita hero saja) dan simpan di `docs/verification/T32-screenshots/hero-story.webm` sebagai bukti tempo; catat kesan tempo di receipt.
+- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
+- [ ] Receipt `T32-phase3b-motion.md`, commit.
 
 ### Fase 4: Halaman legal (TDD unit)
 
@@ -203,7 +225,7 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 5: E2E, regresi, aksesibilitas, Delivery Gate
 
-- [ ] `tests/e2e/landing.spec.ts` untuk acceptance 1-14 (dua akun fixture untuk acceptance 2, `extraHTTPHeaders` untuk locale, `javaScriptEnabled: false` untuk tab dan reveal, `reducedMotion: "reduce"`, crawl link internal, axe per kombinasi). Tambah ke `testMatch` `playwright.release.config.ts`.
+- [ ] `tests/e2e/landing.spec.ts` untuk acceptance 1-8 dan 14-18 (dua akun fixture untuk acceptance 2, `extraHTTPHeaders` untuk locale, `javaScriptEnabled: false` untuk tab, crawl link internal, axe per kombinasi, termasuk setelah cerita hero selesai). Tambah ke `testMatch` `playwright.release.config.ts`. Acceptance 9-13 sudah di `landing-motion.spec.ts` (Fase 3b).
 - [ ] Perbarui test dari inventaris Fase 0 hanya bila gagal karena landing; alasan di receipt.
 - [ ] Screenshot `docs/verification/T32-screenshots`: landing 360 dan 1440 px, light dan dark, id dan en (minimal hero dan panel demo), `/privacy` 360 px, `/sign-in?mode=create-account` 360 px.
 - [ ] `pnpm build`, `pnpm test`, `pnpm test:e2e:release`, `pnpm test:e2e:auth`, `pnpm test:e2e:ui`, `pnpm test:e2e:m2`; catat angka.
@@ -252,7 +274,9 @@ Berhenti dan laporkan bila:
 - `ActivityList`, `AchievementList`, atau `CvPreview` hanya bisa dirender di landing dengan mengubah perilaku komponen itu di app, dan tidak ada komponen app lain yang cocok.
 - Fallback `Accept-Language` mengubah hasil test lama di luar halaman tamu.
 - Kontras teks di atas permukaan hangat tidak bisa mencapai 4,5:1 tanpa mengubah token teks yang ada.
-- Reveal saat scroll hanya bisa dibuat dengan menyembunyikan konten sebelum JavaScript jalan.
+- Reveal saat scroll atau cerita hero hanya bisa dibuat dengan menyembunyikan konten sebelum JavaScript jalan, atau cerita hero berkedip (keadaan akhir terlihat lalu kembali ke awal) dan tidak bisa dicegah dengan §2.2.8.
+- Cerita hero tidak muat dalam 3,5 detik dengan tempo tenang; tanyakan pengguna apakah mempersingkat catatan contoh atau memperpanjang batas.
+- Gerak landing hanya bisa dibuat dengan library animasi, `@keyframes` berulang, atau token durasi baru.
 - Butuh migration, dependency (termasuk font atau parser Markdown), atau perubahan copy app di luar `landing.*`, `legal.*`, dan link legal di form daftar.
 - Copy memerlukan klaim yang dilarang brief, atau pengguna meminta testimoni/angka tanpa data nyata.
 - Scope bocor ke §2.3.
@@ -266,7 +290,8 @@ Read-only setelah Fase 5. P0–P2 memblokir, P3 follow-up.
 - [ ] Pengguna login tidak pernah melihat landing; tamu tidak pernah di-redirect dari `/`.
 - [ ] Prioritas locale profil > cookie > header; header rusak tidak melempar.
 - [ ] Potongan UI tidak punya kontrol aksi dan berlabel contoh; data contoh fiktif.
-- [ ] Konten terlihat tanpa JavaScript dan dengan reduced motion; tidak ada kedip reveal.
+- [ ] Konten terlihat tanpa JavaScript dan dengan reduced motion; tidak ada kedip reveal atau kedip hero.
+- [ ] Cerita hero sekali jalan ≤ 3,5 detik, replay bisa dengan keyboard, screen reader hanya menerima teks akhir; tab bergeser sesuai arah; titik langkah punya teks; tidak ada loop, parallax, atau gerak terikat scroll; logo diam.
 - [ ] Legal: semua bagian terender di kedua bahasa, label draf dan `noindex` aktif, guard `LEGAL_DRAFT` diuji.
 - [ ] Tanpa gradient, foto, serif, aksen baru; token warm lulus kontras di kedua tema.
 - [ ] Delivery Gate antislop tercatat tanpa FAIL.
@@ -276,6 +301,7 @@ Read-only setelah Fase 5. P0–P2 memblokir, P3 follow-up.
 1. **Landing bocor ke pengguna login atau redirect hilang.** Mengubah `page.tsx` mudah membuat sesi tanpa profil jatuh ke landing. Dijaga acceptance 2 dan `root-destination.test.ts`.
 2. **Konten hilang karena reveal.** Opacity 0 sebelum hydration, observer yang tidak terpicu di section terakhir, atau kedip saat hydration (pola P2 T30). Dijaga §2.2.8 dan acceptance 9 (tanpa JS, reduced motion, scroll cepat).
 3. **Klaim terlarang lewat copy atau data contoh.** Angka "contoh" di achievement bisa terbaca sebagai hasil produk, dan nama contoh bisa mirip orang nyata. Dijaga acceptance 6 dan 7, scan string, dan persetujuan copy di Fase 1.
-4. **Locale header mengubah perilaku lama.** Fallback baru berlaku di `/sign-in` dan halaman tamu lain. Dijaga acceptance 3 dan 15.
-5. **Halaman legal terbaca berlaku.** Isian kosong tanpa label draf, atau terindeks mesin pencari. Dijaga acceptance 12 dan guard `LEGAL_DRAFT`.
+4. **Locale header mengubah perilaku lama.** Fallback baru berlaku di `/sign-in` dan halaman tamu lain. Dijaga acceptance 3 dan 19.
+5. **Halaman legal terbaca berlaku.** Isian kosong tanpa label draf, atau terindeks mesin pencari. Dijaga acceptance 16 dan guard `LEGAL_DRAFT`.
 6. **Potongan UI memicu aksi.** Komponen app yang merender link atau tombol ke route terlindungi di landing. Dijaga §2.2.5 (`inert`) dan acceptance 7.
+7. **Cerita hero mengganggu.** Efek ketik yang dibacakan per karakter, kedip keadaan akhir ke awal setelah hydration, atau cerita yang terus berjalan di tab latar. Dijaga §2.2.8, acceptance 10 dan 13, serta video tempo Fase 3b.

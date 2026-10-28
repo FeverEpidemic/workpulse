@@ -23,7 +23,7 @@ Hasil interview 2026-10-20. Sumber arah visual: `docs/Design.md` (sage, Plus Jak
 | Hero | Potongan UI asli (Activity jadi Achievement) melayang di atas blok permukaan hangat solid full-width. Tanpa foto. |
 | Font | Tetap Plus Jakarta Sans saja. Hierarki dari ukuran dan weight. |
 | Warna | Aksen tetap sage. Beberapa section memakai permukaan hangat (krem/off-white) sebagai jeda. Tidak ada aksen baru. |
-| Motion | MOTION 2 ringan: satu fade/slide pendek saat section masuk layar, mati total di reduced motion. Konten tetap terlihat tanpa JavaScript. |
+| Motion | Diperluas pada interview animasi 28 Oktober 2026 (menggantikan "MOTION 2 ringan"). Hero: cerita sekali jalan (catatan Activity seperti diketik, kartu Achievement usulan AI muncul, lalu tanda disetujui), berhenti di keadaan akhir, dengan tombol putar ulang. Panel demo: panel baru geser masuk mengikuti arah tab, ditambah fade. Scroll: isi section muncul bertahap (judul, teks, lalu UI), sekali per section. Lima titik: deretan terpisah dari logo yang menyala mengikuti lima langkah alur (catat, AI usulkan, setujui, pilih ke CV, PDF); logo tetap diam. Tempo tenang, 200-300 ms. Interaksi mikro: kartu UI terangkat saat hover (desktop), panah CTA bergeser, indikator toggle bahasa meluncur. Reduced motion dan tanpa JavaScript langsung menampilkan keadaan akhir. |
 | Legal | `/privacy` dan `/terms` dalam Indonesia dan English. Versi English diterjemahkan Claude dari draf, di-review pemilik. |
 
 ## Yang tidak boleh muncul
@@ -35,11 +35,11 @@ Hasil interview 2026-10-20. Sumber arah visual: `docs/Design.md` (sage, Plus Jak
 
 ## Design Read
 
-Reading this as: landing produk personal untuk karyawan aktif, fresh graduate, dan freelancer di Indonesia, dalam bahasa visual app sendiri (sage, tenang, profesional tapi tidak formal), dial ENERGY 2 / RHYTHM 2 / MOTION 2.
+Reading this as: landing produk personal untuk karyawan aktif, fresh graduate, dan freelancer di Indonesia, dalam bahasa visual app sendiri (sage, tenang, profesional tapi tidak formal), dial ENERGY 2 / RHYTHM 2 / MOTION 3.
 
 - ENERGY 2: lebih menyapa dari app, tetap tenang.
 - RHYTHM 2: komposisi section konsisten, dengan beberapa jeda yang sengaja beda.
-- MOTION 2: hover, focus, dan satu fade/slide pendek saat section masuk layar (diubah dari MOTION 1 pada interview 28 Oktober 2026). Reduced motion mengikuti Design.md 28.4.
+- MOTION 3: cerita hero sekali jalan, tab yang bergeser, isi section bertahap, titik langkah, dan interaksi mikro (dinaikkan dari MOTION 1 lewat dua interview pada 28 Oktober 2026). Semua gerak hanya di landing; app tetap MOTION 2. Reduced motion mengikuti Design.md 28.4.
 - Motif identitas: ritme lima titik dari logo (hari kerja, satu hari kosong, hari ini).
 
 ## Urutan isi (draf, mengikuti alur cerita)
