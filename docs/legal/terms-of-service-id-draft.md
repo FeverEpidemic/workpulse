@@ -8,7 +8,7 @@ Dengan mendaftar atau memakai WorkPulse, Anda setuju dengan syarat ini dan denga
 
 ## 1. Tentang WorkPulse
 
-WorkPulse adalah aplikasi web untuk mencatat pekerjaan, menyusunnya menjadi achievement, dan membuat CV dari catatan itu. WorkPulse dikelola oleh [NAMA PENGELOLA] ("kami").
+WorkPulse adalah aplikasi web untuk mencatat pekerjaan, menyusunnya menjadi achievement, dan membuat CV dari catatan itu. WorkPulse dikelola oleh Ilham Aisy Rasyid ("kami").
 
 ## 2. Status pilot
 
@@ -24,7 +24,7 @@ Kalau suatu saat ada fitur berbayar, kami umumkan lebih dulu, dan Anda tidak aka
 
 - Satu akun untuk satu orang. Pakai email yang benar-benar Anda gunakan.
 - Jaga kerahasiaan password Anda. Semua aktivitas di akun Anda dianggap dilakukan oleh Anda.
-- Kalau Anda curiga akun Anda dipakai orang lain, ganti password dan hubungi kami di [EMAIL KONTAK].
+- Kalau Anda curiga akun Anda dipakai orang lain, ganti password dan hubungi kami di halo@myworkpulse.my.id.
 - Anda harus berusia minimal [USIA MINIMUM] tahun.
 
 ## 4. Isi yang Anda simpan
@@ -74,4 +74,4 @@ Kalau syarat ini berubah, kami perbarui tanggal di bagian atas. Untuk perubahan 
 
 ## 12. Kontak
 
-[NAMA PENGELOLA], [EMAIL KONTAK].
+Ilham Aisy Rasyid, halo@myworkpulse.my.id.
