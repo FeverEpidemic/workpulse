@@ -210,13 +210,13 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 3b: Motion landing (TDD unit dan E2E)
 
-- [ ] Test gagal `hero-story-state.test.ts`: urutan state, total durasi dari konstanta `motion.ts` ≤ 3500 ms, replay kembali ke `idle`, reduced motion dan `visibilitychange` langsung ke `done`.
-- [ ] Perluas `landing-css.test.ts`: item reveal hanya disembunyikan di bawah `.is-reveal-ready`, `transition-delay` memakai `--reveal-index`, durasi `--motion-slow`, hover kartu di dalam `(hover: hover) and (pointer: fine)`, tanpa `@keyframes` berulang (`infinite`), logo tanpa animasi, tanpa durasi literal baru (`motion-tokens.test.ts` tetap lulus).
-- [ ] Implementasi §2.2.8 (reveal bertahap, cerita hero, tab bergeser, titik langkah, interaksi mikro).
-- [ ] `tests/e2e/landing-motion.spec.ts` untuk acceptance 9-13 dengan `page.clock` untuk timeline hero, `reducedMotion: "reduce"`, `javaScriptEnabled: false`, dan pengecekan tidak ada kedip (snapshot opacity hero pada frame pertama setelah load). Tambah ke `testMatch` `playwright.release.config.ts`.
-- [ ] Rekam satu video Playwright (`video: "on"` untuk test cerita hero saja) dan simpan di `docs/verification/T32-screenshots/hero-story.webm` sebagai bukti tempo; catat kesan tempo di receipt.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
-- [ ] Receipt `T32-phase3b-motion.md`, commit.
+- [x] Test gagal `hero-story-state.test.ts`: urutan state, total durasi dari konstanta `motion.ts` ≤ 3500 ms, replay kembali ke `idle`, reduced motion dan `visibilitychange` langsung ke `done`.
+- [x] Perluas `landing-css.test.ts`: item reveal hanya disembunyikan di bawah `.is-reveal-ready`, `transition-delay` memakai `--reveal-index`, durasi `--motion-slow`, hover kartu di dalam `(hover: hover) and (pointer: fine)`, tanpa `@keyframes` berulang (`infinite`), logo tanpa animasi, tanpa durasi literal baru (`motion-tokens.test.ts` tetap lulus).
+- [x] Implementasi §2.2.8 (reveal bertahap, cerita hero, tab bergeser, titik langkah, interaksi mikro).
+- [x] `tests/e2e/landing-motion.spec.ts` untuk acceptance 9-13 dengan `page.clock` untuk timeline hero, `reducedMotion: "reduce"`, `javaScriptEnabled: false`, dan pengecekan tidak ada kedip (snapshot opacity hero pada frame pertama setelah load). Tambah ke `testMatch` `playwright.release.config.ts`.
+- [x] Rekam satu video Playwright (`video: "on"` untuk test cerita hero saja) dan simpan di `docs/verification/T32-screenshots/hero-story.webm` sebagai bukti tempo; catat kesan tempo di receipt.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
+- [x] Receipt `T32-phase3b-motion.md`, commit.
 
 ### Fase 4: Halaman legal (TDD unit)
 

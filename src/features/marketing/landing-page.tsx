@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { ArrowRight, Download, FileUp, Mail, ScrollText, ShieldCheck, Trash2 } from "lucide-react";
 
 import { BrandSymbol } from "@/components/ui/brand-logo";
@@ -8,6 +9,8 @@ import { DemoTabs, type DemoTab } from "@/features/marketing/demo-tabs";
 import { ExampleFrame } from "@/features/marketing/example-frame";
 import { HeroStory } from "@/features/marketing/hero-story";
 import { LandingHeader, SIGN_UP_HREF } from "@/features/marketing/landing-header";
+import { HERO_STORY_ARM_SCRIPT, REVEAL_STAGGER_MS } from "@/features/marketing/motion";
+import { RevealOnScroll } from "@/features/marketing/reveal-on-scroll";
 import { landingSample } from "@/features/marketing/sample-data";
 import { t, type Locale } from "@/i18n/messages";
 
@@ -22,9 +25,14 @@ function SignUpCta({ locale, label }: { locale: Locale; label: "landing.hero.cta
   );
 }
 
+/** Props for one item of a `[data-reveal]` section; the stagger comes from motion.ts, not CSS. */
+function reveal(index: number) {
+  return { "data-reveal-item": "", style: { "--reveal-delay": `${index * REVEAL_STAGGER_MS}ms` } as CSSProperties };
+}
+
 function SectionIntro({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) {
   return (
-    <div className="landing-intro">
+    <div className="landing-intro" {...reveal(0)}>
       <p className="landing-eyebrow">{eyebrow}</p>
       <h2 id={id} className="landing-h2">{title}</h2>
     </div>
@@ -106,6 +114,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
       <LandingHeader locale={locale} />
 
       <main id="main-content" tabIndex={-1}>
+        <script dangerouslySetInnerHTML={{ __html: HERO_STORY_ARM_SCRIPT }} />
         <section id="landing-hero" className="landing-section landing-section--warm landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
             <div className="landing-hero-text">
@@ -121,18 +130,19 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-how" className="landing-section" aria-labelledby="landing-how-title">
+        <section id="landing-how" data-reveal className="landing-section" aria-labelledby="landing-how-title">
           <div className="landing-container landing-stack">
             <SectionIntro id="landing-how-title" eyebrow={t(locale, "landing.demo.eyebrow")} title={t(locale, "landing.demo.title")} />
-            <DemoTabs tabs={tabs} label={t(locale, "landing.demo.tablist")} locale={locale} />
+            <div {...reveal(1)}><DemoTabs tabs={tabs} label={t(locale, "landing.demo.tablist")} locale={locale} /></div>
           </div>
         </section>
 
-        <section id="landing-import" className="landing-section landing-section--ruled" aria-labelledby="landing-import-title">
+        <section id="landing-import" data-reveal className="landing-section landing-section--ruled" aria-labelledby="landing-import-title">
           <div className="landing-container landing-split">
             <SectionIntro id="landing-import-title" eyebrow={t(locale, "landing.import.eyebrow")} title={t(locale, "landing.import.title")} />
             <div className="landing-stack">
-              <p className="landing-lead">{t(locale, "landing.import.body")}</p>
+              <p className="landing-lead" {...reveal(1)}>{t(locale, "landing.import.body")}</p>
+              <div {...reveal(2)}>
               <ExampleFrame label={t(locale, "landing.import.exampleLabel")} locale={locale}>
                 <div className="landing-card landing-import">
                   <p className="landing-import-file">
@@ -155,11 +165,12 @@ export function LandingPage({ locale }: { locale: Locale }) {
                   </ul>
                 </div>
               </ExampleFrame>
+              </div>
             </div>
           </div>
         </section>
 
-        <section id="landing-data" className="landing-section landing-section--warm" aria-labelledby="landing-data-title">
+        <section id="landing-data" data-reveal className="landing-section landing-section--warm" aria-labelledby="landing-data-title">
           <div className="landing-container landing-stack">
             <SectionIntro id="landing-data-title" eyebrow={t(locale, "landing.data.eyebrow")} title={t(locale, "landing.data.title")} />
             <ul className="landing-facts">
@@ -167,8 +178,8 @@ export function LandingPage({ locale }: { locale: Locale }) {
                 [ShieldCheck, "landing.data.ai.title", "landing.data.ai.body"],
                 [ScrollText, "landing.data.source.title", "landing.data.source.body"],
                 [Trash2, "landing.data.delete.title", "landing.data.delete.body"],
-              ] as const).map(([Icon, title, body]) => (
-                <li key={title} className="landing-fact">
+              ] as const).map(([Icon, title, body], index) => (
+                <li key={title} className="landing-fact" {...reveal(index + 1)}>
                   <h3 className="landing-fact-title"><Icon aria-hidden="true" size={22} strokeWidth={1.8} />{t(locale, title)}</h3>
                   <p className="landing-body">{t(locale, body)}</p>
                 </li>
@@ -177,13 +188,13 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-maker" className="landing-section" aria-labelledby="landing-maker-title">
+        <section id="landing-maker" data-reveal className="landing-section" aria-labelledby="landing-maker-title">
           <div className="landing-container landing-container--narrow landing-stack">
-            <h2 id="landing-maker-title" className="landing-eyebrow">{t(locale, "landing.maker.eyebrow")}</h2>
-            <blockquote className="landing-quote">
+            <h2 id="landing-maker-title" className="landing-eyebrow" {...reveal(0)}>{t(locale, "landing.maker.eyebrow")}</h2>
+            <blockquote className="landing-quote" {...reveal(1)}>
               <p>{t(locale, "landing.maker.quote")}</p>
             </blockquote>
-            <p className="landing-maker">
+            <p className="landing-maker" {...reveal(2)}>
               <span className="landing-maker-name">{t(locale, "landing.maker.name")}</span>
               <a className="landing-text-link" href={`mailto:${CONTACT}`}>
                 <Mail aria-hidden="true" size={16} strokeWidth={1.8} />
@@ -193,12 +204,12 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-closing" className="landing-section landing-section--warm-subtle" aria-labelledby="landing-closing-title">
+        <section id="landing-closing" data-reveal className="landing-section landing-section--warm-subtle" aria-labelledby="landing-closing-title">
           <div className="landing-container landing-closing">
             <BrandSymbol className="landing-closing-mark" />
-            <h2 id="landing-closing-title" className="landing-h2">{t(locale, "landing.closing.title")}</h2>
-            <p className="landing-body">{t(locale, "landing.closing.body")}</p>
-            <SignUpCta locale={locale} label="landing.closing.cta" />
+            <h2 id="landing-closing-title" className="landing-h2" {...reveal(0)}>{t(locale, "landing.closing.title")}</h2>
+            <p className="landing-body" {...reveal(1)}>{t(locale, "landing.closing.body")}</p>
+            <div {...reveal(2)}><SignUpCta locale={locale} label="landing.closing.cta" /></div>
           </div>
         </section>
       </main>
@@ -213,6 +224,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </nav>
         </div>
       </footer>
+      <RevealOnScroll />
     </div>
   );
 }

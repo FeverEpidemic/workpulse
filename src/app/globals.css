@@ -3983,3 +3983,104 @@ a.dashboard-stat-card:hover,
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
+
+/* T32 landing motion (MOTION 3, landing only) */
+.landing-hero-example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.landing-hero-activity .activity-list-excerpt {
+  min-height: calc(var(--line-height-body) * 2em);
+}
+
+[data-hero-story="armed"] .landing-hero-stack :is(.activity-list-excerpt, .landing-card-foot, .landing-connector, .landing-hero-achievement) {
+  visibility: hidden;
+}
+
+.landing-hero-stack :is(.landing-card-foot, .landing-connector, .landing-hero-achievement, .activity-list-meta .ui-badge--success) {
+  transition:
+    opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out),
+    box-shadow var(--motion-slow) var(--ease-out);
+}
+
+/* The reset at the start (hydration or replay) is instant; only the steps forward fade in. */
+.landing-hero-stack[data-phase="idle"] :is(.landing-card-foot, .landing-connector, .landing-hero-achievement, .activity-list-meta .ui-badge--success) {
+  transition: none;
+}
+
+.landing-hero-stack[data-saved="false"] :is(.landing-card-foot, .activity-list-meta .ui-badge--success) {
+  opacity: 0;
+}
+
+.landing-hero-stack[data-suggested="false"] :is(.landing-connector, .landing-hero-achievement) {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.landing-replay {
+  align-self: flex-end;
+}
+
+.landing-replay[aria-disabled="true"] {
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
+.is-reveal-ready [data-reveal]:not([data-revealed]) [data-reveal-item] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.is-reveal-ready [data-reveal-item] {
+  transition: opacity var(--motion-slow) var(--ease-out), transform var(--motion-slow) var(--ease-out);
+  transition-delay: var(--reveal-delay);
+}
+
+@keyframes landing-panel-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes landing-panel-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+.landing-panels[data-direction="right"] .landing-panel:not([hidden]) {
+  animation: landing-panel-from-right var(--motion-slow) var(--ease-out);
+}
+
+.landing-panels[data-direction="left"] .landing-panel:not([hidden]) {
+  animation: landing-panel-from-left var(--motion-slow) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-card {
+    transition: transform var(--motion-slow) var(--ease-out), box-shadow var(--motion-slow) var(--ease-out);
+  }
+
+  .landing-example:hover .landing-card {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .landing-cta:hover .landing-cta-arrow {
+    transform: translateX(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

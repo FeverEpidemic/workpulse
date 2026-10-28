@@ -149,7 +149,7 @@ export function landingSample(locale: Locale) {
     { title: text.degree, detail: `${UNIVERSITY} · ${text.educationKind}` },
   ];
   return {
-    hero: { activity, activityOptions, note: text.note, savedAsWritten: text.savedAsWritten, connector: text.connector, aiBadge: text.aiBadge, approved: text.approved, title: text.achievementTitle, contribution: text.contribution },
+    hero: { activity, activityOptions, note: text.note, savedAsWritten: text.savedAsWritten, connector: text.connector, aiBadge: text.aiBadge, reviewBadge: text.reviewBadge, approved: text.approved, title: text.achievementTitle, contribution: text.contribution },
     review: {
       badge: text.draftBadge, title: text.achievementTitle, source: text.source, confirm: text.confirmAchievement, editFirst: text.editFirst,
       fields: [

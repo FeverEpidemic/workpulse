@@ -23,20 +23,29 @@ const subscribeNothing = () => () => {};
 export function DemoTabs({ tabs, label, locale }: { tabs: DemoTab[]; label: string; locale: Locale }) {
   const hydrated = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const [selected, setSelected] = useState(0);
+  // The side the new panel slides in from; unset until the first switch, so nothing moves on load.
+  const [direction, setDirection] = useState<"left" | "right" | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const current = tabs[selected]!;
 
-  function select(index: number) {
+  function select(index: number, from: "left" | "right" = index > selected ? "right" : "left") {
+    if (index !== selected) setDirection(from);
     setSelected(index);
     tabRefs.current[index]?.focus();
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const last = tabs.length - 1;
-    const next = { ArrowRight: selected === last ? 0 : selected + 1, ArrowLeft: selected === 0 ? last : selected - 1, Home: 0, End: last }[event.key];
-    if (next === undefined) return;
+    const moves: Record<string, [number, "left" | "right"]> = {
+      ArrowRight: [selected === last ? 0 : selected + 1, "right"],
+      ArrowLeft: [selected === 0 ? last : selected - 1, "left"],
+      Home: [0, "left"],
+      End: [last, "right"],
+    };
+    const move = moves[event.key];
+    if (!move) return;
     event.preventDefault();
-    select(next);
+    select(...move);
   }
 
   return (
@@ -62,7 +71,7 @@ export function DemoTabs({ tabs, label, locale }: { tabs: DemoTab[]; label: stri
         </div>
         <StepDots from={current.steps[0]} to={current.steps[1]} locale={locale} />
       </div>
-      <div className="landing-panels">
+      <div className="landing-panels" data-direction={hydrated && direction ? direction : undefined}>
         {tabs.map((tab, index) => (
           <div
             key={tab.id}
