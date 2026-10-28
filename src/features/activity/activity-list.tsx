@@ -14,6 +14,44 @@ function activityReturnQuery(returnTo: string): string {
   return new URLSearchParams({ returnTo }).toString();
 }
 
+/** One list row. Without `href` it renders the same row as plain content (T32 landing sample). */
+export function ActivityListRow({
+  activity,
+  options,
+  locale,
+  href,
+}: {
+  activity: ActivityListItem;
+  options: ActivityContextOptions;
+  locale: Locale;
+  href?: string;
+}) {
+  const excerpt = activityExcerpt(activity.raw_text);
+  const context = resolveActivityContext(activity, options);
+  const content = (
+    <>
+      <span className="activity-list-meta">
+        <time dateTime={activity.occurred_on}>{formatActivityDate(activity.occurred_on, locale)}</time>
+        <Badge>{t(locale, `activity.${activity.capture_mode === "note" ? "noteMode" : activity.capture_mode === "form" ? "formMode" : "chatMode"}`)}</Badge>
+        <Badge variant="success">{t(locale, "activity.savedBadge")}</Badge>
+      </span>
+      <span className="activity-list-excerpt">{excerpt}</span>
+      {(context.projectLabel || context.experienceLabel || context.projectUnavailable || context.experienceUnavailable) ? (
+        <span className="activity-list-context">
+          {context.projectLabel ? <span>{t(locale, "activity.project")}: {context.projectLabel}</span> : null}
+          {context.experienceLabel ? <span>{t(locale, "activity.experience")}: {context.experienceLabel}</span> : null}
+          {context.projectUnavailable || context.experienceUnavailable ? (
+            <span>{t(locale, "activity.contextUnavailable")}</span>
+          ) : null}
+        </span>
+      ) : null}
+    </>
+  );
+  return href
+    ? <Link className="activity-list-row" href={href} data-activity-id={activity.id}>{content}</Link>
+    : <div className="activity-list-row" data-activity-id={activity.id}>{content}</div>;
+}
+
 export function ActivityList({
   items,
   options,
@@ -63,32 +101,11 @@ export function ActivityList({
         </Link>
       </div>
       <ul className="activity-list" aria-label={t(locale, "activity.description")}>
-        {items.map((activity) => {
-          const excerpt = activityExcerpt(activity.raw_text);
-          const context = resolveActivityContext(activity, options);
-          const detailHref = `/activity/${activity.id}?${activityReturnQuery(returnTo)}`;
-          return (
-            <li key={activity.id}>
-              <Link className="activity-list-row" href={detailHref} data-activity-id={activity.id}>
-                <span className="activity-list-meta">
-                  <time dateTime={activity.occurred_on}>{formatActivityDate(activity.occurred_on, locale)}</time>
-                  <Badge>{t(locale, `activity.${activity.capture_mode === "note" ? "noteMode" : activity.capture_mode === "form" ? "formMode" : "chatMode"}`)}</Badge>
-                  <Badge variant="success">{t(locale, "activity.savedBadge")}</Badge>
-                </span>
-                <span className="activity-list-excerpt">{excerpt}</span>
-                {(context.projectLabel || context.experienceLabel || context.projectUnavailable || context.experienceUnavailable) ? (
-                  <span className="activity-list-context">
-                    {context.projectLabel ? <span>{t(locale, "activity.project")}: {context.projectLabel}</span> : null}
-                    {context.experienceLabel ? <span>{t(locale, "activity.experience")}: {context.experienceLabel}</span> : null}
-                    {context.projectUnavailable || context.experienceUnavailable ? (
-                      <span>{t(locale, "activity.contextUnavailable")}</span>
-                    ) : null}
-                  </span>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
+        {items.map((activity) => (
+          <li key={activity.id}>
+            <ActivityListRow activity={activity} options={options} locale={locale} href={`/activity/${activity.id}?${activityReturnQuery(returnTo)}`} />
+          </li>
+        ))}
       </ul>
       {nextCursor ? (
         <nav className="activity-pagination" aria-label={t(locale, "activity.nextPage")}>

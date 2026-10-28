@@ -18,6 +18,9 @@
   --color-bg-subtle: #f0f5ef;
   --color-bg-elevated: #ffffff;
   --color-bg-overlay: rgb(17 22 19 / 0.48);
+  /* T32 landing surfaces. Primary-colored text stays off warm-subtle (4.24:1). */
+  --color-bg-warm: #f6f3ec;
+  --color-bg-warm-subtle: #efeadf;
 
   --color-text-primary: #1a211c;
   --color-text-secondary: #59635c;
@@ -111,6 +114,8 @@
   --color-bg-subtle: #1e2621;
   --color-bg-elevated: #222b25;
   --color-bg-overlay: rgb(0 0 0 / 0.68);
+  --color-bg-warm: #1c1b17;
+  --color-bg-warm-subtle: #23211c;
 
   --color-text-primary: #f1f5f2;
   --color-text-secondary: #b6c0b8;

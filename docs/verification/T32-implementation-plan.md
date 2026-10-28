@@ -201,12 +201,12 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 3: Landing UI (TDD unit)
 
-- [ ] Copy ke `messages.ts` (en dan id, key paritas dicek test yang ada untuk dictionary).
-- [ ] Test gagal `landing-copy.test.ts` (kata terlarang acceptance 6 pada semua key `landing.*` di kedua locale; tidak ada key `landing.video*`) dan `landing-markup.test.ts` (urutan section, satu `h1`, label contoh, potongan UI tanpa `form`/`button[type=submit]`/link ke path terlindungi, tablist server markup menampilkan tiga panel).
-- [ ] Token §2.2.6 dan test gagal `landing-css.test.ts` (token warm di light dan dark, tanpa `gradient`, reveal hanya di bawah `.is-reveal-ready`, durasi dari token).
-- [ ] Implementasi §2.2.3, §2.2.5, §2.2.7 dan §3.2 dalam keadaan akhir (tanpa gerak; `HeroStory`, `DemoTabs`, dan `StepDots` merender keadaan akhir/tab pertama).
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus; `motion-tokens.test.ts` tetap lulus.
-- [ ] Receipt `T32-phase3-landing-ui.md`, commit.
+- [x] Copy ke `messages.ts` (en dan id, key paritas dicek test yang ada untuk dictionary).
+- [x] Test gagal `landing-copy.test.ts` (kata terlarang acceptance 6 pada semua key `landing.*` di kedua locale; tidak ada key `landing.video*`) dan `landing-markup.test.ts` (urutan section, satu `h1`, label contoh, potongan UI tanpa `form`/`button[type=submit]`/link ke path terlindungi, tablist server markup menampilkan tiga panel).
+- [x] Token §2.2.6 dan test gagal `landing-css.test.ts` (token warm di light dan dark, tanpa `gradient`, reveal hanya di bawah `.is-reveal-ready`, durasi dari token).
+- [x] Implementasi §2.2.3, §2.2.5, §2.2.7 dan §3.2 dalam keadaan akhir (tanpa gerak; `HeroStory`, `DemoTabs`, dan `StepDots` merender keadaan akhir/tab pertama).
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus; `motion-tokens.test.ts` tetap lulus.
+- [x] Receipt `T32-phase3-landing-ui.md`, commit.
 
 ### Fase 3b: Motion landing (TDD unit dan E2E)
 
