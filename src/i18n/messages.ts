@@ -1182,6 +1182,11 @@ const en = {
   "landing.footer.terms": "Terms of Service",
   "legal.privacy.title": "Privacy Policy",
   "legal.terms.title": "Terms of Service",
+  "legal.privacy.description": "What WorkPulse stores during the free pilot, where it goes, how long it is kept, and what you can do about it.",
+  "legal.terms.description": "The terms for using WorkPulse during the free pilot.",
+  "legal.draftNotice": "Draft, not yet in effect. Highlighted parts are still being filled in. Search engines won't index this page until the final version is published.",
+  "legal.effective": "Effective from {date}",
+  "legal.toc": "On this page",
   "legal.signUpNote": "By creating an account, you agree to the {terms} and {privacy}.",
 } as const;
 
@@ -2365,6 +2370,11 @@ const id: Record<keyof typeof en, string> = {
   "landing.footer.terms": "Syarat Layanan",
   "legal.privacy.title": "Kebijakan Privasi",
   "legal.terms.title": "Syarat Layanan",
+  "legal.privacy.description": "Data apa yang WorkPulse simpan selama pilot gratis, ke mana perginya, berapa lama disimpan, dan apa yang bisa kamu lakukan.",
+  "legal.terms.description": "Syarat memakai WorkPulse selama pilot gratis.",
+  "legal.draftNotice": "Draf, belum berlaku. Bagian bertanda kuning masih diisi. Halaman ini tidak diindeks mesin pencari sampai versi final terbit.",
+  "legal.effective": "Berlaku sejak {date}",
+  "legal.toc": "Di halaman ini",
   "legal.signUpNote": "Dengan membuat akun, kamu setuju dengan {terms} dan {privacy}.",
 };
 

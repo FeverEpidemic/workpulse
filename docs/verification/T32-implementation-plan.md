@@ -220,10 +220,10 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 4: Halaman legal (TDD unit)
 
-- [ ] Test gagal `legal-content.test.ts`: jumlah bagian tiap konten TS sama dengan jumlah heading `##` di draf Markdown masing-masing (ID dan EN), nama dan email pengelola terisi, guard `LEGAL_DRAFT` §2.2.9.
-- [ ] Implementasi §2.2.9, route `/privacy` dan `/terms`, metadata `noindex` selama draf.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
-- [ ] Receipt `T32-phase4-legal.md`, commit.
+- [x] Test gagal `legal-content.test.ts`: jumlah bagian tiap konten TS sama dengan jumlah heading `##` di draf Markdown masing-masing (ID dan EN), nama dan email pengelola terisi, guard `LEGAL_DRAFT` §2.2.9.
+- [x] Implementasi §2.2.9, route `/privacy` dan `/terms`, metadata `noindex` selama draf.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus.
+- [x] Receipt `T32-phase4-legal.md`, commit.
 
 ### Fase 5: E2E, regresi, aksesibilitas, Delivery Gate
 

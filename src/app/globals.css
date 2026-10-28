@@ -4084,3 +4084,201 @@ a.dashboard-stat-card:hover,
     animation: none !important;
   }
 }
+
+/* T32 legal pages */
+.legal-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-12);
+  padding-block: clamp(32px, 5vw, 64px) 80px;
+}
+
+.legal-toc {
+  position: sticky;
+  top: var(--space-6);
+  min-width: 0;
+  max-width: 260px;
+  flex: 1 1 220px;
+}
+
+.legal-toc-title {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.legal-toc-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legal-toc-list a {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.legal-toc-list a:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+.legal-article {
+  display: flex;
+  min-width: 0;
+  max-width: 720px;
+  flex: 1 1 560px;
+  flex-direction: column;
+  gap: var(--space-4);
+  line-height: var(--line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.legal-article section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.legal-article ul {
+  display: grid;
+  gap: var(--space-2);
+  padding-left: var(--space-6);
+  list-style: disc;
+}
+
+.legal-article a {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.legal-article code {
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-subtle);
+  padding: 0 var(--space-1);
+  font-size: 0.9em;
+}
+
+.legal-h2 {
+  margin-top: var(--space-6);
+  scroll-margin-top: var(--space-6);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  line-height: var(--line-height-heading);
+}
+
+.legal-draft {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-surface);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.legal-draft svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-warning);
+}
+
+.legal-effective {
+  color: var(--color-text-secondary);
+}
+
+.legal-blank {
+  border-radius: var(--radius-xs);
+  background: var(--color-warning-surface);
+  padding: 0 var(--space-1);
+  color: var(--color-warning);
+  box-decoration-break: clone;
+}
+
+.legal-table-wrap {
+  overflow: hidden;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.legal-table th {
+  background: var(--color-bg-subtle);
+  padding: 10px 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.legal-table td {
+  border-top: 1px solid var(--color-border-default);
+  padding: 10px 14px;
+  vertical-align: top;
+}
+
+.legal-toc-mobile {
+  display: none;
+  width: 100%;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.legal-toc-mobile summary {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  list-style: none;
+  padding-inline: var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.legal-toc-mobile summary::-webkit-details-marker {
+  display: none;
+}
+
+.legal-toc-mobile summary svg {
+  transition: transform var(--motion-normal) var(--ease-standard);
+}
+
+.legal-toc-mobile[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.legal-toc-mobile .legal-toc-list {
+  border-top: 1px solid var(--color-border-default);
+  padding: var(--space-1) var(--space-4) var(--space-2);
+}
+
+@media (max-width: 767px) {
+  .legal-layout {
+    gap: var(--space-6);
+  }
+
+  .legal-toc {
+    display: none;
+  }
+
+  .legal-toc-mobile {
+    display: block;
+  }
+}

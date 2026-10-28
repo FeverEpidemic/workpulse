@@ -8,13 +8,12 @@ import { CvPreview } from "@/features/cv/cv-preview";
 import { DemoTabs, type DemoTab } from "@/features/marketing/demo-tabs";
 import { ExampleFrame } from "@/features/marketing/example-frame";
 import { HeroStory } from "@/features/marketing/hero-story";
+import { CONTACT_EMAIL, LandingFooter } from "@/features/marketing/landing-footer";
 import { LandingHeader, SIGN_UP_HREF } from "@/features/marketing/landing-header";
 import { HERO_STORY_ARM_SCRIPT, REVEAL_STAGGER_MS } from "@/features/marketing/motion";
 import { RevealOnScroll } from "@/features/marketing/reveal-on-scroll";
 import { landingSample } from "@/features/marketing/sample-data";
 import { t, type Locale } from "@/i18n/messages";
-
-const CONTACT = "halo@myworkpulse.my.id";
 
 function SignUpCta({ locale, label }: { locale: Locale; label: "landing.hero.cta" | "landing.closing.cta" }) {
   return (
@@ -196,7 +195,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
             </blockquote>
             <p className="landing-maker" {...reveal(2)}>
               <span className="landing-maker-name">{t(locale, "landing.maker.name")}</span>
-              <a className="landing-text-link" href={`mailto:${CONTACT}`}>
+              <a className="landing-text-link" href={`mailto:${CONTACT_EMAIL}`}>
                 <Mail aria-hidden="true" size={16} strokeWidth={1.8} />
                 {t(locale, "landing.maker.email")}
               </a>
@@ -214,16 +213,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
         </section>
       </main>
 
-      <footer className="landing-footer">
-        <div className="landing-container landing-footer-inner">
-          <span className="brand-logo landing-footer-logo"><BrandSymbol />WorkPulse</span>
-          <nav aria-label={t(locale, "landing.footer.label")} className="landing-footer-nav">
-            <Link href="/privacy">{t(locale, "landing.footer.privacy")}</Link>
-            <Link href="/terms">{t(locale, "landing.footer.terms")}</Link>
-            <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
-          </nav>
-        </div>
-      </footer>
+      <LandingFooter locale={locale} />
       <RevealOnScroll />
     </div>
   );
