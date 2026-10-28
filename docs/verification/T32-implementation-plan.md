@@ -174,30 +174,30 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 0: Baseline (tanpa edit kode)
 
-- [ ] Worktree baru dari `main` (`19caca7` atau lebih baru, termasuk commit plan ini), `git status` bersih.
-- [ ] `pnpm install --frozen-lockfile` di worktree.
-- [ ] Parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari closeout T31: unit **154 file / 1448 test**; catat angka aktual.
-- [ ] `pnpm test:e2e:release` (harapan **43**) dan `pnpm test:e2e:auth`; catat angka.
-- [ ] Inventaris test yang membuka `/` sebagai tamu atau mengharapkan redirect ke `/sign-in` dari root (`grep -rn "goto(\"/\")\|goto('/')\|toHaveURL(/\\/sign-in" tests/`). Catat tiap file dan apakah ia perlu diubah.
-- [ ] Inventaris props `ActivityList`, `AchievementList`, `CvPreview`: props wajib, apakah ada callback atau kontrol aksi yang selalu dirender, dan tipe data yang dibutuhkan. Bila salah satunya tidak bisa dirender tanpa kontrol aksi, catat alternatif komponen app yang bisa (misalnya baris activity tunggal); bila tidak ada, **stop** (§8).
-- [ ] Verifikasi rujukan file:baris di dokumen ini; selisih dicatat.
-- [ ] Receipt `T32-phase0-baseline.md`.
+- [x] Worktree baru dari `main` (`19caca7` atau lebih baru, termasuk commit plan ini), `git status` bersih.
+- [x] `pnpm install --frozen-lockfile` di worktree.
+- [x] Parity migration (harapan **38/38**, terakhir `20261019090000_t26_import_rules_extraction.sql`).
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan dari closeout T31: unit **154 file / 1448 test**; catat angka aktual.
+- [x] `pnpm test:e2e:release` (harapan **43**) dan `pnpm test:e2e:auth`; catat angka.
+- [x] Inventaris test yang membuka `/` sebagai tamu atau mengharapkan redirect ke `/sign-in` dari root (`grep -rn "goto(\"/\")\|goto('/')\|toHaveURL(/\\/sign-in" tests/`). Catat tiap file dan apakah ia perlu diubah.
+- [x] Inventaris props `ActivityList`, `AchievementList`, `CvPreview`: props wajib, apakah ada callback atau kontrol aksi yang selalu dirender, dan tipe data yang dibutuhkan. Bila salah satunya tidak bisa dirender tanpa kontrol aksi, catat alternatif komponen app yang bisa (misalnya baris activity tunggal); bila tidak ada, **stop** (§8).
+- [x] Verifikasi rujukan file:baris di dokumen ini; selisih dicatat.
+- [x] Receipt `T32-phase0-baseline.md`.
 
 ### Fase 1: Copy dan terjemahan legal (dokumen, persetujuan pengguna)
 
-- [ ] Tulis `docs/marketing/landing-copy-v1.md`: per section §3.2, teks `id` dan `en` berdampingan, termasuk label kecil, CTA, label "contoh", isi data contoh (persona fiktif, activity, achievement), teks tab, label lima langkah dan teks status titik, catatan Activity yang diketik di hero (≤ 90 karakter), label tombol putar ulang, paragraf pembuat (§0), metadata title/description, label toggle, label draf legal.
-- [ ] Tulis `docs/legal/privacy-policy-en-draft.md` dan `docs/legal/terms-of-service-en-draft.md` dari draf ID: bagian sama, isian kosong tetap dalam kurung siku English (misal `[CITY]`), catatan draf di atas.
-- [ ] Delivery Gate `antislop-copywriting` atas copy deck dan kedua terjemahan, PASS/FAIL dengan bukti di receipt. Cek manual daftar kata terlarang acceptance 6.
-- [ ] Receipt `T32-phase1-copy.md`, commit. **Stop: minta pengguna menyetujui copy deck dan terjemahan.** Catat revisi pengguna di receipt; Fase 2 memakai versi yang disetujui.
+- [x] Tulis `docs/marketing/landing-copy-v1.md`: per section §3.2, teks `id` dan `en` berdampingan, termasuk label kecil, CTA, label "contoh", isi data contoh (persona fiktif, activity, achievement), teks tab, label lima langkah dan teks status titik, catatan Activity yang diketik di hero (≤ 90 karakter), label tombol putar ulang, paragraf pembuat (§0), metadata title/description, label toggle, label draf legal.
+- [x] Tulis `docs/legal/privacy-policy-en-draft.md` dan `docs/legal/terms-of-service-en-draft.md` dari draf ID: bagian sama, isian kosong tetap dalam kurung siku English (misal `[CITY]`), catatan draf di atas.
+- [x] Delivery Gate `antislop-copywriting` atas copy deck dan kedua terjemahan, PASS/FAIL dengan bukti di receipt. Cek manual daftar kata terlarang acceptance 6.
+- [x] Receipt `T32-phase1-copy.md`, commit. **Stop: minta pengguna menyetujui copy deck dan terjemahan.** Catat revisi pengguna di receipt; Fase 2 memakai versi yang disetujui.
 
 ### Fase 2: Route, locale, sign-in (TDD unit)
 
-- [ ] Test gagal `root-destination.test.ts` (tamu, onboarding selesai, provisional, tanpa profil) dan `accept-language.test.ts` (acceptance 3, termasuk q-value, `in`, wildcard, header rusak, prioritas profil > cookie > header).
-- [ ] Implementasi §2.2.1, §2.2.2; `page.tsx` sementara merender placeholder landing minimal (h1 dari copy) agar route bisa diuji.
-- [ ] Test gagal untuk parsing `mode` dan render awal `SignInClient` (`renderToStaticMarkup` dengan `initialMode="create-account"` memuat `sign-up-form`). Implementasi §2.2.4 dan link legal di bawah form buat akun.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus; `test:e2e:auth` lulus.
-- [ ] Receipt `T32-phase2-route-locale.md`, commit.
+- [x] Test gagal `root-destination.test.ts` (tamu, onboarding selesai, provisional, tanpa profil) dan `accept-language.test.ts` (acceptance 3, termasuk q-value, `in`, wildcard, header rusak, prioritas profil > cookie > header).
+- [x] Implementasi §2.2.1, §2.2.2; `page.tsx` sementara merender placeholder landing minimal (h1 dari copy) agar route bisa diuji.
+- [x] Test gagal untuk parsing `mode` dan render awal `SignInClient` (`renderToStaticMarkup` dengan `initialMode="create-account"` memuat `sign-up-form`). Implementasi §2.2.4 dan link legal di bawah form buat akun.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm lint` lulus; `test:e2e:auth` lulus.
+- [x] Receipt `T32-phase2-route-locale.md`, commit.
 
 ### Fase 3: Landing UI (TDD unit)
 

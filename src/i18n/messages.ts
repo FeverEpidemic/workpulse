@@ -1,3 +1,5 @@
+import { localeFromAcceptLanguage } from "@/i18n/accept-language";
+
 export type Locale = "en" | "id";
 
 const en = {
@@ -1115,6 +1117,10 @@ const en = {
   "profile.importCvTitle": "Import from a CV",
   "profile.importCvBody": "Upload a PDF or DOCX CV and choose which records to add. Nothing is saved until you confirm.",
   "profile.importCvAction": "Import CV",
+  "landing.hero.title": "You sit down to update your CV and can't remember what you did last year.",
+  "legal.privacy.title": "Privacy Policy",
+  "legal.terms.title": "Terms of Service",
+  "legal.signUpNote": "By creating an account, you agree to the {terms} and {privacy}.",
 } as const;
 
 const id: Record<keyof typeof en, string> = {
@@ -2232,6 +2238,10 @@ const id: Record<keyof typeof en, string> = {
   "profile.importCvTitle": "Impor dari CV",
   "profile.importCvBody": "Unggah CV PDF atau DOCX dan pilih data yang ditambahkan. Tidak ada yang disimpan sebelum Anda mengonfirmasi.",
   "profile.importCvAction": "Impor CV",
+  "landing.hero.title": "Mau update CV. Terus lupa setahun kemarin ngerjain apa aja.",
+  "legal.privacy.title": "Kebijakan Privasi",
+  "legal.terms.title": "Syarat Layanan",
+  "legal.signUpNote": "Dengan membuat akun, kamu setuju dengan {terms} dan {privacy}.",
 };
 
 export type MessageKey = keyof typeof en;
@@ -2249,7 +2259,9 @@ export function parseLocale(value: unknown): Locale {
   return value === "id" ? "id" : "en";
 }
 
-export function resolveLocale(profileLocale: unknown, cookieLocale: unknown): Locale {
+/** Profile, then a valid `wp-locale` cookie, then the browser's `Accept-Language` (T32). */
+export function resolveLocale(profileLocale: unknown, cookieLocale: unknown, acceptLanguage?: string | null): Locale {
   if (profileLocale === "en" || profileLocale === "id") return profileLocale;
-  return parseLocale(cookieLocale);
+  if (cookieLocale === "en" || cookieLocale === "id") return cookieLocale;
+  return localeFromAcceptLanguage(acceptLanguage);
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { destinationForLifecycle } from "@/domain/auth/route-state";
+import { destinationForLifecycle, signInModeFromQuery } from "@/domain/auth/route-state";
 import { sanitizeReturnTo } from "@/domain/routes/safe-return";
 import { SignInClient } from "@/features/auth/sign-in-client";
 import { getRequestContext, getRequestLocale } from "@/server/auth/context";
@@ -34,6 +34,7 @@ export default async function SignInPage({ searchParams }: { searchParams: SignI
     <SignInClient
       locale={locale}
       returnTo={returnTo}
+      initialMode={signInModeFromQuery(query.mode)}
       notice={context.accountDeleting ? "auth.accountDeleting" : noticeKeys[noticeValue]}
       configured={context.configured}
       googleEnabled={isGoogleAuthEnabled()}
