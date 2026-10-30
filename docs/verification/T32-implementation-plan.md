@@ -227,13 +227,13 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 5: E2E, regresi, aksesibilitas, Delivery Gate
 
-- [ ] `tests/e2e/landing.spec.ts` untuk acceptance 1-8 dan 14-18 (dua akun fixture untuk acceptance 2, `extraHTTPHeaders` untuk locale, `javaScriptEnabled: false` untuk tab, crawl link internal, axe per kombinasi, termasuk setelah cerita hero selesai). Tambah ke `testMatch` `playwright.release.config.ts`. Acceptance 9-13 sudah di `landing-motion.spec.ts` (Fase 3b).
-- [ ] Perbarui test dari inventaris Fase 0 hanya bila gagal karena landing; alasan di receipt.
-- [ ] Screenshot `docs/verification/T32-screenshots`: landing 360 dan 1440 px, light dan dark, id dan en (minimal hero dan panel demo), `/privacy` 360 px, `/sign-in?mode=create-account` 360 px.
-- [ ] `pnpm build`, `pnpm test`, `pnpm test:e2e:release`, `pnpm test:e2e:auth`, `pnpm test:e2e:ui`, `pnpm test:e2e:m2`; catat angka.
-- [ ] Klik-tembus manual di 360 dan 1440 px: baca landing dari atas ke bawah di kedua bahasa, ganti bahasa, ketuk tiap tab, scroll cepat bolak-balik (reveal tidak berkedip), ikuti CTA sampai form buat akun, buka legal dari footer dan dari form daftar. Tulis pengamatan.
-- [ ] Delivery Gate antislop (core + `antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`) dengan PASS/FAIL dan bukti di receipt.
-- [ ] Receipt `T32-phase5-e2e-regression.md`, commit. **Stop: gate review Claude.**
+- [x] `tests/e2e/landing.spec.ts` untuk acceptance 1-8 dan 14-18 (dua akun fixture untuk acceptance 2, `extraHTTPHeaders` untuk locale, `javaScriptEnabled: false` untuk tab, crawl link internal, axe per kombinasi, termasuk setelah cerita hero selesai). Tambah ke `testMatch` `playwright.release.config.ts`. Acceptance 9-13 sudah di `landing-motion.spec.ts` (Fase 3b).
+- [x] Perbarui test dari inventaris Fase 0 hanya bila gagal karena landing; alasan di receipt.
+- [x] Screenshot `docs/verification/T32-screenshots`: landing 360 dan 1440 px, light dan dark, id dan en (minimal hero dan panel demo), `/privacy` 360 px, `/sign-in?mode=create-account` 360 px.
+- [x] `pnpm build`, `pnpm test`, `pnpm test:e2e:release`, `pnpm test:e2e:auth`, `pnpm test:e2e:ui`, `pnpm test:e2e:m2`; catat angka.
+- [x] Klik-tembus manual di 360 dan 1440 px: baca landing dari atas ke bawah di kedua bahasa, ganti bahasa, ketuk tiap tab, scroll cepat bolak-balik (reveal tidak berkedip), ikuti CTA sampai form buat akun, buka legal dari footer dan dari form daftar. Tulis pengamatan.
+- [x] Delivery Gate antislop (core + `antislop-ui`, `antislop-human`, `antislop-layoutmobile`, `antislop-copywriting`) dengan PASS/FAIL dan bukti di receipt.
+- [x] Receipt `T32-phase5-e2e-regression.md`, commit. **Stop: gate review Claude.**
 
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
