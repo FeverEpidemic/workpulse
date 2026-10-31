@@ -1,7 +1,7 @@
 # T32 Landing page dan halaman legal: bukti acceptance
 
 - Tanggal: 1 November 2026
-- Status: **gate review lulus, belum ditandai DONE** (status ditetapkan di closeout). Gate review Claude Opus 5.5: satu P2 (RV1) diperbaiki, review ulang lulus tanpa P0-P2 ([gate review](T32-review-remediation-plan.md), [remediasi](T32-review-remediation.md)).
+- Status: **DONE lokal** (closeout 1 November 2026). Gate review Claude Opus 5.5: satu P2 (RV1) diperbaiki, review ulang lulus tanpa P0-P2 ([gate review](T32-review-remediation-plan.md), [remediasi](T32-review-remediation.md)).
 - Pelaksana Fase 0-6: Claude Opus 5.5, branch `claude/t32-landing`, [PR #40](https://github.com/FeverEpidemic/workpulse/pull/40).
 - Keputusan: [decision 0042](../decisions/0042-t32-landing-legal.md). Rencana: [T32-implementation-plan.md](T32-implementation-plan.md).
 - Receipt: [Fase 0](T32-phase0-baseline.md), [Fase 1](T32-phase1-copy.md), [Fase 2](T32-phase2-route-locale.md), [Fase 3](T32-phase3-landing-ui.md), [Fase 3b](T32-phase3b-motion.md), [Fase 4](T32-phase4-legal.md), [Fase 5](T32-phase5-e2e-regression.md). Screenshot dan video tempo: `docs/verification/T32-screenshots/`.

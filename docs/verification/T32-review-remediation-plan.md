@@ -5,6 +5,8 @@
 - Catatan: reviewer adalah sesi yang sama dengan pelaksana Fase 0-5. Karena itu review ini memeriksa ulang setiap klaim receipt dari kode dan dari run baru, bukan dari ingatan.
 - Branch `claude/t32-landing`, HEAD `4b747fb`, base handoff `19caca7`. Checkout utama `D:\Project\WorkPulse`, bukan worktree bersih terpisah. Working tree bersih kecuali `.claude/launch.json` dan `.claude/setting.local.json` (lokal, tidak di-commit).
 
+- Status plan: **DONE** (1 November 2026). RV1 dan RV2 selesai ([remediasi](T32-review-remediation.md)), T32 ditutup di closeout.
+
 ## Verdict
 
 **Review pertama: belum lulus** (satu P2, RV1). **Setelah remediasi: lulus.** Lihat "Review ulang RV1" di bawah.

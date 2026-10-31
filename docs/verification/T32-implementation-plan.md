@@ -4,6 +4,7 @@
 
 - Tanggal: 28 Oktober 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE** (1 November 2026). Gate review lulus setelah remediasi RV1, lihat [T32-landing-legal.md](T32-landing-legal.md).
 - Dependensi: T03 (auth dan locale), T04 (design system), T23 (hapus akun), T29 (Google), T30 (motion), T31 (tab bar) **DONE** di `main` (`19caca7`).
 - Asal task: permintaan terarah pengguna. T32 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Keputusan produk berasal dari interview 20 Oktober 2026 (`docs/marketing/landing-page-brief-v1.md`), jawaban item terbuka, interview referensi parloa.com, dan interview animasi pada 28 Oktober 2026 (semuanya dicatat di brief yang sama).
 - Eksekutor: satu agent Claude; model ditetapkan pengguna saat mulai. Semua fase berurutan tanpa delegasi.
