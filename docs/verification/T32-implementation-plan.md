@@ -237,11 +237,11 @@ T32 lulus hanya jika setiap poin berikut dibuktikan dengan hasil lokal nyata:
 
 ### Fase 6: Draft dokumen (setelah gate lulus)
 
-- [ ] `docs/Design.md` dan `Design.md`: token permukaan hangat di §17, pola landing (hero UI melayang, label kecil, panel demo bertab, reveal sekali) sebagai bagian baru atau di §16.3 bila termasuk pola yang sengaja. Jaga kedua salinan identik.
-- [ ] Draft decision `0042-t32-landing-legal.md` (nomor dicek): root untuk tamu, fallback `Accept-Language` untuk semua halaman tamu, `mode=create-account`, konten legal sebagai data TS dan guard draf, token warm, MOTION 2 hanya untuk landing.
-- [ ] Update `docs/marketing/landing-page-brief-v1.md`: centang item yang selesai, catat yang tersisa (forwarding email, isian legal, video).
-- [ ] `docs/verification/T32-landing-legal.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
-- [ ] Commit.
+- [x] `docs/Design.md` dan `Design.md`: token permukaan hangat di §17, pola landing (hero UI melayang, label kecil, panel demo bertab, reveal sekali) sebagai bagian baru atau di §16.3 bila termasuk pola yang sengaja. Jaga kedua salinan identik.
+- [x] Draft decision `0042-t32-landing-legal.md` (nomor dicek): root untuk tamu, fallback `Accept-Language` untuk semua halaman tamu, `mode=create-account`, konten legal sebagai data TS dan guard draf, token warm, MOTION 2 hanya untuk landing.
+- [x] Update `docs/marketing/landing-page-brief-v1.md`: centang item yang selesai, catat yang tersisa (forwarding email, isian legal, video).
+- [x] `docs/verification/T32-landing-legal.md` (ringkasan acceptance dan bukti) tanpa klaim DONE.
+- [x] Commit.
 
 ## 6. Fixture
 

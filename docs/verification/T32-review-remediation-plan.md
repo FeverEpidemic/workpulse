@@ -42,8 +42,8 @@
 | F3 | P3 | Tombol putar ulang baru muncul setelah hydration, jadi hero bergeser sedikit (layout shift) | Follow-up |
 | F4 | P3 | Tiga test flaky, masing-masing gagal sekali (a, b, c di bawah) | Follow-up. c diperbaiki di RV2 (selesai). |
 | F8 | P3 | Axe hanya menguji header tamu di halaman legal; varian header akun login (RV1) tidak masuk matriks axe | Follow-up |
-| F5 | P3 | Plan §2.2.8 menyebut blok reduced motion global yang tidak ada | Perbaiki teks di Fase 6 |
-| F6 | P3 | Dua teks data contoh tidak ada di copy deck: bullet CV kedua (dari mockup) dan format meta Activity di hero (dirender komponen app) | Catat di copy deck Fase 6 |
+| F5 | P3 | ~~Plan §2.2.8 menyebut blok reduced motion global yang tidak ada~~. Temuan ini salah: bloknya ada (`globals.css:1870`). Yang keliru justru receipt Fase 3b keputusan 6, dan reviewer mengulang kesalahan itu. | Ditarik. Receipt 3b dikoreksi di Fase 6. |
+| F6 | P3 | Dua teks data contoh tidak ada di copy deck: bullet CV kedua (dari mockup) dan format meta Activity di hero (dirender komponen app) | Selesai: dicatat di copy deck (Fase 6) |
 | F7 | P3 | Scroll cepat bolak-balik di Fase 5 tidak dicek visual (panel browser tersembunyi), hanya lewat E2E | Catatan |
 
 ### RV1 (P2): toggle bahasa mati di halaman legal untuk akun login

@@ -102,6 +102,11 @@ Catatan yang diketik: `id` 82 karakter, `en` 74 karakter. Versi `en` 96 karakter
 
 Heading seksi CV (Pengalaman, Pendidikan) dan format tanggal ikut dari komponen `CvPreview` dan locale CV, bukan copy landing.
 
+Catatan implementasi (T32, 1 November 2026):
+
+- Kertas CV di tab CV punya bullet kedua di bawah Operations Analyst, diambil dari mockup: "Menyusun rekap keluhan pelanggan sebagai bahan evaluasi SLA vendor kurir." / "Put together customer complaints as input for the courier vendor SLA review."
+- Meta Activity di hero dirender oleh komponen app `ActivityListRow`: tanggal ("14 Agu 2025"), badge "Catatan" dan "Tersimpan", lalu "Proyek: Retur Gudang". Bentuknya tidak persis seperti baris "Meta Activity" di atas.
+
 ## Import CV lama
 
 | Key | id | en |
