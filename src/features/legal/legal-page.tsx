@@ -40,8 +40,16 @@ function Block({ block, caption }: { block: LegalBlock; caption: string }) {
   );
 }
 
+/**
+ * True only for an onboarded account: its profile sets the language. A provisional account still follows the
+ * wp-locale cookie, so it keeps the guest header and its working toggle.
+ */
+export function legalPageSignedIn(context: { user: unknown; profile: { onboarding_completed_at: string | null } | null }): boolean {
+  return Boolean(context.user && context.profile?.onboarding_completed_at);
+}
+
 /** `/privacy` and `/terms`: the draft text with its blanks highlighted, in the landing page frame. */
-export function LegalPage({ kind, locale }: { kind: LegalKind; locale: Locale }) {
+export function LegalPage({ kind, locale, signedIn = false }: { kind: LegalKind; locale: Locale; signedIn?: boolean }) {
   const doc = legalDocument(kind, locale);
   const [effectiveBefore, effectiveAfter] = t(locale, "legal.effective").split("{date}");
   const toc = (
@@ -52,7 +60,7 @@ export function LegalPage({ kind, locale }: { kind: LegalKind; locale: Locale })
   return (
     <div className="landing">
       <a className="skip-link" href="#main-content">{t(locale, "landing.skip")}</a>
-      <LandingHeader locale={locale} />
+      <LandingHeader locale={locale} signedIn={signedIn} />
       <main id="main-content" tabIndex={-1} className="landing-container legal-layout">
         {/* Sidebar from 768 px, a closed disclosure below it; CSS shows only one, so only one nav is announced. */}
         <nav className="legal-toc" aria-label={t(locale, "legal.toc")}>

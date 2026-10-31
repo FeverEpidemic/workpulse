@@ -293,6 +293,12 @@ test.describe("T32 legal pages", () => {
       expect((await signedIn.page.goto(path))?.status()).toBe(200);
       await expect(signedIn.page).toHaveURL(new RegExp(`${path}$`));
       await expect(signedIn.page.getByRole("heading", { level: 1 })).toHaveText(id);
+      // RV1: the profile sets the language, so a signed-in account gets no toggle and no sign-in links.
+      const header = signedIn.page.getByRole("banner");
+      await expect(header.locator('button[name="locale"]')).toHaveCount(0);
+      await expect(header.locator('a[href^="/sign-in"]')).toHaveCount(0);
+      await header.getByRole("link", { name: "Buka dashboard" }).click();
+      await expect(signedIn.page).toHaveURL(/\/dashboard$/);
       await signedIn.context.close();
     });
   }

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { LegalPage } from "@/features/legal/legal-page";
+import { LegalPage, legalPageSignedIn } from "@/features/legal/legal-page";
 import { legalMetadata } from "@/features/legal/documents";
 
 vi.mock("@/server/locale/actions", () => ({ saveLocalePreference: vi.fn() }));
@@ -57,6 +57,32 @@ describe("T32 legal page markup", () => {
     expect(footer).toMatch(/<a[^>]*aria-current="page"[^>]*href="\/terms"|<a[^>]*href="\/terms"[^>]*aria-current="page"/);
     expect(html).toContain('href="/sign-in?mode=create-account"');
     expect(html).toContain('href="#main-content"');
+  });
+});
+
+describe("T32 RV1 legal header for a signed-in account", () => {
+  it.each(["en", "id"] as const)("offers the dashboard instead of the language toggle and sign-in links in %s", (locale) => {
+    const html = renderToStaticMarkup(<LegalPage kind="privacy" locale={locale} signedIn />);
+    const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+    expect(header).toMatch(new RegExp(`<a[^>]*href="/dashboard"[^>]*>${locale === "en" ? "Open dashboard" : "Buka dashboard"}</a>`));
+    expect(header).not.toContain('name="locale"');
+    expect(header).not.toContain('href="/sign-in');
+  });
+
+  it("treats only an onboarded account as signed in; a provisional one keeps the working toggle", () => {
+    const user = { id: "3f3c2a4e-1d2b-4c5d-8e6f-7a8b9c0d1e2f" };
+    expect(legalPageSignedIn({ user, profile: { onboarding_completed_at: "2026-10-01T00:00:00Z" } })).toBe(true);
+    expect(legalPageSignedIn({ user, profile: { onboarding_completed_at: null } })).toBe(false);
+    expect(legalPageSignedIn({ user, profile: null })).toBe(false);
+    expect(legalPageSignedIn({ user: null, profile: null })).toBe(false);
+  });
+
+  it("keeps the guest header unchanged", () => {
+    const header = render("privacy").slice(0, render("privacy").indexOf("</header>"));
+    expect(header.match(/name="locale"/g)).toHaveLength(2);
+    expect(header).toContain('href="/sign-in"');
+    expect(header).toContain('href="/sign-in?mode=create-account"');
+    expect(header).not.toContain('href="/dashboard"');
   });
 });
 

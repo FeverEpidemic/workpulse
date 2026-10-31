@@ -38,11 +38,15 @@ test.describe("T32 hero story", () => {
 
   test("plays once in order within 3.5 s without showing the end first, then replays from the keyboard", async ({ page }) => {
     await recordStory(page);
+    // A page Chromium reports as hidden ends the story at once by design (visibilitychange), so keep it in front.
+    await page.bringToFront();
     await page.goto("/");
+    expect(await page.evaluate(() => document.visibilityState)).toBe("visible");
     await expect(stack(page)).toHaveAttribute("data-phase", "done", { timeout: 8_000 });
 
     const log = await page.evaluate(() => window.__storyLog);
-    expect(log.map(([, phase]) => phase)).toEqual(["idle", "typing", "saved", "suggested", "approved", "done"]);
+    const phases = log.map(([, phase]) => phase);
+    expect(phases.join(","), phases.join(",") === "idle,done" ? "story finished early: the page was hidden while it ran" : "story phases").toBe("idle,typing,saved,suggested,approved,done");
     const duration = log.at(-1)![0] - log[0]![0];
     expect(duration).toBeLessThanOrEqual(3_500);
     expect(duration).toBeGreaterThan(1_500);
