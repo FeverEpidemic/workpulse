@@ -7,7 +7,7 @@
 
 ## Verdict
 
-**Belum lulus. Status T32 tetap PARTIAL.** Ada satu temuan P2 (RV1). Setelah RV1 diperbaiki dan checks di bawah diulang, T32 bisa lanjut ke Fase 6 dan closeout.
+**Review pertama: belum lulus** (satu P2, RV1). **Setelah remediasi: lulus.** Lihat "Review ulang RV1" di bawah.
 
 ## Yang diperiksa
 
@@ -36,11 +36,12 @@
 
 | ID | Level | Temuan | Status |
 | --- | --- | --- | --- |
-| RV1 | P2 | Toggle bahasa di `/privacy` dan `/terms` tidak berfungsi untuk akun yang sudah onboarding | Terbuka |
+| RV1 | P2 | Toggle bahasa di `/privacy` dan `/terms` tidak berfungsi untuk akun yang sudah onboarding | **Selesai** (`T32-review-remediation.md`, review ulang di bawah) |
 | F1 | P3 | Akun yang sedang dihapus melihat landing di `/`, bukan pemberitahuan penghapusan | Follow-up |
 | F2 | P3 | `Accept-Language` juga menentukan bahasa akun provisional (onboarding), bukan hanya tamu | Catat di decision Fase 6 |
 | F3 | P3 | Tombol putar ulang baru muncul setelah hydration, jadi hero bergeser sedikit (layout shift) | Follow-up |
-| F4 | P3 | Tiga test flaky, masing-masing gagal sekali (a, b, c di bawah) | Follow-up, c diperbaiki di RV2 |
+| F4 | P3 | Tiga test flaky, masing-masing gagal sekali (a, b, c di bawah) | Follow-up. c diperbaiki di RV2 (selesai). |
+| F8 | P3 | Axe hanya menguji header tamu di halaman legal; varian header akun login (RV1) tidak masuk matriks axe | Follow-up |
 | F5 | P3 | Plan §2.2.8 menyebut blok reduced motion global yang tidak ada | Perbaiki teks di Fase 6 |
 | F6 | P3 | Dua teks data contoh tidak ada di copy deck: bullet CV kedua (dari mockup) dan format meta Activity di hero (dirender komponen app) | Catat di copy deck Fase 6 |
 | F7 | P3 | Scroll cepat bolak-balik di Fase 5 tidak dicek visual (panel browser tersembunyi), hanya lewat E2E | Catatan |
@@ -94,6 +95,20 @@ Sebelum `goto`, panggil `page.bringToFront()`. Setelah load, pastikan `document.
 ### Checks yang harus diulang setelah remediasi
 
 `pnpm lint --ignore-pattern ".claude/**"`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e:release` (restore screenshot T25/T30/T31 setelahnya), `pnpm test:e2e:auth`, `git diff --check`. Lalu review ulang RV1 oleh Claude.
+
+## Review ulang RV1 (31 Oktober 2026)
+
+- **Diff dibaca:** `landing-header.tsx`, `legal-page.tsx`, `app/privacy/page.tsx`, `app/terms/page.tsx`. Penyebab di `legal-page.tsx:55` sudah ditangani. Header akun onboarding tidak lagi punya toggle atau link Masuk/Daftar, dan punya satu link ke `/dashboard` dengan key yang sudah ada.
+- **Kasus yang dicek:**
+  - Akun onboarding: header dashboard.
+  - Akun provisional: header tamu, dan toggle berfungsi karena cookie yang menentukan bahasa.
+  - Sesi tanpa profil: header tamu, cookie yang menentukan bahasa.
+  - Akun yang sedang dihapus (`user` null): header tamu.
+  - Tamu: header tidak berubah. Test markup tamu tetap lulus.
+- **Bukti:** unit 3 test baru (merah 2 sebelum perbaikan). E2E akun login di halaman legal. Run ulang lengkap di `T32-review-remediation.md`: lint, typecheck, unit 163/1562, build, release 79 lulus 0 gagal, auth 1 lulus. `git diff --check` bersih.
+- **Sisa:** F8 (axe untuk header akun login), P3.
+
+**Verdict setelah remediasi: tidak ada P0-P2 terbuka. T32 lulus gate review** dan boleh lanjut ke Fase 6 (dokumen) dan closeout. Status DONE baru ditandai di closeout, bukan di dokumen ini.
 
 ## Yang dibutuhkan dari pengguna
 

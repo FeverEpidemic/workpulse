@@ -82,7 +82,7 @@ Dial: ENERGY 2 / RHYTHM 2 / MOTION 3 (MOTION 3 hanya landing). Design Read ada d
 | R-23 aset tanpa konfirmasi | PASS | Logo memakai `BrandSymbol` yang sudah ada. Tanpa foto atau avatar. Persona "Rani Prameswari" dan "PT Contoh …" disetujui di mockup dan copy deck, dengan label "Contoh". |
 | R-24 link ke halaman tidak ada | PASS | Crawl: kelima path internal 200. |
 | R-25 kontras | PASS | Axe 24 kombinasi nol temuan. Tabel rasio di receipt Fase 3. Placeholder legal 6,24:1 / 8,02:1. |
-| R-26 kontrol mati | PASS | Tombol "Simpan activity"/"Konfirmasi" di contoh ada di dalam `inert` dan berlabel "Contoh", bukan kontrol. Semua kontrol nyata (toggle, tab, replay, CTA, daftar isi) diuji E2E. |
+| R-26 kontrol mati | PASS (dikoreksi) | Tombol "Simpan activity"/"Konfirmasi" di contoh ada di dalam `inert` dan berlabel "Contoh", bukan kontrol. Semua kontrol nyata (toggle, tab, replay, CTA, daftar isi) diuji E2E. **Koreksi gate review (RV1):** di `/privacy` dan `/terms`, toggle bahasa tidak berfungsi untuk akun yang sudah onboarding, karena locale profil menang atas cookie. Klaim PASS di sini salah untuk keadaan itu. Diperbaiki di `T32-review-remediation.md`. |
 | R-27 state kosong/loading/error | PASS | Landing dan legal statis tanpa data view. Toggle bahasa tanpa JS tetap form biasa. Fallback hydration hero 3 s diuji. |
 | R-28 FAQ generik | PASS | Tidak ada FAQ. |
 | R-32 keyboard dan fokus | PASS | `:focus-visible` global (`globals.css:60`), ring 6,48:1 light / 9,74:1 dark. Skip link, toggle, tab (panah/Home/End), dan replay (Enter) diuji E2E. |
@@ -127,7 +127,7 @@ Dial: ENERGY 2 / RHYTHM 2 / MOTION 3 (MOTION 3 hanya landing). Design Read ada d
 | Item | Hasil | Bukti |
 | --- | --- | --- |
 | C-1 keputusan default AI | PASS | Keputusan visual punya alasan di plan §2.2 dan di receipt fase. |
-| C-2 elemen interaktif mati | PASS | Lihat R-26. |
+| C-2 elemen interaktif mati | PASS (dikoreksi) | Lihat R-26 dan RV1. |
 | C-3 section pengisi template | PASS | Setiap section dari brief §3.2. Tanpa "Trusted by", pricing, atau FAQ. |
 | C-4 rusak di state, tema, breakpoint, atau tanpa mouse | PASS | Tanpa JS, reduced motion, sentuh, keyboard, dua tema, dan tiga lebar diuji E2E. |
 | C-5 klaim karangan | PASS | Lihat R-36. |
