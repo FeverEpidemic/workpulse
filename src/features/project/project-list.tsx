@@ -53,9 +53,6 @@ export function ProjectList({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="project-results-title" className="sr-only">{t(locale, "project.description")}</h2>
         <p className="field-help" role="status">{t(locale, "project.pageCount", { count: items.length })}</p>
-        <Link className="button-primary" href={`/projects/new?${new URLSearchParams({ returnTo }).toString()}`}>
-          {t(locale, "project.new")}
-        </Link>
       </div>
       <ul className="project-list" aria-label={t(locale, "project.description")}>
         {items.map(({ project, experience, linkedActivityCount }) => {

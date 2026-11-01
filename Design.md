@@ -664,7 +664,7 @@ Illustration usage is minimal and reserved primarily for:
 
 The published WorkPulse Design System (https://claude.ai/artifact/3xSj9rHCMG9U2msCqFdaR3) holds the tokens, component guidelines and live previews taken from the code. When it and this document differ on a value, `src/styles/tokens.css` and `src/app/globals.css` win.
 
-Design dials: **ENERGY 1 / RHYTHM 1 / MOTION 2**. Quiet surfaces with one sage accent; uniform work screens on purpose; functional motion only (section 28).
+Design dials: **ENERGY 1 / RHYTHM 1 / MOTION 2**. Quiet surfaces with one sage accent; uniform work screens on purpose; functional motion only (section 28). The public landing page has its own dials (section 16.4).
 
 ---
 
@@ -715,6 +715,26 @@ A few patterns that often read as generated UI are kept on purpose. Use them onl
 - **Equal cards for an unsteered choice.** The CV import mode dialog shows "With AI" and "Without AI" with the same border, size and secondary button.
 
 Do not add a left stripe anywhere else, and never to a card or list row.
+
+---
+
+## 16.4 Landing Page
+
+The public landing page at `/` (guests only, T32) and the legal pages `/privacy` and `/terms` follow the app's visual language with a few rules of their own. Decision 0042 records why.
+
+Design dials for the landing page: **ENERGY 2 / RHYTHM 2 / MOTION 3**. The app keeps ENERGY 1 / RHYTHM 1 / MOTION 2.
+
+- **Real UI over a warm surface.** The hero and the demo show the app's own components (`ActivityListRow`, `CvPreview`, badges, buttons) with fictional data, floating with `--shadow-md`/`--shadow-lg` on the warm surfaces of section 17.5. Every sample sits in an `ExampleFrame`: a visible "Example"/"Contoh" badge, a descriptive `aria-label`, and `inert` so nothing inside can be focused or clicked. No screenshots, skeletons, photos or illustrations.
+- **Small label above a section title.** Plus Jakarta Sans 14px 600 in `--color-action-primary`, sentence case, never uppercase or monospace. Not used on `--color-bg-warm-subtle` (contrast, section 17.5).
+- **Tabbed demo panel, not numbered cards.** One wide `--color-bg-warm-subtle` panel with ARIA tabs (Activity, Achievement, CV) and one panel visible. Without JavaScript all three panels render in order.
+- **Step dots.** Five dots mark the five steps of the flow (log, AI suggests, approve, add to CV, PDF), with the active range also given as text. They are not the logo: no blank day, no loop.
+- **Section rhythm.** Sections alternate between canvas and warm surfaces; at least one uses a different composition (title left, content right). Facts are rows divided by `--color-border-strong`, not cards.
+- **Motion (MOTION 3, landing only).** All of it uses `--motion-slow` and `--ease-out`; pauses and typing speed are TS constants in `src/features/marketing/motion.ts`, never literal CSS durations.
+  - The hero story plays once after hydration: the note is typed, saved, an AI suggestion appears and is approved, then a replay button shows. It takes about 3 s, never repeats on its own, and ends at once when the tab is hidden. The server renders the end state; an inline script hides the story parts until hydration so the end never flashes back to the start, and gives up after 3 s.
+  - Sections reveal once, in a staggered fade (80 ms, at most 12px of travel), only under `html.is-reveal-ready`, so content never depends on JavaScript.
+  - A new demo panel slides in from the side of the move. Sample cards lift 2px on hover for a fine pointer only.
+  - With reduced motion or without JavaScript everything shows in its end state. No parallax, no scroll-linked motion, no loops; the logo never moves.
+- **Legal pages.** The draft text comes from `docs/legal/` as structured data. Unfilled blanks are highlighted with the warning colors, a draft notice sits above the title, and the pages are `noindex` while `LEGAL_DRAFT` is on. The contents list is a sticky sidebar from 768px and a closed disclosure below it.
 
 ---
 
@@ -818,6 +838,19 @@ Semantic colors must always be paired with at least one of:
 - Label
 
 Never communicate status with color alone.
+
+---
+
+## 17.5 Warm Surfaces (landing only)
+
+Two background tokens for the landing page and nowhere else (section 16.4). They are surfaces, not accents: the accent stays sage.
+
+| Token | Light | Dark |
+| --- | --- | --- |
+| `--color-bg-warm` | `#F6F3EC` | `#1C1B17` |
+| `--color-bg-warm-subtle` | `#EFEADF` | `#23211C` |
+
+Measured contrast: primary text 14.8:1 (light) / 15.7:1 (dark); secondary text 5.2:1 or better on both surfaces in both themes. `--color-action-primary` as a text color reaches 4.6:1 on `--color-bg-warm` but only 4.2:1 on `--color-bg-warm-subtle` in light, so sage text never sits on the subtle warm surface; a sage fill with its own label text (5.1:1) is fine.
 
 ---
 

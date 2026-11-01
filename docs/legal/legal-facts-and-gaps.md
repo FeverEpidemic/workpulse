@@ -19,8 +19,8 @@ Pendamping `privacy-policy-id-draft.md` dan `terms-of-service-id-draft.md`. Disu
 
 ## Yang harus diisi pemilik produk
 
-- [ ] Nama pengelola dan kota.
-- [ ] Email kontak (rencana: email domain `myworkpulse.my.id`).
+- [ ] Nama pengelola dan kota. Nama: Ilham Aisy Rasyid. Kota belum diisi.
+- [x] Email kontak: `halo@myworkpulse.my.id`.
 - [ ] Nama penyedia AI dan negaranya. Endpoint yang tercatat di decision 0019 adalah agregator OpenAI-compatible, jadi teks bisa diteruskan lagi ke penyedia model di belakangnya. Yang ditulis sebaiknya rantai lengkapnya.
 - [ ] Region proyek Supabase production.
 - [ ] Lokasi server (negara) untuk web, worker, dan backup.

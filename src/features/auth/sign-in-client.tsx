@@ -12,24 +12,37 @@ import { signInAction, signUpAction, requestRecoveryAction, signInWithGoogleActi
 import { IDLE_ACTION_STATE } from "@/server/action-result";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 import { AUTH_FIELD_LIMITS } from "@/domain/profile/field-contract";
+import type { SignInMode } from "@/domain/auth/route-state";
 
-type AuthMode = "sign-in" | "create-account" | "recovery";
+type AuthMode = SignInMode | "recovery";
+
+function SignUpLegalNote({ locale }: { locale: Locale }) {
+  const links = {
+    "{terms}": <Link key="terms" className="underline underline-offset-4" href="/terms">{t(locale, "legal.terms.title")}</Link>,
+    "{privacy}": <Link key="privacy" className="underline underline-offset-4" href="/privacy">{t(locale, "legal.privacy.title")}</Link>,
+  };
+  const parts = t(locale, "legal.signUpNote").split(/(\{terms\}|\{privacy\})/);
+  return <p className="text-sm text-[var(--wp-muted)]">{parts.map((part) => (part in links ? links[part as keyof typeof links] : part))}</p>;
+}
 
 export function SignInClient({
   locale,
   returnTo,
+  initialMode = "sign-in",
   notice,
   configured,
   googleEnabled = false,
 }: {
   locale: Locale;
   returnTo: string;
+  /** T32: `/sign-in?mode=create-account` from the landing CTAs. */
+  initialMode?: SignInMode;
   notice?: MessageKey;
   configured: boolean;
   /** T29: server flag `WORKPULSE_AUTH_GOOGLE_ENABLED`. */
   googleEnabled?: boolean;
 }) {
-  const [mode, setMode] = useState<AuthMode>("sign-in");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [googleState, signInWithGoogle] = useActionState(signInWithGoogleAction, IDLE_ACTION_STATE);
   const [signInState, signIn, signingIn] = useActionState(signInAction, IDLE_ACTION_STATE);
   const [signUpState, signUp, signingUp] = useActionState(signUpAction, IDLE_ACTION_STATE);
@@ -119,6 +132,7 @@ export function SignInClient({
             <FieldError state={signUpState} field="password" locale={locale} id={signUpPasswordErrorId} />
             <ActionFeedback state={signUpState} locale={locale} returnTo={returnTo} />
             <SubmitButton pendingLabel={t(locale, "common.loading")}>{t(locale, "auth.createAccount")}</SubmitButton>
+            <SignUpLegalNote locale={locale} />
             <p className="text-sm text-[var(--wp-muted)]">
               {t(locale, "auth.haveAccount")} {" "}
               <button className="font-semibold text-[var(--wp-primary)] underline underline-offset-4" type="button" onClick={() => setMode("sign-in")}>

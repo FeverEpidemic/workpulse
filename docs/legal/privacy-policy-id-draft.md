@@ -10,7 +10,7 @@ WorkPulse saat ini berjalan sebagai **pilot gratis**. Fitur dan kebijakan ini ma
 
 ## 1. Siapa pengelola WorkPulse
 
-WorkPulse dikelola oleh [NAMA PENGELOLA], [KOTA], Indonesia. Untuk pertanyaan atau permintaan soal data Anda, hubungi [EMAIL KONTAK].
+WorkPulse dikelola oleh Ilham Aisy Rasyid, [KOTA], Indonesia. Untuk pertanyaan atau permintaan soal data Anda, hubungi halo@myworkpulse.my.id.
 
 ## 2. Data yang kami simpan
 
@@ -92,7 +92,7 @@ Sesuai Undang-Undang Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi, Anda 
 - **melihat dan memperbaiki** data Anda. Sebagian besar bisa langsung dilakukan di aplikasi;
 - **menghapus** data Anda, lewat fitur hapus akun di bagian 7;
 - **menarik persetujuan** pemrosesan AI kapan saja (bagian 4);
-- **meminta salinan** data Anda. Saat ini belum ada tombol untuk mengunduh semua data sekaligus, jadi kirim permintaan ke [EMAIL KONTAK] dan kami jawab dalam [JANGKA WAKTU, misal 14 hari kerja].
+- **meminta salinan** data Anda. Saat ini belum ada tombol untuk mengunduh semua data sekaligus, jadi kirim permintaan ke halo@myworkpulse.my.id dan kami jawab dalam [JANGKA WAKTU, misal 14 hari kerja].
 
 ## 9. Cookie
 
@@ -115,4 +115,4 @@ Kalau kebijakan ini berubah, kami perbarui tanggal di bagian atas. Untuk perubah
 
 ## 12. Kontak
 
-[NAMA PENGELOLA], [EMAIL KONTAK].
+Ilham Aisy Rasyid, halo@myworkpulse.my.id.

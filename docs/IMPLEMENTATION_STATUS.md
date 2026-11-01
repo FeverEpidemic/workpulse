@@ -1,5 +1,22 @@
 # WorkPulse Implementation Status
 
+## T32 Landing page dan halaman legal: DONE lokal, 1 November 2026
+
+Status T32: **DONE** (acceptance lokal). Tamu di `/` mendapat landing page, sedangkan akun login tetap dialihkan ke dashboard atau onboarding. Isinya: hero dengan cerita Activity jadi Achievement yang diputar sekali, panel demo bertab (Activity, Achievement, CV) dengan lima titik langkah, import CV lama, kendali atas data, catatan dari pembuat, dan CTA "Daftar pilot gratis" ke `/sign-in?mode=create-account`. Contoh UI dirender dari komponen app dengan data fiktif berlabel "Contoh" dan `inert`. Kunjungan pertama memakai bahasa browser (`id` untuk Indonesia, selain itu `en`), dan ada toggle ID/EN. `/privacy` dan `/terms` menampilkan draf legal en/id dengan isian kosong yang disorot, label draf, dan `noindex`.
+
+- Pelaksana Fase 0-6 dan gate review: Claude Opus 5.5, atas permintaan pengguna; independensi review terbatas. Gate pada `4b747fb`: satu P2 (RV1, toggle bahasa di halaman legal tidak berfungsi untuk akun login) diperbaiki di `3f1b665`. Review ulang **PASS** tanpa P0-P2, dengan P3 F1, F3, F4, F8.
+- Dependensi: T03, T27, T30 **DONE**. T32 adalah permintaan terarah pengguna (brief 20 Oktober 2026, referensi parloa.com, interview animasi), tidak ada di `IMPLEMENTATION_PLAN.md` §5. Mockup disetujui 28 Oktober 2026, copy deck dan terjemahan legal disetujui 29 Oktober 2026.
+- Scope: route `/` untuk tamu, fallback `Accept-Language`, `mode=create-account` dan link legal di form daftar, landing (UI, motion MOTION 3 khusus landing), `/privacy` dan `/terms`, dua token permukaan hangat, copy en/id. Di luar scope: video, FAQ, testimoni, isian legal kosong, forwarding email, analytics, deploy.
+- File: `src/app/{page,privacy/page,terms/page}.tsx`, `src/app/sign-in/page.tsx`, `src/features/marketing/*`, `src/features/legal/*`, `src/features/auth/sign-in-client.tsx`, `src/features/activity/activity-list.tsx` (`ActivityListRow` dipecah, markup app sama), `src/domain/routes/root-destination.ts`, `src/domain/auth/route-state.ts`, `src/i18n/{accept-language,messages}.ts`, `src/server/auth/context.ts`, `src/styles/tokens.css`, `src/app/globals.css`; test unit baru, `tests/e2e/landing.spec.ts` dan `landing-motion.spec.ts` (masuk `test:e2e:release`), `smoke.spec.ts` diperbarui; `docs/legal/*-en-draft.md`, `docs/marketing/landing-copy-v1.md`, `Design.md` dan `docs/Design.md` §16.4, §17.5.
+- Keputusan: [decision 0042](decisions/0042-t32-landing-legal.md). Tanpa migration (parity tetap 38), tanpa dependency, tanpa script npm baru.
+- Checks (setelah remediasi, checkout utama `ee7e28f`): lint, typecheck, build exit 0; unit 163 file / 1562 test; E2E `release` 79 lulus dan 1 skip (rekaman video), `auth` 1; `git diff --check` bersih. Fase 5 dan gate: `ui` 1, `m2` 1. Axe WCAG 2.2 AA nol temuan di 24 kombinasi (3 halaman × 360/1440 × light/dark × en/id).
+- Belum dijalankan: Safari, Firefox, perangkat nyata, staging, production; axe untuk header akun login di halaman legal (F8); worktree bersih terpisah (checks diulang di checkout utama).
+- Risiko dan follow-up (P3): F1 akun yang sedang dihapus melihat landing di `/`, bukan notice di `/sign-in`; F3 tombol putar ulang muncul setelah hydration (hero sedikit bergeser); F4 dua test flaky (`landing.spec.ts` layout 360, `motion-loading.spec.ts:61` T30); `Accept-Language` juga menentukan bahasa akun provisional (decision 0042 #2). Docker Desktop mati dua kali selama T32.
+
+Berikutnya: review dan merge PR #40. Pemilik produk mengisi isian legal, menyiapkan forwarding `halo@myworkpulse.my.id`, dan meminta review hukum sebelum `LEGAL_DRAFT` dimatikan.
+
+[Rencana](verification/T32-implementation-plan.md), [bukti](verification/T32-landing-legal.md), [gate review](verification/T32-review-remediation-plan.md), [remediasi](verification/T32-review-remediation.md), receipt [Fase 0](verification/T32-phase0-baseline.md) sampai [5](verification/T32-phase5-e2e-regression.md).
+
 ## T31 Tab bar mobile mengambang: DONE lokal, 27 Oktober 2026
 
 Status T31: **DONE** (acceptance lokal). Di ≤ 880 px tab bar menjadi kapsul solid yang mengambang 8 px dari kiri, kanan, dan bawah (ditambah safe area), maksimal 480 px di tablet, dengan border 1 px, radius `--radius-lg`, satu `--shadow-md`, dan tanpa blur. Saat scroll ke bawah kapsul menyempit ke 268 px (lima target 44 px, jarak 8 px) bersamaan dengan tinggi 64 → 52 px, 180 ms `--ease-out`. Tap di samping kapsul sampai ke konten. Reduced motion mengganti state tanpa transisi.
@@ -1328,6 +1345,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T29 | Masuk dengan Google | DONE |
 | T30 | Animasi dan loading | DONE |
 | T31 | Tab bar mobile mengambang | DONE |
+| T32 | Landing page dan halaman legal | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

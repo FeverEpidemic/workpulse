@@ -19,6 +19,12 @@ Hasil interview 2026-10-20. Sumber arah visual: `docs/Design.md` (sage, Plus Jak
 | FAQ | Tidak ada sampai ada pertanyaan nyata dari calon user. |
 | Legal | Kebijakan Privasi dan Syarat Layanan dibuat baru. Claude menyusun draf dari kode (data yang disimpan, provider, hapus akun), pemilik me-review, sebaiknya dicek orang yang paham hukum sebelum live. |
 | Arah visual | Satu nada dengan app, lebih hidup. |
+| Referensi | parloa.com (interview 28 Oktober 2026). Yang diambil: UI asli melayang di hero, label kecil di atas judul, panel demo produk yang bisa di-tab. Yang tidak diambil: foto/video sinematik, font serif, aksen oranye, testimoni, rating, angka hasil, daftar alasan bernomor. |
+| Hero | Potongan UI asli (Activity jadi Achievement) melayang di atas blok permukaan hangat solid full-width. Tanpa foto. |
+| Font | Tetap Plus Jakarta Sans saja. Hierarki dari ukuran dan weight. |
+| Warna | Aksen tetap sage. Beberapa section memakai permukaan hangat (krem/off-white) sebagai jeda. Tidak ada aksen baru. |
+| Motion | Diperluas pada interview animasi 28 Oktober 2026 (menggantikan "MOTION 2 ringan"). Hero: cerita sekali jalan (catatan Activity seperti diketik, kartu Achievement usulan AI muncul, lalu tanda disetujui), berhenti di keadaan akhir, dengan tombol putar ulang. Panel demo: panel baru geser masuk mengikuti arah tab, ditambah fade. Scroll: isi section muncul bertahap (judul, teks, lalu UI), sekali per section. Lima titik: deretan terpisah dari logo yang menyala mengikuti lima langkah alur (catat, AI usulkan, setujui, pilih ke CV, PDF); logo tetap diam. Tempo tenang, 200-300 ms. Interaksi mikro: kartu UI terangkat saat hover (desktop), panah CTA bergeser, indikator toggle bahasa meluncur. Reduced motion dan tanpa JavaScript langsung menampilkan keadaan akhir. |
+| Legal | `/privacy` dan `/terms` dalam Indonesia dan English. Versi English diterjemahkan Claude dari draf, di-review pemilik. |
 
 ## Yang tidak boleh muncul
 
@@ -29,11 +35,11 @@ Hasil interview 2026-10-20. Sumber arah visual: `docs/Design.md` (sage, Plus Jak
 
 ## Design Read
 
-Reading this as: landing produk personal untuk karyawan aktif, fresh graduate, dan freelancer di Indonesia, dalam bahasa visual app sendiri (sage, tenang, profesional tapi tidak formal), dial ENERGY 2 / RHYTHM 2 / MOTION 1.
+Reading this as: landing produk personal untuk karyawan aktif, fresh graduate, dan freelancer di Indonesia, dalam bahasa visual app sendiri (sage, tenang, profesional tapi tidak formal), dial ENERGY 2 / RHYTHM 2 / MOTION 3.
 
 - ENERGY 2: lebih menyapa dari app, tetap tenang.
 - RHYTHM 2: komposisi section konsisten, dengan beberapa jeda yang sengaja beda.
-- MOTION 1: hover dan focus saja, sesuai Design.md 2.4 dan 28.4.
+- MOTION 3: cerita hero sekali jalan, tab yang bergeser, isi section bertahap, titik langkah, dan interaksi mikro (dinaikkan dari MOTION 1 lewat dua interview pada 28 Oktober 2026). Semua gerak hanya di landing; app tetap MOTION 2. Reduced motion mengikuti Design.md 28.4.
 - Motif identitas: ritme lima titik dari logo (hari kerja, satu hari kosong, hari ini).
 
 ## Urutan isi (draf, mengikuti alur cerita)
@@ -49,7 +55,19 @@ Reading this as: landing produk personal untuk karyawan aktif, fresh graduate, d
 
 ## Masih terbuka
 
-- [ ] Nama asli untuk bagian pembuat, dan isi paragrafnya.
-- [ ] Alamat email domain (misal `halo@myworkpulse.my.id`) dan forwarding-nya.
-- [ ] Rute pendaftaran yang dituju CTA (cek apakah sign-up ada di `/sign-in` atau rute sendiri).
+- [x] Nama asli untuk bagian pembuat, dan isi paragrafnya: Ilham Aisy Rasyid. Paragraf: "Semoga dengan adanya tools ini, kalian jadi tidak lupa apa aja sih yang pernah dikerjakan selama kalian bekerja"
+- [x] Alamat email domain: `halo@myworkpulse.my.id`.
+- [ ] Forwarding `halo@myworkpulse.my.id` ke inbox pemilik.
+- [x] Rute pendaftaran yang dituju CTA: tetap `/sign-in`.
 - [x] Draf Kebijakan Privasi dan Syarat Layanan (versi Indonesia): `docs/legal/`. Isian yang masih kosong ada di `docs/legal/legal-facts-and-gaps.md`.
+- [x] Terjemahan English kedua draf legal (`docs/legal/*-en-draft.md`), disetujui 29 Oktober 2026.
+- [ ] Isian legal yang masih kosong (kota, penyedia AI dan negaranya, region server, penyedia email, usia minimum, jangka waktu, pengadilan) dan review hukum. Setelah lengkap, salin ulang ke `src/features/legal/content/` dan ubah `LEGAL_DRAFT` ke `false` (test akan menolak kalau masih ada isian kosong).
+- [ ] Video untuk section video. Section-nya belum ada di halaman.
+
+## Status implementasi (T32)
+
+Landing di `/`, `/privacy`, dan `/terms` sudah dibangun di T32 (branch `claude/t32-landing`, [decision 0042](../decisions/0042-t32-landing-legal.md), [bukti](../verification/T32-landing-legal.md)). Yang berbeda dari urutan isi di atas:
+
+- Butir 3 (alur kerja) menjadi panel demo bertab Activity, Achievement, CV dengan lima titik langkah, sesuai referensi parloa.
+- Butir 6 (video) belum ada, sesuai keputusan di tabel.
+- CTA daftar menuju `/sign-in?mode=create-account`, yang langsung membuka form buat akun.

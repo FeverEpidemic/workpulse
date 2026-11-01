@@ -1,5 +1,5 @@
 import type { User } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { resolveLocale, type Locale } from "@/i18n/messages";
 import type { ProfileRow } from "@/domain/database-types";
@@ -48,13 +48,14 @@ export async function getRequestContext(): Promise<RequestContext> {
 }
 
 export async function getRequestLocale(): Promise<Locale> {
-  const cookieStore = await cookies();
+  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()]);
   const cookieLocale = cookieStore.get("wp-locale")?.value;
+  const acceptLanguage = headerStore.get("accept-language");
   try {
     const context = await getRequestContext();
     const profileLocale = context.profile?.onboarding_completed_at ? context.profile.locale : null;
-    return resolveLocale(profileLocale, cookieLocale);
+    return resolveLocale(profileLocale, cookieLocale, acceptLanguage);
   } catch {
-    return resolveLocale(null, cookieLocale);
+    return resolveLocale(null, cookieLocale, acceptLanguage);
   }
 }
