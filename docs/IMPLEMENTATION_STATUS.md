@@ -1,5 +1,9 @@
 # WorkPulse Implementation Status
 
+## Landing: fade dua arah saat scroll, 3 November 2026
+
+Permintaan terarah pengguna, lanjutan T32. Item landing, termasuk hero, memudar saat keluar lewat tepi viewport dan muncul lagi saat kembali. Keputusan: [decision 0043](decisions/0043-landing-two-way-fade.md), tanpa migration dan dependency. Checks: lint dan typecheck exit 0; unit 164 file / 1569 test; E2E `landing-motion.spec.ts` 19 lulus dan 1 skip (rekaman video), `landing.spec.ts` 24 lulus di production build; cek browser di 1440 dan 375 piksel. Belum dijalankan: `test:e2e:release` lengkap, Safari, Firefox, perangkat nyata.
+
 ## T32 Landing page dan halaman legal: DONE lokal, 1 November 2026
 
 Status T32: **DONE** (acceptance lokal). Tamu di `/` mendapat landing page, sedangkan akun login tetap dialihkan ke dashboard atau onboarding. Isinya: hero dengan cerita Activity jadi Achievement yang diputar sekali, panel demo bertab (Activity, Achievement, CV) dengan lima titik langkah, import CV lama, kendali atas data, catatan dari pembuat, dan CTA "Daftar pilot gratis" ke `/sign-in?mode=create-account`. Contoh UI dirender dari komponen app dengan data fiktif berlabel "Contoh" dan `inert`. Kunjungan pertama memakai bahasa browser (`id` untuk Indonesia, selain itu `en`), dan ada toggle ID/EN. `/privacy` dan `/terms` menampilkan draf legal en/id dengan isian kosong yang disorot, label draf, dan `noindex`.
