@@ -193,13 +193,13 @@ Tidak boleh berubah: `supabase/migrations/*`, `package.json`, `pnpm-lock.yaml`, 
 
 ### Fase 3: E2E, regresi, Delivery Gate
 
-- [ ] Migrasikan helper `add()` di `cv-builder.spec.ts:114-117`: centang, klik `cv-pool-add` section itu, tunggu `cv-pool-added`. Migrasikan semua pemakaian di spec lain per §2.2.10. Assertion lama diganti padanan yang setara, tidak dibuang.
-- [ ] `m4-cv-journey.spec.ts:424-427` dan `release-keyboard.spec.ts:173-179`: fokus awal di checkbox yang tercentang, lalu pindah ke tombol dengan keyboard.
-- [ ] Tambah E2E baru untuk acceptance 3, 4, 5, 6, 7, 9, 11.
-- [ ] Lock ulang aria hanya setelah melihat diff-nya: `WORKPULSE_RELEASE_WRITE_ARIA=1` pada `release-a11y`. Lampirkan ringkasan diff di receipt. Selain area daftar, tidak boleh ada yang berubah.
-- [ ] Jalankan regresi §7. Klik setiap kontrol di browser lalu catat per elemen (R-35). Jalankan Delivery Gate antislop lengkap sebagai laporan PASS/FAIL dengan bukti.
-- [ ] Commit `test(t33): cover the multi-select pool end to end`, lalu tulis `T33-phase3-e2e-regression.md`.
-- [ ] **Berhenti di sini.** Laporkan ke pengguna bahwa gate review siap dijalankan. Jangan lanjut ke Fase 4 sebelum diminta.
+- [x] Migrasikan helper `add()` di `cv-builder.spec.ts:114-117`: centang, klik `cv-pool-add` section itu, tunggu `cv-pool-added`. Migrasikan semua pemakaian di spec lain per §2.2.10. Assertion lama diganti padanan yang setara, tidak dibuang.
+- [x] `m4-cv-journey.spec.ts:424-427` dan `release-keyboard.spec.ts:173-179`: fokus awal di checkbox yang tercentang, lalu pindah ke tombol dengan keyboard.
+- [x] Tambah E2E baru untuk acceptance 3, 4, 5, 6, 7, 9, 11.
+- [x] Lock ulang aria hanya setelah melihat diff-nya: `WORKPULSE_RELEASE_WRITE_ARIA=1` pada `release-a11y`. Lampirkan ringkasan diff di receipt. Selain area daftar, tidak boleh ada yang berubah.
+- [x] Jalankan regresi §7. Klik setiap kontrol di browser lalu catat per elemen (R-35). Jalankan Delivery Gate antislop lengkap sebagai laporan PASS/FAIL dengan bukti.
+- [x] Commit `test(t33): cover the multi-select pool end to end`, lalu tulis `T33-phase3-e2e-regression.md`.
+- [x] **Berhenti di sini.** Laporkan ke pengguna bahwa gate review siap dijalankan. Jangan lanjut ke Fase 4 sebelum diminta.
 
 ### Fase 4: draft dokumen (setelah gate)
 
