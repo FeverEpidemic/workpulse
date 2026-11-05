@@ -1,6 +1,6 @@
 # WorkPulse Implementation Status
 
-T33 Multi-select di daftar CV: **TODO**, [rencana](verification/T33-implementation-plan.md) ditulis 5 November 2026.
+T33 Multi-select di daftar CV: **PARTIAL**, Fase 0-3 selesai dan gate review 5 November 2026 belum lulus. [Rencana](verification/T33-implementation-plan.md), [temuan dan remediasi](verification/T33-review-remediation-plan.md).
 
 ## T32 Landing page dan halaman legal: DONE lokal, 1 November 2026
 
