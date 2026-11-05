@@ -186,10 +186,10 @@ Tidak boleh berubah: `supabase/migrations/*`, `package.json`, `pnpm-lock.yaml`, 
 
 ### Fase 2: UI
 
-- [ ] Perbarui `tests/unit/cv-builder-ui.test.tsx` lebih dulu sampai gagal: checkbox, tanpa `aria-label="Add SQL to CV"`, teks Added tanpa checkbox, tombol nonaktif, highlight tercentang, tetap tanpa "Add all".
-- [ ] Implementasi `cv-section.tsx`, `cv-builder.tsx`, dan CSS sesuai §3. Lulus unit, lint, typecheck.
-- [ ] Commit `feat(t33): select several records from the CV pool`.
-- [ ] Tulis `T33-phase2-ui.md`.
+- [x] Perbarui `tests/unit/cv-builder-ui.test.tsx` lebih dulu sampai gagal: checkbox, tanpa `aria-label="Add SQL to CV"`, teks Added tanpa checkbox, tombol nonaktif, highlight tercentang, tetap tanpa "Add all".
+- [x] Implementasi `cv-section.tsx`, `cv-builder.tsx`, dan CSS sesuai §3. Lulus unit, lint, typecheck.
+- [x] Commit `feat(t33): select several records from the CV pool`.
+- [x] Tulis `T33-phase2-ui.md`.
 
 ### Fase 3: E2E, regresi, Delivery Gate
 
