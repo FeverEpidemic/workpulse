@@ -1,5 +1,7 @@
 # WorkPulse Implementation Status
 
+T33 Multi-select di daftar CV: **TODO**, [rencana](verification/T33-implementation-plan.md) ditulis 5 November 2026.
+
 ## T32 Landing page dan halaman legal: DONE lokal, 1 November 2026
 
 Status T32: **DONE** (acceptance lokal). Tamu di `/` mendapat landing page, sedangkan akun login tetap dialihkan ke dashboard atau onboarding. Isinya: hero dengan cerita Activity jadi Achievement yang diputar sekali, panel demo bertab (Activity, Achievement, CV) dengan lima titik langkah, import CV lama, kendali atas data, catatan dari pembuat, dan CTA "Daftar pilot gratis" ke `/sign-in?mode=create-account`. Contoh UI dirender dari komponen app dengan data fiktif berlabel "Contoh" dan `inert`. Kunjungan pertama memakai bahasa browser (`id` untuk Indonesia, selain itu `en`), dan ada toggle ID/EN. `/privacy` dan `/terms` menampilkan draf legal en/id dengan isian kosong yang disorot, label draf, dan `noindex`.
