@@ -22,14 +22,15 @@ import {
   removeCvItemAction, reorderCvSectionAction, resolveCvFreshnessAction, saveCvEditsAction, selectCvSourceAction, updateCvLayoutAction,
 } from "./actions";
 import {
-  achievementPlacements, announcedPosition, BULK_FOCUS_CANDIDATES, choiceKeys, clientCorrelationId, deriveSaveState, firstInvalidField,
-  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, previewLinkState, reviewFocusCandidates, reviewTargets, singleResolution,
+  achievementPlacements, addableSelection, announcedPosition, BULK_FOCUS_CANDIDATES, choiceKeys, clientCorrelationId, deriveSaveState, firstInvalidField,
+  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, previewLinkState, reviewFocusCandidates, reviewTargets, runSequentialAdds,
+  singleResolution,
 } from "./cv-builder-state";
 import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField, type ProfileReview } from "./cv-panels";
 import { CvReviewSummary } from "./cv-review";
 import { CvExportLink, CvPreview } from "./cv-preview";
 import { CvSection, type EditorEntry, type SectionHandlers } from "./cv-section";
-import type { PoolBySection, PoolOption } from "./cv-view";
+import type { PoolBySection } from "./cv-view";
 
 export interface CvBuilderProps {
   locale: Locale;
@@ -102,6 +103,9 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
   // Review panels are closed until the user opens one; "profile" is the key of the profile panel.
   const [openReviews, setOpenReviews] = useState<ReadonlySet<string>>(new Set());
   const [infoNotice, setInfoNotice] = useState("");
+  // Records ticked in the "Available to add" lists. A suggested record starts ticked; nothing is saved until a button is pressed.
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(highlightId ? [highlightId] : []));
+  const [adding, setAdding] = useState<{ sectionKey: CvSectionKey; current: number; total: number } | null>(null);
   const busyRef = useRef(false);
   const pendingFocus = useRef<(() => void) | null>(null);
   const conflictRef = useRef<HTMLDivElement>(null);
@@ -211,12 +215,63 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
     setSync((current) => ({ ...current, draft: { ...current.draft, [key]: value } }));
   };
 
-  const onAdd = (option: PoolOption) => {
-    void runOperation(
-      selectCvSourceAction,
-      form({ expected_revision: String(revision), source_type: option.sourceType, source_id: option.sourceId }),
-      () => setAnnouncement(t(locale, "cv.announce.added", { name: option.label })),
-    );
+  const onTogglePoolOption = (sourceId: string, checked: boolean) => {
+    if (busyRef.current) return;
+    setChosen((current) => {
+      const next = new Set(current);
+      if (checked) next.add(sourceId);
+      else next.delete(sourceId);
+      return next;
+    });
+  };
+
+  /** Adds the ticked records of one section in list order, one request each; stops at the first failure. */
+  const onAddSelected = async (sectionKey: CvSectionKey) => {
+    const options = addableSelection(pool[sectionKey], chosen);
+    if (busyRef.current || options.length === 0) return;
+    busyRef.current = true;
+    setBusy(true);
+    setNotice(null);
+    setInfoNotice("");
+    try {
+      const result = await runSequentialAdds({
+        options,
+        revision,
+        add: (option, expectedRevision) => selectCvSourceAction(
+          IDLE_ACTION_STATE,
+          form({ expected_revision: String(expectedRevision), source_type: option.sourceType, source_id: option.sourceId }),
+        ),
+        onProgress: (current, total) => {
+          setAdding({ sectionKey, current, total });
+          if (total > 1) setAnnouncement(t(locale, "cv.pool.adding", { current, total }));
+        },
+      });
+      setLocalRevision(result.revision);
+      const addedIds = new Set(result.added.map((option) => option.sourceId));
+      setChosen((current) => new Set([...current].filter((id) => !addedIds.has(id))));
+      if (!result.failed) {
+        pendingFocus.current = () => window.document.getElementById(`cv-section-heading-${sectionKey}`)?.focus();
+        const only = result.added[0];
+        setAnnouncement(result.added.length === 1 && only
+          ? t(locale, "cv.announce.added", { name: only.label })
+          : t(locale, "cv.announce.addedMany", { count: result.added.length }));
+        startTransition(() => router.refresh());
+        return;
+      }
+      pendingFocus.current = null;
+      if (result.failure?.status === "error") fail(result.failure);
+      else setNotice({ messageKey: "error.unavailable", correlationId: clientCorrelationId() });
+      if (result.added.length > 0) {
+        setInfoNotice(t(locale, "cv.notice.partialAdd", { added: result.added.length, total: options.length }));
+        // fail() reloads only for a conflict; the records that did go in must show up either way.
+        startTransition(() => router.refresh());
+      }
+      setNoticeFocus((count) => count + 1);
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+      setAdding(null);
+    }
   };
 
   const focusMove = (itemId: string, direction: "up" | "down") => () => {
@@ -458,7 +513,11 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
       return next;
     }),
     onDraftChange,
-    onAdd,
+    busy,
+    chosen,
+    adding,
+    onTogglePoolOption,
+    onAddSelected: (sectionKey) => void onAddSelected(sectionKey),
     onRemove,
     onMoveItem,
     poolOpen: poolOpen[key],

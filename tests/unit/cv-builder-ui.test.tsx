@@ -41,8 +41,9 @@ describe("T19 S13 CV builder", () => {
     expect(html).toContain("Your CV is empty");
     expect(html).toContain("Nothing is added automatically");
     expect(html).toContain("Available to add (1)");
-    expect(html).toContain('aria-label="Add SQL to CV"');
+    expect(html).not.toContain('aria-label="Add SQL to CV"');
     expect(html).not.toContain("Add all");
+    expect(html).not.toContain("Select all");
     expect(html).toContain("Add records to see your CV here.");
     expect(html).toContain("All changes saved");
     expect(html.match(/data-testid="cv-item"/g)).toBeNull();
@@ -53,13 +54,79 @@ describe("T19 S13 CV builder", () => {
     const items = [...html.matchAll(/data-item-id="([^"]+)"/g)].map((match) => match[1]);
     expect(items).toEqual([uuid(2), uuid(3), uuid(4), uuid(1), uuid(5)]);
     expect(items.filter((id) => id === uuid(3))).toHaveLength(1);
-    expect(html).toContain('aria-label="Add Belum ditambahkan to CV"');
-    expect(html).toContain('aria-label="Title 301 is already on the CV"');
-    expect(html).toContain('aria-disabled="true"');
     expect(html).not.toContain("Draf saja");
+    expect(html).not.toContain("cv-add-");
+    expect(html).not.toContain('aria-label="Add Belum ditambahkan to CV"');
     // An added child achievement says where it is on the CV; a standalone one does not need to.
     expect(html.match(/data-testid="cv-pool-placement"/g)).toHaveLength(1);
     expect(html).toContain("On the CV under Skripsi Sistem Antrian");
+  });
+
+  const tag = (html: string, pattern: RegExp) => html.match(pattern)?.[0] ?? "";
+
+  it("gives every record not yet on the CV one checkbox named after the record, and no per-row Add button", () => {
+    const html = render();
+    const checkbox = tag(html, new RegExp(`<input[^>]*id="cv-pool-check-${uuid(303)}"[^>]*>`));
+    expect(checkbox).toContain('type="checkbox"');
+    expect(checkbox).not.toContain("checked");
+    // The name is the record alone: the Suggested badge and the detail never leak into it.
+    expect(checkbox).toContain(`aria-labelledby="cv-pool-name-${uuid(303)}"`);
+    expect(checkbox).toContain(`aria-describedby="cv-pool-detail-${uuid(303)}"`);
+    expect(html).toContain(`<span id="cv-pool-name-${uuid(303)}">Belum ditambahkan</span>`);
+    expect(html).toContain(`id="cv-pool-detail-${uuid(303)}"`);
+    expect(html.match(/type="checkbox"/g)).toHaveLength(1);
+    const row = tag(html, new RegExp(`<li[^>]*data-testid="cv-pool-row"[^>]*>(?:(?!</li>)[\\s\\S])*cv-pool-check-${uuid(303)}`));
+    expect(row).not.toContain("<button");
+  });
+
+  it("shows a record already on the CV as text with no checkbox, keeping its placement note", () => {
+    const html = render();
+    for (const id of [uuid(301), uuid(302), uuid(401)]) {
+      expect(html).not.toContain(`cv-pool-check-${id}`);
+      const added = tag(html, new RegExp(`<span[^>]*id="cv-pool-added-${id}"[^>]*>[\\s\\S]*?</span></span>`));
+      expect(added).toContain('data-testid="cv-pool-added"');
+      expect(added).toContain("Added");
+    }
+    expect(html).toContain("is already on the CV");
+    expect(html).toContain("On the CV under Skripsi Sistem Antrian");
+  });
+
+  it("shows one add button per section that still has records, disabled with a visible hint until one is chosen", () => {
+    const html = render();
+    const buttons = [...html.matchAll(/<button[^>]*data-testid="cv-pool-add"[^>]*>[\s\S]*?<\/button>/g)].map((match) => match[0]);
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toContain('id="cv-pool-add-achievements"');
+    expect(buttons[0]).toContain('aria-disabled="true"');
+    expect(buttons[0]).not.toMatch(/\sdisabled(=|\s|>)/);
+    expect(buttons[0]).toContain("Add to CV");
+    expect(buttons[0]).toContain('aria-describedby="cv-pool-hint-achievements"');
+    expect(html).toContain('id="cv-pool-hint-achievements"');
+    expect(html).toContain("Select at least one record.");
+    // Sections whose records are all on the CV, or that have none, have no button.
+    expect(html).not.toContain("cv-pool-add-education");
+    expect(html).not.toContain("cv-pool-add-skills");
+    expect(html).not.toContain("cv-pool-add-experience");
+  });
+
+  it("localizes the add button and hint in Indonesian", () => {
+    const html = render({ locale: "id" });
+    expect(html).toContain("Tambahkan ke CV");
+    expect(html).toContain("Pilih minimal satu catatan.");
+  });
+
+  it("checks the suggested record and labels the button with the count", () => {
+    const html = render({ highlightId: uuid(303) });
+    const checkbox = tag(html, new RegExp(`<input[^>]*id="cv-pool-check-${uuid(303)}"[^>]*>`));
+    expect(checkbox).toContain('checked=""');
+    const button = tag(html, /<button[^>]*data-testid="cv-pool-add"[^>]*>[\s\S]*?<\/button>/);
+    expect(button).toContain("Add 1 to CV");
+    expect(button).not.toContain('aria-disabled="true"');
+    expect(html).not.toContain("Select at least one record.");
+  });
+
+  it("ignores a highlight that does not name an unadded achievement", () => {
+    expect(render({ highlightId: null })).not.toContain('checked=""');
+    expect(tag(render({ highlightId: null }), /<button[^>]*data-testid="cv-pool-add"[^>]*>/)).toContain('aria-disabled="true"');
   });
 
   it("labels every move control with the item or section name and disables the edges", () => {

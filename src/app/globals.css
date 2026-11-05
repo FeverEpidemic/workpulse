@@ -2896,6 +2896,43 @@ a.dashboard-stat-card:hover,
   outline-offset: 2px;
 }
 
+/* The whole row is the label: one target of at least 44 px, and long names wrap beside the box. */
+.cv-pool-label {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: var(--touch-target-min);
+  cursor: pointer;
+}
+
+.cv-pool-label input[type="checkbox"] {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--color-action-primary);
+}
+
+.cv-pool-label .field-help {
+  display: block;
+}
+
+.cv-pool-added {
+  flex: none;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.cv-pool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-top: var(--space-3);
+}
+
 .cv-pool-row[aria-current="true"] {
   background: var(--color-bg-subtle);
   outline: 2px solid var(--color-action-primary);
