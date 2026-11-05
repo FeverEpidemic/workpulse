@@ -169,20 +169,20 @@ Tidak boleh berubah: `supabase/migrations/*`, `package.json`, `pnpm-lock.yaml`, 
 
 ### Fase 0: baseline, tanpa edit kode
 
-- [ ] Siapkan worktree: `pnpm install --frozen-lockfile`, salin `.env.local` dari checkout utama, dan salin **hanya** lima file `supabase/.temp/{storage,postgres,gotrue,rest}-version` dan `storage-migration` (lihat §7).
-- [ ] Pastikan branch `claude/t33-cv-multi-select` bersih dan parity migration 38/38.
-- [ ] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan unit dari receipt T32: 163 file / 1562 test. Catat angka nyata.
-- [ ] Jalankan `pnpm test:e2e:cv` untuk baseline. Catat flaky yang sudah ada.
-- [ ] Verifikasi klaim file:baris di header, dan bahwa semua jawaban sukses `selectCvSourceAction` membawa `cvRevision` numerik. Bila tidak, berhenti (§8).
-- [ ] Tulis `T33-phase0-baseline.md`, commit.
+- [x] Siapkan worktree: `pnpm install --frozen-lockfile`, salin `.env.local` dari checkout utama, dan salin **hanya** lima file `supabase/.temp/{storage,postgres,gotrue,rest}-version` dan `storage-migration` (lihat §7).
+- [x] Pastikan branch `claude/t33-cv-multi-select` bersih dan parity migration 38/38.
+- [x] Jalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`. Harapan unit dari receipt T32: 163 file / 1562 test. Catat angka nyata.
+- [x] Jalankan `pnpm test:e2e:cv` untuk baseline. Catat flaky yang sudah ada.
+- [x] Verifikasi klaim file:baris di header, dan bahwa semua jawaban sukses `selectCvSourceAction` membawa `cvRevision` numerik. Bila tidak, berhenti (§8).
+- [x] Tulis `T33-phase0-baseline.md`, commit.
 
 ### Fase 1: aturan state dan copy (TDD unit)
 
-- [ ] Test gagal untuk `addableSelection`: urutan daftar, membuang yang `selected`, membuang id yang tidak ada di pool.
-- [ ] Test gagal untuk `poolAddButton`: `available = 0` → null, `chosen = 0` → disabled + `cv.pool.addNone`, `chosen > 0` → `cv.pool.addSelected`.
-- [ ] Test gagal untuk `runSequentialAdds` dengan fake `add`: revision dirantai, urutan benar, berhenti di kegagalan pertama, tangkap throw, jawaban tanpa revision, `onProgress`.
-- [ ] Implementasi, tambah copy en dan id, lulus, commit `feat(t33): add pool selection rules and copy`.
-- [ ] Tulis `T33-phase1-state.md`.
+- [x] Test gagal untuk `addableSelection`: urutan daftar, membuang yang `selected`, membuang id yang tidak ada di pool.
+- [x] Test gagal untuk `poolAddButton`: `available = 0` → null, `chosen = 0` → disabled + `cv.pool.addNone`, `chosen > 0` → `cv.pool.addSelected`.
+- [x] Test gagal untuk `runSequentialAdds` dengan fake `add`: revision dirantai, urutan benar, berhenti di kegagalan pertama, tangkap throw, jawaban tanpa revision, `onProgress`.
+- [x] Implementasi, tambah copy en dan id, lulus, commit `feat(t33): add pool selection rules and copy`.
+- [x] Tulis `T33-phase1-state.md`.
 
 ### Fase 2: UI
 
