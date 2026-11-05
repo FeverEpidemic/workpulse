@@ -172,11 +172,13 @@ test("sign in, Quick log, save an activity, confirm an achievement, add it to th
 
   await activate(page, page.getByRole("link", { name: "Add to CV" }), findings);
   await expect(page).toHaveURL(/\/cv\?highlight=[0-9a-f-]{36}$/i);
-  const add = page.getByRole("button", { name: /^Add .* to CV$/ });
-  await expect(add).toBeFocused();
+  // The suggested record is ticked and focused; Tab moves to the section's button and Enter adds it.
+  const suggestedBox = page.locator('[id^="cv-pool-check-"]');
+  await expect(suggestedBox).toBeFocused();
+  await expect(suggestedBox).toBeChecked();
   await checkFocus(page, findings);
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("button", { name: /is already on the CV$/ })).toBeVisible();
+  await activate(page, page.getByTestId("cv-pool-add"), findings);
+  await expect(page.getByTestId("cv-pool-added")).toBeVisible();
 
   await activate(page, page.getByTestId("cv-preview-export-link"), findings);
   await expect(page).toHaveURL(/\/cv\/preview$/);

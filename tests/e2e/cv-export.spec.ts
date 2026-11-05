@@ -327,10 +327,13 @@ test("graduate journey with the keyboard: select, save, open S14, export with th
 
   // Select three records, one key press each, and wait for each to be reported as added.
   for (const id of [education, project, achievement]) {
-    const add = page.locator(`#cv-add-${id}`);
-    await expect(add).toHaveAttribute("aria-label", /^Add /);
-    await press(page, add);
-    await expect(add).toHaveAttribute("aria-disabled", "true");
+    // Tick with Space, then press the add button of that record's section with Enter.
+    const check = page.locator(`#cv-pool-check-${id}`);
+    await expect(check).toHaveAttribute("type", "checkbox");
+    await press(page, check, "Space");
+    await expect(check).toBeChecked();
+    await press(page, page.locator("section[data-section]").filter({ has: check }).getByTestId("cv-pool-add"));
+    await expect(page.locator(`#cv-pool-added-${id}`)).toBeVisible();
   }
   // A text edit needs the explicit Save; until then the way to S14 is closed.
   await page.locator("#cv-summary").fill("Lulusan Informatika yang terbiasa menyusun laporan penelitian.");

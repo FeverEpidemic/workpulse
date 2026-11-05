@@ -330,10 +330,13 @@ test("M4 journey (F07): career data → S04/S08 → S13 → S14 → real PDF, ov
     // 3. S13: select (the project parent follows its child), the education record, the CV language, an override
     //    with Indonesian characters, the section order, then an explicit Save.
     for (const id of [firstId, educationId]) {
-      const add = page.locator(`#cv-add-${id}`);
-      await expect(add).toHaveAttribute("aria-label", /^Add /);
-      await press(page, add);
-      await expect(add).toHaveAttribute("aria-disabled", "true");
+      // Tick with Space, then press the add button of that record's section with Enter.
+      const check = page.locator(`#cv-pool-check-${id}`);
+      await expect(check).toHaveAttribute("type", "checkbox");
+      await press(page, check, "Space");
+      await expect(check).toBeChecked();
+      await press(page, page.locator("section[data-section]").filter({ has: check }).getByTestId("cv-pool-add"));
+      await expect(page.locator(`#cv-pool-added-${id}`)).toBeVisible();
     }
     await expect(page.locator('section[data-section="projects"] [data-testid="cv-item"]')).toHaveCount(2);
     await expect(page.locator('section[data-section="education"] [data-testid="cv-item"]')).toHaveCount(1);
@@ -421,10 +424,14 @@ test("M4 journey (F07): career data → S04/S08 → S13 → S14 → real PDF, ov
     await expect(page).toHaveURL(new RegExp(`/cv\\?highlight=${secondId}$`));
     await expect(page.locator('[data-testid="cv-pool-row"][aria-current="true"]')).toContainText("Suggested");
     expect((await owner.from("cv_items").select("id")).data!.length, "Add to CV only suggests").toBe(itemsBefore);
-    const addSecond = page.locator(`#cv-add-${secondId}`);
-    await expect(addSecond).toBeFocused();
+    // The suggested record starts ticked and focused; Tab reaches the section's button and Enter adds it.
+    const checkSecond = page.locator(`#cv-pool-check-${secondId}`);
+    await expect(checkSecond).toBeFocused();
+    await expect(checkSecond).toBeChecked();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#cv-pool-add-achievements")).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(addSecond).toHaveAttribute("aria-disabled", "true");
+    await expect(page.locator(`#cv-pool-added-${secondId}`)).toBeVisible();
     await expect(saveStatus(page)).toContainText("All changes saved");
     await expect(preview(page)).toContainText(secondBullet);
 

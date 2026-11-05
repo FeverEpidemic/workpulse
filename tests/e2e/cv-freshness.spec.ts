@@ -400,7 +400,7 @@ test("the dashboard shows the two CV checks and each link opens the right place 
   await page.getByRole("link", { name: "1 confirmed achievement is not on your CV." }).click();
   await expect(page).toHaveURL(/\/cv#cv-pool-achievements$/);
   await expect(page.locator("#cv-pool-achievements")).toHaveJSProperty("open", true);
-  await expect(page.getByRole("button", { name: "Add Belum di CV to CV" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Belum di CV", exact: true })).toBeVisible();
 
   // With nothing to review or add, neither check is shown.
   await page.goto("/cv");
@@ -408,8 +408,9 @@ test("the dashboard shows the two CV checks and each link opens the right place 
   await page.getByRole("button", { name: "Review change for Sudah di CV" }).click();
   await page.getByRole("button", { name: "Keep saved wording for Sudah di CV" }).click();
   await expect(summary(page)).toHaveCount(0);
-  await page.getByRole("button", { name: "Add Belum di CV to CV" }).click();
-  await expect(page.getByRole("button", { name: "Belum di CV is already on the CV" })).toBeVisible();
+  await page.getByRole("checkbox", { name: "Belum di CV", exact: true }).check();
+  await page.getByTestId("cv-pool-add").click();
+  await expect(page.getByTestId("cv-pool-added").filter({ hasText: "Belum di CV is already on the CV" })).toBeVisible();
   await page.goto("/dashboard");
   // Other checks (confirmed achievements without evidence) may still show; the two CV checks are gone.
   await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
