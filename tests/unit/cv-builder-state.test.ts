@@ -1,12 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CV_SECTION_KEYS } from "@/domain/cv/contracts";
 import type { CvFreshnessRow } from "@/domain/cv/contracts";
-import { actionFailure } from "@/server/action-result";
+import { actionFailure, actionSuccess } from "@/server/action-result";
 import {
-  achievementPlacements, announcedPosition, choiceKeys, clientCorrelationId, deriveSaveState, fieldElementId, firstInvalidField, initialPoolOpen,
-  BULK_FOCUS_CANDIDATES, isReviewBlocked, isSourceChangedConflict, isStaleConflict, reviewFocusCandidates, reviewSummaryKey, reviewTargets, singleResolution, stateBadge,
+  achievementPlacements, addableSelection, announcedPosition, choiceKeys, clientCorrelationId, deriveSaveState, fieldElementId, firstInvalidField, initialPoolOpen,
+  BULK_FOCUS_CANDIDATES, isReviewBlocked, isSourceChangedConflict, isStaleConflict, poolAddButton, reviewFocusCandidates, reviewSummaryKey, reviewTargets,
+  runSequentialAdds, singleResolution, stateBadge,
 } from "@/features/cv/cv-builder-state";
+import type { PoolOption } from "@/features/cv/cv-view";
 
 import { uuid } from "./cv-fixtures";
 
@@ -152,5 +154,83 @@ describe("T20 S13 review state", () => {
     expect(isSourceChangedConflict(actionFailure("VALIDATION", "cv.error.resolutionInvalid"))).toBe(false);
     expect(isSourceChangedConflict({ status: "idle" })).toBe(false);
     expect(isStaleConflict(actionFailure("CONFLICT", "cv.error.sourceChanged"))).toBe(false);
+  });
+});
+describe("T33 pool multi-select rules", () => {
+  const option = (n: number, selected = false): PoolOption => ({
+    sourceType: "achievement", sourceId: uuid(n), label: `Record ${n}`, detail: null, selected,
+  });
+  const pool = [option(1), option(2, true), option(3), option(4)];
+
+  it("keeps the chosen records in list order, not click order, and drops what is already on the CV or gone", () => {
+    expect(addableSelection(pool, new Set([uuid(4), uuid(1)])).map((entry) => entry.sourceId)).toEqual([uuid(1), uuid(4)]);
+    expect(addableSelection(pool, new Set([uuid(2), uuid(3)])).map((entry) => entry.sourceId)).toEqual([uuid(3)]);
+    expect(addableSelection(pool, new Set([uuid(99)]))).toEqual([]);
+    expect(addableSelection(pool, new Set())).toEqual([]);
+  });
+
+  it("shows no button when nothing is left to add, a disabled one with no choice, and a count label otherwise", () => {
+    expect(poolAddButton(0, 0)).toBeNull();
+    expect(poolAddButton(3, 0)).toEqual({ messageKey: "cv.pool.addNone", disabled: true });
+    expect(poolAddButton(3, 2)).toEqual({ messageKey: "cv.pool.addSelected", disabled: false });
+  });
+
+  const ok = (cvRevision: number) => actionSuccess(undefined, { cvRevision, itemIds: [], parentItemIds: [] });
+
+  it("adds in order, chaining the revision each answer returns, and reports progress", async () => {
+    const calls: Array<[string, number]> = [];
+    const onProgress = vi.fn();
+    const result = await runSequentialAdds({
+      options: [option(1), option(3), option(4)], revision: 10, onProgress,
+      add: async (entry, revision) => {
+        calls.push([entry.sourceId, revision]);
+        return ok(revision + 2);
+      },
+    });
+    expect(calls).toEqual([[uuid(1), 10], [uuid(3), 12], [uuid(4), 14]]);
+    expect(result.added.map((entry) => entry.sourceId)).toEqual([uuid(1), uuid(3), uuid(4)]);
+    expect(result).toMatchObject({ failed: null, failure: null, revision: 16 });
+    expect(onProgress.mock.calls).toEqual([[1, 3], [2, 3], [3, 3]]);
+  });
+
+  it("stops at the first server failure, keeps what was added, and hands back the failed answer", async () => {
+    const failure = actionFailure("NOT_FOUND", "error.notFound");
+    const add = vi.fn(async (entry: PoolOption, revision: number) => (entry.sourceId === uuid(3) ? failure : ok(revision + 1)));
+    const result = await runSequentialAdds({ options: [option(1), option(3), option(4)], revision: 5, add });
+    expect(add).toHaveBeenCalledTimes(2);
+    expect(result.added.map((entry) => entry.sourceId)).toEqual([uuid(1)]);
+    expect(result.failed?.sourceId).toBe(uuid(3));
+    expect(result.failure).toBe(failure);
+    expect(result.revision).toBe(6);
+  });
+
+  it("treats a thrown call as a failure without an answer and never rejects", async () => {
+    const result = await runSequentialAdds({
+      options: [option(1), option(3)], revision: 1,
+      add: async (entry, revision) => {
+        if (entry.sourceId === uuid(3)) throw new Error("network");
+        return ok(revision + 1);
+      },
+    });
+    expect(result.added).toHaveLength(1);
+    expect(result.failed?.sourceId).toBe(uuid(3));
+    expect(result.failure).toBeNull();
+    expect(result.revision).toBe(2);
+  });
+
+  it("does not guess a revision: a success without a numeric revision stops the run", async () => {
+    const add = vi.fn(async () => actionSuccess(undefined, {}));
+    const result = await runSequentialAdds({ options: [option(1), option(3)], revision: 7, add });
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(result.added).toEqual([]);
+    expect(result.failed?.sourceId).toBe(uuid(1));
+    expect(result.failure).toBeNull();
+    expect(result.revision).toBe(7);
+  });
+
+  it("returns an empty run untouched", async () => {
+    const add = vi.fn();
+    expect(await runSequentialAdds({ options: [], revision: 3, add })).toEqual({ added: [], failed: null, failure: null, revision: 3 });
+    expect(add).not.toHaveBeenCalled();
   });
 });
