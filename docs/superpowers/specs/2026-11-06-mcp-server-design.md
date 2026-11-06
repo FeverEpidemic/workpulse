@@ -305,7 +305,7 @@ Draft copy final ini masih harus lolos review copy (antislop-copywriting dan Del
 
 | Fase | Isi | Selesai kalau |
 |---|---|---|
-| 0. Spike (dibuang) | Nyalakan OAuth server dan DCR di staging; endpoint minimal dengan `whoami`; consent seadanya | Pertanyaan §10.1 terjawab dan dicatat di `docs/verification/T34-phase0-spike.md`. Kode tidak di-merge. Connect dari client asli dikerjakan product owner (§14.2). Kalau claude.ai atau ChatGPT gagal sampai `whoami`, eksekutor berhenti dan melapor; product owner yang memutuskan pindah ke pendekatan B (OAuth server sendiri) |
+| 0. Spike (dibuang) | Supabase **lokal** di belakang satu tunnel HTTPS ke Next spike, yang hanya meneruskan `/auth/v1` (tanpa admin) ke stack lokal. Project hosted tidak disentuh. OAuth server dan DCR dinyalakan di `config.toml` worktree spike; endpoint minimal dengan `whoami`; consent seadanya (detail di handoff plan Fase 1) | Pertanyaan §10.1 terjawab dan dicatat di `docs/verification/T34-phase0-spike.md`. Kode tidak di-merge. Connect dari client asli dikerjakan product owner (§14.2). Kalau claude.ai atau ChatGPT gagal sampai `whoami`, eksekutor berhenti dan melapor; product owner yang memutuskan pindah ke pendekatan B (OAuth server sendiri) |
 | 1. Skema | §5 seluruhnya, hook pre-request, policy storage | pgTAP hijau, guard release T25 hijau |
 | 2. Endpoint | §7, sepuluh tool | unit dan integrasi hijau |
 | 3. Consent dan S12 | §6.2, §8 | e2e hijau, review copy lolos |
@@ -315,7 +315,7 @@ Draft copy final ini masih harus lolos review copy (antislop-copywriting dan Del
 
 1. claude.ai dan ChatGPT berhasil DCR, login, consent, dan memanggil `whoami` lewat staging.
 2. Isi claim access token: `client_id`, `aud`, `role`, dan apakah `auth.uid()` bekerja di PostgREST.
-3. Token OAuth memang diterima langsung oleh PostgREST dan Storage (alasan §3.1), dan hook `db-pre-request` bisa diaktifkan di hosted Supabase.
+3. Token OAuth memang diterima langsung oleh PostgREST dan Storage (alasan §3.1), dan hook `db-pre-request` bisa diaktifkan di hosted Supabase. Bagian hosted tidak bisa dijawab oleh spike lokal, jadi dicek di awal fase staging sebelum deploy.
 4. API untuk mencabut otorisasi atau refresh token per client.
 5. Cara mengambil detail otorisasi dan approve/deny dari server Next.js.
 6. Redirect URI yang dipakai tiap client, untuk mengisi allowlist.
@@ -344,6 +344,8 @@ Ketiganya dicatat apa adanya di dokumen verifikasi T34.
 | Risiko | Mitigasi |
 |---|---|
 | OAuth server Supabase masih baru dan perilakunya berubah | Fase 0 sebelum kode produk; versi CLI di-pin; jalur pindah ke pendekatan B |
+| Spike membuka stack lokal ke internet, dan kunci default stack lokal bersifat publik | Tunnel hanya ke Next spike; proxy hanya meneruskan `/auth/v1` tanpa `/admin`; REST, Storage, Studio, dan Mailpit tidak pernah di-tunnel; tunnel dimatikan setelah spike |
+| Restart Auth untuk spike mengganggu sesi lain yang memakai stack lokal bersama | Spike dijalankan hanya setelah pemilik produk memastikan tidak ada sesi lain; config dikembalikan dan stack di-restart dari checkout utama di akhir |
 | Token pihak ketiga dipakai langsung ke API Supabase | §3.1: hook pre-request, policy storage, `mcp_*` sebagai satu-satunya pintu; dites di integrasi |
 | Client palsu meniru nama Claude lewat DCR | Host redirect ditampilkan dan di-allowlist selama pilot |
 | Data karier dikirim ke penyedia AI pihak ketiga | Consent menyebutnya secara eksplisit; scope baca tidak mencakup CV, kontak, dan isi file |
@@ -371,7 +373,7 @@ Hanya gate reviewer yang menulis status resmi dan menandai T34 DONE.
 
 Eksekutor tidak boleh login ke akun pihak ketiga milik user dan tidak boleh mengubah project hosted tanpa persetujuan. Jadi langkah berikut ditulis di handoff sebagai instruksi untuk product owner, dan eksekutor berhenti sampai product owner melaporkan hasilnya:
 
-1. Menambahkan connector WorkPulse di claude.ai dan ChatGPT, login, consent, lalu meminta `whoami` dan tool lain (Fase 0 dan Fase 4).
+1. Menjalankan tunnel HTTPS untuk spike, lalu menambahkan connector WorkPulse di claude.ai dan ChatGPT, login, consent, dan meminta `whoami` dan tool lain (Fase 0 dan Fase 4).
 2. Menyalakan OAuth server, DCR, dan hook `db-pre-request` di Supabase staging, kalau perubahan itu tidak bisa dilakukan lewat migration yang di-review.
 3. Meng-enroll akun pilot staging dengan `set_mcp_access` dan mengisi allowlist dengan `set_mcp_settings`.
 

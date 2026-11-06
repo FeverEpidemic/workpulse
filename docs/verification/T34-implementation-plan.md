@@ -200,17 +200,53 @@ T34 lulus hanya jika setiap poin berikut dibuktikan dengan hasil nyata:
 
 Tujuan: menjawab Spec §10.1 sebelum ada kode produk. Kode spike tinggal di branch `claude/t34-spike` yang tidak pernah di-merge.
 
-Masalah lingkungan yang harus dipecahkan di fase ini: claude.ai dan ChatGPT harus bisa menjangkau endpoint MCP **dan** authorization server lewat HTTPS publik, dan Supabase mengarahkan consent ke `Site URL + authorization_url_path`. Project hosted `Workpulse` dipakai bersama staging dan pilot, sehingga Site URL-nya tidak boleh diubah.
+**Lingkungan (diputuskan pemilik produk 6 November 2026): Supabase lokal di belakang satu tunnel HTTPS.** claude.ai dan ChatGPT harus menjangkau endpoint MCP dan Supabase Auth lewat HTTPS publik, dan Supabase mengarahkan consent ke `site_url + authorization_url_path`. Project hosted `Workpulse` (staging sekaligus pilot) **tidak disentuh** di fase ini.
 
-- [ ] Tulis di receipt usulan lingkungan spike, dengan rekomendasi berikut, lalu **stop** dan minta persetujuan pemilik produk:
-  - **[PEMILIK]** buat project Supabase sementara `workpulse-mcp-spike` (Free plan; bila kuota project habis, laporkan), nyalakan OAuth server + DCR, set Site URL ke URL tunnel, dan berikan URL project serta publishable key lewat `.env.spike.local` di worktree spike (bukan di chat).
-  - **[PEMILIK]** jalankan tunnel HTTPS (misalnya `cloudflared tunnel --url http://localhost:<port>`) ke Next dev server spike, dan bagikan URL tunnel.
-  - Kamu menerapkan migration minimal ke project spike hanya bila pemilik produk menyetujuinya secara eksplisit.
-- [ ] Spike (setelah disetujui): route `/api/mcp` minimal dengan satu tool `whoami` (tanpa database selain claims), dokumen protected resource, dan halaman `/oauth/consent` seadanya (tombol Izinkan/Tolak memakai API OAuth server supabase-js).
-- [ ] **[PEMILIK]** tambahkan connector di claude.ai dan ChatGPT ke URL tunnel, login, consent, jalankan `whoami`. Kirim screenshot dan pesan error bila ada.
-- [ ] Dari spike, rekam di receipt jawaban Spec §10.1 nomor 1–7: alur DCR tiap client, isi claim (`client_id`, `aud`, `role`, `iss`), apakah `auth.uid()` bekerja di PostgREST dengan token itu, apakah token diterima langsung oleh PostgREST dan Storage (uji `select` satu tabel dan signed URL), apakah `pgrst.db_pre_request` bisa diset di hosted, nama method supabase-js untuk detail/approve/deny/revoke, redirect URI tiap client, dan perlakuan scope custom.
-- [ ] Receipt `T34-phase1-spike.md`, commit di branch spike saja (receipt juga di-cherry-pick ke `claude/t34-mcp`). **Stop: pemilik produk memutuskan lanjut dengan pendekatan A atau pindah ke B.** Bila nomor 1, 3, atau 5 gagal, rekomendasikan B dengan alasan, tapi jangan mulai B.
-- [ ] **[PEMILIK]** hapus project spike setelah keputusan (catat tanggalnya di receipt).
+Susunannya satu tunnel ke Next dev server spike. Next yang meneruskan Auth ke stack lokal:
+
+```
+internet ──HTTPS──> tunnel ──> Next spike (127.0.0.1:<port>)
+                                 ├─ /api/mcp, /.well-known/oauth-protected-resource, /oauth/consent
+                                 └─ /auth/v1/*  ──proxy──> 127.0.0.1:54321/auth/v1/*  (kecuali /auth/v1/admin/*)
+```
+
+Alasan hanya `/auth/v1` yang diteruskan: kunci default stack lokal (termasuk `service_role` legacy) adalah nilai demo yang publik. Kalau Kong 54321 dibuka utuh ke internet, siapa pun yang tahu URL tunnel bisa membaca seluruh database lokal. Proxy spike **wajib** menolak `/auth/v1/admin/*`, `/rest/v1/*`, `/storage/v1/*`, `/realtime/*`, dan semua path lain dengan 404. Studio (54323) dan Mailpit (54324) tidak pernah di-tunnel.
+
+- [ ] **Koordinasi stack bersama.** Fase ini me-restart stack lokal dua kali dengan `config.toml` berbeda, dan ini mengubah Auth untuk semua sesi lain (§0.1 nomor 6–7). Sebelum mulai, tulis di receipt sesi/worktree lain yang terlihat aktif (`git worktree list`, proses `next`/`workers/run.ts`, `docker ps`), lalu **stop** dan minta pemilik produk memastikan tidak ada sesi lain (termasuk T33) yang memakai stack selama spike.
+- [ ] Branch `claude/t34-spike` di worktree sendiri. Salin lima file pin dari checkout utama (`supabase/.temp/{storage,postgres,gotrue,rest}-version`, `storage-migration`; **bukan** `project-ref`/`linked-project.json`) supaya restart dari worktree ini tidak memicu `42P10`.
+- [ ] **[PEMILIK]** jalankan quick tunnel ke port Next spike, misalnya `cloudflared tunnel --url http://127.0.0.1:<port>`, lalu tempel URL `https://<acak>.trycloudflare.com` di chat. URL ini berubah setiap tunnel dijalankan ulang, jadi tunnel dibiarkan hidup sampai spike selesai.
+- [ ] Di `config.toml` worktree spike saja (tidak pernah di-commit ke `claude/t34-mcp` atau `main`):
+  - `[auth] site_url = "<tunnel>"`
+  - `external_url = "<tunnel>/auth/v1"`
+  - `additional_redirect_urls` ditambah `<tunnel>/auth/confirm`
+  - `[auth.oauth_server] enabled = true`, `allow_dynamic_registration = true`
+
+  Biarkan `jwt_issuer` mengikuti `external_url`. Lalu `pnpm db:stop` + `pnpm db:start` dari worktree spike (tanpa reset). Cek `docker ps` memuat `storage-api:v1.80.2`.
+- [ ] Spike Next (`WORKPULSE_SITE_URL=<tunnel>`):
+  - route proxy `/auth/v1/[...path]` dengan allowlist di atas, meneruskan method, header, dan body apa adanya, termasuk header `Location`, yang ditulis ulang dari `127.0.0.1:54321` ke URL tunnel bila ada;
+  - `/.well-known/oauth-protected-resource` dengan `authorization_servers: ["<tunnel>/auth/v1"]`;
+  - `/api/mcp` minimal dengan satu tool `whoami` (dari claims saja);
+  - `/oauth/consent` seadanya (Izinkan/Tolak memakai API OAuth server supabase-js).
+
+  Uji sendiri dulu dengan `curl` lewat URL tunnel: metadata authorization server Supabase terbaca, issuer di dalamnya = `<tunnel>/auth/v1`, dan `/auth/v1/admin/users`, `/rest/v1/profiles` membalas 404.
+- [ ] **[PEMILIK]** buat satu akun test di app spike lewat URL tunnel (email konfirmasi tertangkap Mailpit lokal), selesaikan onboarding, lalu tambahkan connector di claude.ai dan ChatGPT ke `<tunnel>/api/mcp`, login, consent, dan jalankan `whoami`. Kirim screenshot dan pesan error bila ada.
+- [ ] Rekam di receipt jawaban Spec §10.1:
+  - nomor 1: alur DCR tiap client;
+  - nomor 2: isi claim (`client_id`, `aud`, `role`, `iss`);
+  - nomor 3, bagian lokal: apakah token itu diterima langsung oleh PostgREST dan Storage lokal (`select` satu tabel dan signed URL, dari mesin lokal, bukan lewat tunnel), dan apakah `auth.uid()` bekerja;
+  - nomor 4: method supabase-js untuk revoke;
+  - nomor 5: method supabase-js untuk detail, approve, dan deny;
+  - nomor 6: redirect URI tiap client;
+  - nomor 7: perlakuan scope custom.
+
+  Bagian hosted nomor 3 (apakah `pgrst.db_pre_request` bisa diset di hosted Supabase) tidak bisa dijawab di sini; itu langkah pertama Fase 6.
+- [ ] **Bongkar.**
+  - **[PEMILIK]** hentikan tunnel.
+  - `pnpm db:stop` dari worktree spike, lalu `pnpm db:start` dari checkout utama, supaya Auth kembali ke `config.toml` utama.
+  - Cek `site_url` aktif kembali `http://127.0.0.1:3000` lewat `GET 127.0.0.1:54321/auth/v1/settings` atau `pnpm test:e2e:auth`.
+  - Hapus akun test spike lewat alur T23.
+  - Catat semuanya di receipt.
+- [ ] Receipt `T34-phase1-spike.md`, commit di branch spike saja (receipt di-cherry-pick ke `claude/t34-mcp`). **Stop: pemilik produk memutuskan lanjut dengan pendekatan A atau pindah ke B.** Bila nomor 1 atau 5 gagal, rekomendasikan B dengan alasan, tapi jangan mulai B. Token yang diterima langsung oleh PostgREST dan Storage (nomor 3) bukan kegagalan; itu justru alasan §2.2.2–3 ada, dan dibuktikan tertutup di Fase 2–3.
 
 ### Fase 2: Database (TDD pgTAP)
 
@@ -253,8 +289,9 @@ Masalah lingkungan yang harus dipecahkan di fase ini: claude.ai dan ChatGPT haru
 
 ### Fase 6: Staging dengan client asli (setelah gate lokal lulus)
 
-Project hosted `Workpulse` adalah staging sekaligus pilot. Semua langkah hosted dikerjakan atau disetujui pemilik produk.
+Project hosted `Workpulse` adalah staging sekaligus pilot. Semua langkah hosted dikerjakan atau disetujui pemilik produk. Ini pertama kalinya T34 menyentuh hosted, karena Fase 1 memakai stack lokal.
 
+- [ ] **Cek hosted sebelum deploy (sisa Spec §10.1 nomor 3).** Tulis instruksi untuk **[PEMILIK]**: di SQL editor hosted, jalankan `select rolname, rolconfig from pg_roles where rolname = 'authenticator'` dan coba `alter role authenticator set pgrst.db_pre_request = 'internal.reject_oauth_outside_mcp'` pada fungsi dummy yang selalu lolos, lalu `notify pgrst, 'reload config'`, lalu kembalikan. Juga konfirmasi dashboard menyediakan OAuth server dan DCR. Bila hook tidak bisa diset di hosted, **stop**: T34 tidak boleh dinyalakan di hosted tanpa §2.2.2.
 - [ ] Tulis `docs/verification/T34-mcp-runbook.md`: urutan deploy (migration lewat alur T25, bukan `apply_migration` dari connector), menyalakan `[auth.oauth_server]` dan DCR di dashboard hosted dengan `authorization_url_path = /oauth/consent`, set `WORKPULSE_MCP_ENABLED=true` di web pilot, enroll akun (`set_mcp_access`), isi allowlist (`set_mcp_settings`) dengan host dari Fase 1, cara mencabut semua grant darurat, dan cara mematikan (flag mati + OAuth server mati).
 - [ ] **[PEMILIK]** jalankan runbook di staging/pilot dengan satu akun pilot.
 - [ ] **[PEMILIK]** dari claude.ai dan ChatGPT: connect, `whoami`, `list_achievements`, `create_activity` dengan `request_id`, lihat label sumber di app, putuskan di S12, panggil tool lagi (harus gagal minta login). Kirim screenshot tiap langkah.
@@ -314,7 +351,9 @@ pnpm test:e2e:mcp
 Berhenti dan laporkan ke pemilik produk, jangan improvisasi, bila:
 
 - Working tree kotor di path yang akan diubah T34, atau sesi lain sedang memakai stack lokal dengan cara yang akan terganggu restart Auth.
-- Fase 1 gagal di Spec §10.1 nomor 1, 3, atau 5. Pindah ke pendekatan B diputuskan pemilik produk.
+- Fase 1 gagal di Spec §10.1 nomor 1 atau 5, atau cek hosted di awal Fase 6 menunjukkan hook pre-request tidak bisa diset. Pindah ke pendekatan B diputuskan pemilik produk.
+- Proxy spike Fase 1 ternyata meneruskan path di luar `/auth/v1` (selain admin), atau tunnel perlu membuka Kong 54321 langsung.
+- Ada sesi lain yang memakai stack lokal saat restart Auth Fase 1 diperlukan.
 - Hook `db-pre-request` tidak bisa didaftarkan di lokal atau hosted, atau token OAuth masih bisa membaca tabel/Storage setelah §2.2.2–3.
 - Implementasi menuntut pelonggaran Spec §3.1 (misalnya token OAuth harus boleh memanggil RPC app biasa).
 - Perlu `db:reset`, menulis ulang migration lama, atau mengubah perilaku RPC lama (suite lama berubah hasil).
