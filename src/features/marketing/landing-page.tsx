@@ -24,7 +24,7 @@ function SignUpCta({ locale, label }: { locale: Locale; label: "landing.hero.cta
   );
 }
 
-/** Props for one item of a `[data-reveal]` section; the stagger comes from motion.ts, not CSS. */
+/** Props for one staggered item of a section; the stagger comes from motion.ts, not CSS. */
 function reveal(index: number) {
   return { "data-reveal-item": "", style: { "--reveal-delay": `${index * REVEAL_STAGGER_MS}ms` } as CSSProperties };
 }
@@ -116,7 +116,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
         <script dangerouslySetInnerHTML={{ __html: HERO_STORY_ARM_SCRIPT }} />
         <section id="landing-hero" className="landing-section landing-section--warm landing-hero" aria-labelledby="landing-hero-title">
           <div className="landing-container landing-hero-inner">
-            <div className="landing-hero-text">
+            <div className="landing-hero-text" data-reveal-item="">
               <p className="landing-eyebrow">{t(locale, "landing.hero.eyebrow")}</p>
               <h1 id="landing-hero-title" className="landing-h1">{t(locale, "landing.hero.title")}</h1>
               <p className="landing-lead">{t(locale, "landing.hero.body")}</p>
@@ -129,14 +129,14 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-how" data-reveal className="landing-section" aria-labelledby="landing-how-title">
+        <section id="landing-how" className="landing-section" aria-labelledby="landing-how-title">
           <div className="landing-container landing-stack">
             <SectionIntro id="landing-how-title" eyebrow={t(locale, "landing.demo.eyebrow")} title={t(locale, "landing.demo.title")} />
             <div {...reveal(1)}><DemoTabs tabs={tabs} label={t(locale, "landing.demo.tablist")} locale={locale} /></div>
           </div>
         </section>
 
-        <section id="landing-import" data-reveal className="landing-section landing-section--ruled" aria-labelledby="landing-import-title">
+        <section id="landing-import" className="landing-section landing-section--ruled" aria-labelledby="landing-import-title">
           <div className="landing-container landing-split">
             <SectionIntro id="landing-import-title" eyebrow={t(locale, "landing.import.eyebrow")} title={t(locale, "landing.import.title")} />
             <div className="landing-stack">
@@ -169,7 +169,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-data" data-reveal className="landing-section landing-section--warm" aria-labelledby="landing-data-title">
+        <section id="landing-data" className="landing-section landing-section--warm" aria-labelledby="landing-data-title">
           <div className="landing-container landing-stack">
             <SectionIntro id="landing-data-title" eyebrow={t(locale, "landing.data.eyebrow")} title={t(locale, "landing.data.title")} />
             <ul className="landing-facts">
@@ -187,7 +187,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-maker" data-reveal className="landing-section" aria-labelledby="landing-maker-title">
+        <section id="landing-maker" className="landing-section" aria-labelledby="landing-maker-title">
           <div className="landing-container landing-container--narrow landing-stack">
             <h2 id="landing-maker-title" className="landing-eyebrow" {...reveal(0)}>{t(locale, "landing.maker.eyebrow")}</h2>
             <blockquote className="landing-quote" {...reveal(1)}>
@@ -203,7 +203,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id="landing-closing" data-reveal className="landing-section landing-section--warm-subtle" aria-labelledby="landing-closing-title">
+        <section id="landing-closing" className="landing-section landing-section--warm-subtle" aria-labelledby="landing-closing-title">
           <div className="landing-container landing-closing">
             <BrandSymbol className="landing-closing-mark" />
             <h2 id="landing-closing-title" className="landing-h2" {...reveal(0)}>{t(locale, "landing.closing.title")}</h2>

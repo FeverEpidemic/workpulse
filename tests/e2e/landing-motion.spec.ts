@@ -110,40 +110,129 @@ test.describe("T32 hero story", () => {
   });
 });
 
-test.describe("T32 staged reveal", () => {
+test.describe("T32 two-way reveal", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("reveals each section once, in order, and leaves sections on screen at load alone", async ({ page }) => {
+  const shiftOf = (element: Element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m42;
+
+  async function ready(page: Page) {
     await page.goto("/");
     await expect(page.locator("html")).toHaveClass(/is-reveal-ready/);
-    await expect(page.locator("#landing-how")).toHaveAttribute("data-revealed", "true");
-    for (const item of await page.locator("#landing-how [data-reveal-item]").all()) await expect(item).toHaveCSS("opacity", "1");
+  }
+
+  async function scrollTo(page: Page, y: number) {
+    await page.evaluate((top) => window.scrollTo(0, top), y);
+  }
+
+  test("shows items on screen at load at once and staggers items below on their first entry", async ({ page }) => {
+    await ready(page);
+    await expect(page.locator(".landing-hero-text")).not.toHaveAttribute("data-reveal-offscreen", /.*/);
+    await expect(page.locator(".landing-hero-text")).toHaveCSS("opacity", "1");
 
     const items = page.locator("#landing-data [data-reveal-item]");
-    await expect(page.locator("#landing-data")).not.toHaveAttribute("data-revealed", "true");
-    for (const item of await items.all()) await expect(item).toHaveCSS("opacity", "0");
+    for (const item of await items.all()) {
+      await expect(item).toHaveAttribute("data-reveal-offscreen", "below");
+      await expect(item).toHaveCSS("opacity", "0");
+    }
     const delays = await items.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).transitionDelay));
     expect(delays).toEqual(["0s", "0.08s", "0.16s", "0.24s"]);
     const durations = await items.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).transitionDuration));
     for (const value of durations) expect(value).toBe("0.24s, 0.24s");
-    const shift = await items.first().evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).m42);
+    const shift = await items.first().evaluate(shiftOf);
     expect(shift).toBeGreaterThan(0);
     expect(shift).toBeLessThanOrEqual(16);
 
-    await page.locator("#landing-data").scrollIntoViewIfNeeded();
-    await expect(page.locator("#landing-data")).toHaveAttribute("data-revealed", "true");
-    for (const item of await items.all()) await expect(item).toHaveCSS("opacity", "1");
+    await items.first().evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await expect(items.first()).toHaveCSS("opacity", "1");
+  });
 
-    // Fast scroll down and back: nothing is left hidden or hidden again.
-    await page.mouse.wheel(0, 20_000);
-    await page.mouse.wheel(0, -20_000);
-    await page.mouse.wheel(0, 20_000);
-    for (const id of ["landing-import", "landing-data", "landing-maker", "landing-closing"]) {
-      await expect(page.locator(`#${id}`)).toHaveAttribute("data-revealed", "true");
-      for (const item of await page.locator(`#${id} [data-reveal-item]`).all()) await expect(item).toHaveCSS("opacity", "1");
-    }
+  test("fades an item out past either edge and back in, with no stagger after it has left once", async ({ page }) => {
+    await recordStory(page);
+    await ready(page);
+    await expect(stack(page)).toHaveAttribute("data-phase", "done", { timeout: 8_000 });
+    const phasesBefore = await page.evaluate(() => window.__storyLog.length);
+
+    const heroText = page.locator(".landing-hero-text");
+    const maker = page.locator("#landing-maker [data-reveal-item]").first();
+    const lastMaker = page.locator("#landing-maker [data-reveal-item]").last();
+
+    // Past the top edge: fades out upward.
+    await maker.evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await expect(maker).toHaveCSS("opacity", "1");
+    await expect(heroText).toHaveAttribute("data-reveal-offscreen", "above");
+    await expect(heroText).toHaveCSS("opacity", "0");
+    await expect(heroText).toHaveAttribute("data-reveal-settled", "");
+    await expect(heroText).toHaveCSS("transition-delay", "0s");
+    expect(await heroText.evaluate(shiftOf)).toBeLessThan(0);
+
+    // Past the bottom edge on the way up: fades out downward, and comes back with no stagger.
+    await scrollTo(page, 0);
+    await expect(heroText).not.toHaveAttribute("data-reveal-offscreen", /.*/);
+    await expect(heroText).toHaveCSS("opacity", "1");
+    await expect(lastMaker).toHaveAttribute("data-reveal-offscreen", "below");
+    await expect(lastMaker).toHaveCSS("opacity", "0");
+    await expect(lastMaker).toHaveCSS("transition-delay", "0s");
+    expect(await lastMaker.evaluate(shiftOf)).toBeGreaterThan(0);
+
+    // The hero story does not replay on its way back in.
+    expect(await page.evaluate(() => window.__storyLog.length)).toBe(phasesBefore);
+    await expect(stack(page)).toHaveAttribute("data-phase", "done");
+  });
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 360, height: 800 }]) {
+    test(`leaves nothing hidden on screen after fast scrolling at ${viewport.width}`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await ready(page);
+      await page.mouse.wheel(0, 20_000);
+      await page.mouse.wheel(0, -20_000);
+      await page.mouse.wheel(0, 20_000);
+      await page.keyboard.press("Home");
+      await page.keyboard.press("End");
+
+      await expect(page.locator(".landing-closing h2")).toBeInViewport();
+      await expect(page.locator(".landing-closing h2")).toHaveCSS("opacity", "1");
+      await expect.poll(() => page.evaluate(() => {
+        const edge = (height: number) => Math.max(height * 0.05, 24) + 12;
+        return [...document.querySelectorAll("[data-reveal-item]")].filter((item) => {
+          const { top, bottom, height } = item.getBoundingClientRect();
+          return bottom >= edge(height) && window.innerHeight - top >= edge(height) && getComputedStyle(item).opacity !== "1";
+        }).length;
+      })).toBe(0);
+    });
+  }
+
+  test("keeps the closing logo still", async ({ page }) => {
+    await ready(page);
+    await page.locator(".landing-closing-mark").scrollIntoViewIfNeeded();
     await expect(page.locator(".landing-closing-mark")).not.toHaveAttribute("data-reveal-item", /.*/);
     await expect(page.locator(".landing-closing-mark")).toHaveCSS("animation-name", "none");
+    await expect(page.locator(".landing-closing-mark")).toHaveCSS("opacity", "1");
+  });
+
+  test("never fades an item that holds keyboard focus", async ({ page }) => {
+    await ready(page);
+    const item = page.locator("#landing-closing [data-reveal-item]").last();
+    await item.locator("a").focus();
+    await expect(item).toHaveCSS("opacity", "1");
+    await scrollTo(page, 0);
+    await expect(item).toHaveAttribute("data-reveal-offscreen", "below");
+    await expect(item).toHaveCSS("opacity", "1");
+    await expect(item.locator("a")).toBeFocused();
+  });
+
+  test("shows an item that moves on screen without a scroll", async ({ page }) => {
+    await ready(page);
+    const item = page.locator("#landing-import [data-reveal-item]").first();
+    await expect(item).toHaveAttribute("data-reveal-offscreen", "below");
+    await page.locator("#landing-how").evaluate((element) => { element.style.display = "none"; });
+    await expect(item).not.toHaveAttribute("data-reveal-offscreen", /.*/);
+    await expect(item).toHaveCSS("opacity", "1");
+  });
+
+  test("prints every item", async ({ page }) => {
+    await ready(page);
+    await page.emulateMedia({ media: "print" });
+    for (const item of await page.locator("[data-reveal-item]").all()) await expect(item).toHaveCSS("opacity", "1");
   });
 });
 

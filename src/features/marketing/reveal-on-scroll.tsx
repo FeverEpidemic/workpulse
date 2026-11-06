@@ -2,53 +2,53 @@
 
 import { useEffect } from "react";
 
-/** A section reveals once its top passes this share of the viewport height. */
-const REVEAL_LINE = 0.9;
+import { revealOffscreen } from "@/features/marketing/reveal-state";
 
 /**
- * Staged reveal for `[data-reveal]` sections. Items are only hidden under `html.is-reveal-ready`, which this adds
- * after mount, so the page reads fully without JavaScript or with reduced motion. Sections already on screen at
- * mount are marked revealed first, and each section reveals once.
+ * Two-way fade for `[data-reveal-item]`: an item fades out past either viewport edge and back in when it returns.
+ * Items are only hidden under `html.is-reveal-ready`, which this adds after mount, so the page reads fully without
+ * JavaScript or with reduced motion. Items on screen at mount never fade in.
  *
- * A scroll check instead of IntersectionObserver: a fast jump (End key, anchor link) can skip a section without it
- * ever intersecting, and it must not stay hidden above the viewport.
+ * `data-reveal-settled` turns the stagger off once an item has left, so scrolling back does not lag.
  */
 export function RevealOnScroll() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const root = document.documentElement;
-    let pending = [...document.querySelectorAll<HTMLElement>("[data-reveal]")];
+    const items = [...document.querySelectorAll<HTMLElement>("[data-reveal-item]")];
     let frame = 0;
 
-    function revealPassed() {
+    function update(settle: boolean) {
       frame = 0;
-      const line = window.innerHeight * REVEAL_LINE;
-      pending = pending.filter((section) => {
-        if (section.getBoundingClientRect().top >= line) return true;
-        section.dataset.revealed = "true";
-        return false;
-      });
-      if (pending.length === 0) stop();
+      const viewportHeight = window.innerHeight;
+      for (const item of items) {
+        const offscreen = revealOffscreen(item.getBoundingClientRect(), viewportHeight);
+        const current = item.dataset.revealOffscreen ?? null;
+        if (offscreen === current) continue;
+        if (offscreen) {
+          if (settle && !current) item.dataset.revealSettled = "";
+          item.dataset.revealOffscreen = offscreen;
+        } else {
+          delete item.dataset.revealOffscreen;
+        }
+      }
     }
 
     function schedule() {
-      if (!frame) frame = window.requestAnimationFrame(revealPassed);
+      if (!frame) frame = window.requestAnimationFrame(() => update(true));
     }
 
-    function stop() {
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-    }
-
-    for (const section of pending) {
-      if (section.getBoundingClientRect().top < window.innerHeight) section.dataset.revealed = "true";
-    }
-    pending = pending.filter((section) => !section.dataset.revealed);
+    update(false);
     root.classList.add("is-reveal-ready");
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule, { passive: true });
+    // A demo tab of another height moves the items below it without any scroll.
+    const resizes = new ResizeObserver(schedule);
+    resizes.observe(document.body);
     return () => {
-      stop();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      resizes.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
       root.classList.remove("is-reveal-ready");
     };

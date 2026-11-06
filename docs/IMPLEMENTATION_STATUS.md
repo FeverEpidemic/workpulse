@@ -39,9 +39,13 @@ Status T33: **DONE** (acceptance lokal). Di S13 `/cv`, setiap record di "Availab
   - N2: selama refresh setelah jawaban stale, tombol tambah masih bisa diklik dan memicu konflik lagi. Data tidak rusak.
   - Satu run release pertama macet sekitar dua jam di `release-a11y` 1440 dark saat dua sesi memakai DB lokal yang sama. Penyebabnya tidak diselidiki.
 
-Berikutnya: push branch `claude/t33-cv-multi-select-288f9f`, lalu buka PR ke `main` bila pengguna memintanya.
+Berikutnya: review dan merge PR T33 ke `main`.
 
 [Rencana](verification/T33-implementation-plan.md), [bukti](verification/T33-cv-multi-select.md), [gate review dan gate ulang](verification/T33-review-remediation-plan.md), receipt [Fase 0](verification/T33-phase0-baseline.md) sampai [3](verification/T33-phase3-e2e-regression.md) dan [3b](verification/T33-phase3b-remediation.md).
+
+## Landing: fade dua arah saat scroll, 3 November 2026
+
+Permintaan terarah pengguna, lanjutan T32. Item landing, termasuk hero, memudar saat keluar lewat tepi viewport dan muncul lagi saat kembali. Keputusan: [decision 0043](decisions/0043-landing-two-way-fade.md), tanpa migration dan dependency. Checks: lint dan typecheck exit 0; unit 164 file / 1569 test; E2E `landing-motion.spec.ts` 19 lulus dan 1 skip (rekaman video), `landing.spec.ts` 24 lulus di production build; cek browser di 1440 dan 375 piksel. Belum dijalankan: `test:e2e:release` lengkap, Safari, Firefox, perangkat nyata.
 
 ## T32 Landing page dan halaman legal: DONE lokal, 1 November 2026
 

@@ -47,17 +47,15 @@ async function guest(browser: Browser, testInfo: TestInfo, options: { width?: nu
   return { context, page: await context.newPage() };
 }
 
-/** Lets the hero story finish and scrolls the whole page once so every staged section has revealed. */
+/**
+ * Lets the hero story finish and turns the scroll fade off. Items off screen sit at opacity 0, and axe skips those
+ * without failing, so the contrast and layout checks would quietly miss them.
+ */
 async function settleLanding(page: Page) {
   await expect(page.locator(".landing-hero-stack")).toHaveAttribute("data-phase", "done", { timeout: 8_000 });
-  await page.evaluate(async () => {
-    for (let y = 0; y <= document.documentElement.scrollHeight; y += window.innerHeight / 2) {
-      window.scrollTo(0, y);
-      await new Promise((resolve) => setTimeout(resolve, 60));
-    }
-    window.scrollTo(0, 0);
-  });
-  for (const section of await page.locator("[data-reveal]").all()) await expect(section).toHaveAttribute("data-revealed", "true");
+  await expect(page.locator("html")).toHaveClass(/is-reveal-ready/);
+  await page.evaluate(() => document.documentElement.classList.remove("is-reveal-ready"));
+  for (const item of await page.locator("[data-reveal-item]").all()) await expect(item).toHaveCSS("opacity", "1");
 }
 
 test.describe("T32 root route", () => {

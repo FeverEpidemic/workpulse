@@ -30,11 +30,19 @@ describe("T32 landing CSS", () => {
 
   it("hides reveal items only after JavaScript marks the page ready", () => {
     const hiding = [...landing.matchAll(/([^{}]+)\{[^}]*opacity:\s*0;[^}]*\}/g)].map((match) => match[1]!.trim());
-    const revealHiding = hiding.filter((selector) => selector.includes("data-reveal-item"));
+    const revealHiding = hiding.filter((selector) => selector.includes("data-reveal"));
     expect(revealHiding.length).toBeGreaterThan(0);
     for (const selector of revealHiding) expect(selector).toContain(".is-reveal-ready");
     expect(landing).toMatch(/\[data-reveal-item\][^{]*\{[^}]*transition-delay:\s*var\(--reveal-delay\)/);
     expect(landing).toMatch(/\[data-reveal-item\][^{]*\{[^}]*transition:[^;]*var\(--motion-slow\)[^;]*var\(--ease-out\)/);
+  });
+
+  it("fades items out both ways, but never one that holds focus or on paper", () => {
+    const hidden = (side: string) => new RegExp(`\\.is-reveal-ready \\[data-reveal-offscreen="${side}"\\]:not\\(:focus-within\\)\\s*\\{[^}]*opacity:\\s*0;[^}]*translateY\\(${side === "above" ? "-" : ""}12px\\)`);
+    expect(landing).toMatch(hidden("above"));
+    expect(landing).toMatch(hidden("below"));
+    expect(landing).toMatch(/\[data-reveal-settled\]\s*\{[^}]*transition-delay:\s*0s/);
+    expect(landing).toMatch(/@media print\s*\{\s*\.is-reveal-ready \[data-reveal-item\]\s*\{[^}]*opacity:\s*1 !important;/);
   });
 
   it("hides the hero story parts before hydration only while the inline script has armed it", () => {
