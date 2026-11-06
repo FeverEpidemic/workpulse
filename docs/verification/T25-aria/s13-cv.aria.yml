@@ -101,8 +101,10 @@
       - text: Available to add (1)
       - list:
         - listitem:
-          - paragraph: Analis Data · Perusahaan Contoh
-          - button "Add Analis Data · Perusahaan Contoh to CV": Add
+          - checkbox "Analis Data · Perusahaan Contoh"
+          - text: Analis Data · Perusahaan Contoh
+      - button "Add to CV" [disabled]
+      - paragraph: Select at least one record.
   - region "Projects":
     - heading "Projects" [level=2]
     - text: 2 selected
@@ -134,7 +136,7 @@
           - paragraph: Mempercepat laporan mingguan
           - paragraph: Mempercepat laporan penjualan mingguan hingga satu jam.
           - paragraph: On the CV under Dasbor Penjualan
-          - button "Mempercepat laporan mingguan is already on the CV" [disabled]: Added
+          - text: Mempercepat laporan mingguan is already on the CV
   - region "Education":
     - heading "Education" [level=2]
     - text: 1 selected
@@ -155,8 +157,10 @@
       - text: Available to add (1)
       - list:
         - listitem:
-          - paragraph: SQL
-          - button "Add SQL to CV": Add
+          - checkbox "SQL"
+          - text: SQL
+      - button "Add to CV" [disabled]
+      - paragraph: Select at least one record.
   - region "Certifications":
     - heading "Certifications" [level=2]
     - text: 0 selected
@@ -165,8 +169,10 @@
       - text: Available to add (1)
       - list:
         - listitem:
-          - paragraph: Sertifikat Analisis Data · Lembaga Contoh
-          - button "Add Sertifikat Analisis Data · Lembaga Contoh to CV": Add
+          - checkbox "Sertifikat Analisis Data · Lembaga Contoh"
+          - text: Sertifikat Analisis Data · Lembaga Contoh
+      - button "Add to CV" [disabled]
+      - paragraph: Select at least one record.
   - region "Preview":
     - complementary "Preview":
       - heading "Preview" [level=2]

@@ -14,6 +14,7 @@ import { supportsOverride, sourceItemText } from "@/domain/cv/resolve";
 import type { CvItemRow } from "@/domain/cv/contracts";
 import { t, type Locale, type MessageKey } from "@/i18n/messages";
 
+import { addableSelection, poolAddButton } from "./cv-builder-state";
 import { FieldProblem } from "./cv-panels";
 import { CvReviewPanel, CvReviewToggle, CvStateBadge } from "./cv-review";
 import type { PoolOption } from "./cv-view";
@@ -49,7 +50,14 @@ export interface SectionHandlers {
   review: ReviewHandlers;
   onToggleEditor: (itemId: string) => void;
   onDraftChange: (key: string, value: string) => void;
-  onAdd: (option: PoolOption) => void;
+  /** True while a request runs; the choices and the add button stay focusable but do nothing. */
+  busy: boolean;
+  /** Records ticked in the "Available to add" lists, by source id. Nothing is saved until the section's button is pressed. */
+  chosen: ReadonlySet<string>;
+  /** The add run in progress for one section, for the button label. */
+  adding: { sectionKey: CvSectionKey; current: number; total: number } | null;
+  onTogglePoolOption: (sourceId: string, checked: boolean) => void;
+  onAddSelected: (sectionKey: CvSectionKey) => void;
   onRemove: (entry: EditorEntry) => void;
   onMoveItem: (itemId: string, direction: "up" | "down") => void;
   poolOpen: boolean;
@@ -163,32 +171,49 @@ function PoolRow({ option, handlers }: { option: PoolOption; handlers: SectionHa
   const placedUnder = option.selected && option.sourceType === "achievement" ? handlers.placements[option.sourceId] : undefined;
   useEffect(() => {
     if (!suggested) return;
-    const target = document.getElementById(`cv-add-${option.sourceId}`);
+    const target = document.getElementById(`cv-pool-check-${option.sourceId}`);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     target?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
     target?.focus();
   }, [suggested, option.sourceId]);
+  const nameId = `cv-pool-name-${option.sourceId}`;
+  const detailId = `cv-pool-detail-${option.sourceId}`;
+  if (option.selected) {
+    return (
+      <li className="cv-pool-row" data-testid="cv-pool-row" aria-current={suggested ? "true" : undefined}>
+        <div className="cv-item-text">
+          <p className="cv-item-title"><span>{option.label}</span></p>
+          {option.detail ? <p className="field-help">{option.detail}</p> : null}
+          {placedUnder ? <p className="field-help" data-testid="cv-pool-placement">{t(locale, "cv.pool.shownUnder", { name: placedUnder })}</p> : null}
+        </div>
+        <span id={`cv-pool-added-${option.sourceId}`} className="cv-pool-added" data-testid="cv-pool-added">
+          <span aria-hidden="true">{t(locale, "cv.action.added")}</span>
+          <span className="sr-only">{t(locale, "cv.aria.added", { name: option.label })}</span>
+        </span>
+      </li>
+    );
+  }
+  // The whole row is the label, so it holds no other control; the accessible name is the record alone.
   return (
     <li className="cv-pool-row" data-testid="cv-pool-row" aria-current={suggested ? "true" : undefined}>
-      <div className="cv-item-text">
-        <p className="cv-item-title">
-          <span>{option.label}</span>
-          {suggested ? <Badge variant="success">{t(locale, "cv.badge.suggested")}</Badge> : null}
-        </p>
-        {option.detail ? <p className="field-help">{option.detail}</p> : null}
-        {placedUnder ? <p className="field-help" data-testid="cv-pool-placement">{t(locale, "cv.pool.shownUnder", { name: placedUnder })}</p> : null}
-      </div>
-      <Button
-        id={`cv-add-${option.sourceId}`} variant="secondary" aria-disabled={option.selected || undefined}
-        aria-label={t(locale, option.selected ? "cv.aria.added" : "cv.aria.add", { name: option.label })}
-        onClick={() => { if (!option.selected) handlers.onAdd(option); }}
-      >
-        {t(locale, option.selected ? "cv.action.added" : "cv.action.add")}
-      </Button>
+      <label className="cv-pool-label">
+        <input
+          id={`cv-pool-check-${option.sourceId}`} type="checkbox" checked={handlers.chosen.has(option.sourceId)}
+          aria-labelledby={nameId} aria-describedby={option.detail ? detailId : undefined}
+          aria-disabled={handlers.busy || undefined}
+          onChange={(event) => handlers.onTogglePoolOption(option.sourceId, event.currentTarget.checked)}
+        />
+        <span className="cv-item-text">
+          <span className="cv-item-title">
+            <span id={nameId}>{option.label}</span>
+            {suggested ? <Badge variant="success">{t(locale, "cv.badge.suggested")}</Badge> : null}
+          </span>
+          {option.detail ? <span id={detailId} className="field-help">{option.detail}</span> : null}
+        </span>
+      </label>
     </li>
   );
 }
-
 export function CvSection({
   sectionKey, entries, pool, handlers,
 }: {
@@ -200,6 +225,11 @@ export function CvSection({
   const { locale } = handlers;
   const heading = t(locale, `cv.section.${sectionKey}` as MessageKey);
   const available = pool.filter((option) => !option.selected).length;
+  const chosenCount = addableSelection(pool, handlers.chosen).length;
+  const addButton = poolAddButton(available, chosenCount);
+  const progress = handlers.adding?.sectionKey === sectionKey ? handlers.adding : null;
+  const hintId = `cv-pool-hint-${sectionKey}`;
+  const inert = addButton?.disabled === true || handlers.busy;
   return (
     <section className="cv-panel cv-section" aria-labelledby={`cv-section-heading-${sectionKey}`} data-section={sectionKey}>
       <header className="cv-section-header">
@@ -218,6 +248,20 @@ export function CvSection({
             {pool.map((option) => <PoolRow key={option.sourceId} option={option} handlers={handlers} />)}
           </ul>
         )}
+        {addButton ? (
+          <div className="cv-pool-actions">
+            <Button
+              id={`cv-pool-add-${sectionKey}`} data-testid="cv-pool-add" variant="secondary"
+              aria-disabled={inert || undefined} aria-describedby={addButton.disabled ? hintId : undefined}
+              onClick={() => { if (!inert) handlers.onAddSelected(sectionKey); }}
+            >
+              {progress && progress.total > 1
+                ? t(locale, "cv.pool.adding", { current: progress.current, total: progress.total })
+                : t(locale, addButton.messageKey, { count: chosenCount })}
+            </Button>
+            {addButton.disabled ? <p id={hintId} className="field-help">{t(locale, "cv.pool.selectHint")}</p> : null}
+          </div>
+        ) : null}
       </details>
     </section>
   );

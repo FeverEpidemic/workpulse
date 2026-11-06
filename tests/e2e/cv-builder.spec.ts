@@ -110,10 +110,28 @@ const itemIds = async (page: Page, key: string) => section(page, key).locator('[
 const itemTitles = async (page: Page, key: string) =>
   section(page, key).locator('[data-testid="cv-item"] > .cv-item-main .cv-item-title > span:first-child').allTextContents();
 
-/** Adds a record and waits until the reloaded list shows it as added (one change at a time). */
+const addButton = (page: Page, key: string) => section(page, key).getByTestId("cv-pool-add");
+const poolCheckbox = (page: Page, name: string) => page.getByRole("checkbox", { name, exact: true });
+const addedRow = (page: Page, name: string) => page.getByTestId("cv-pool-added").filter({ hasText: `${name} is already on the CV` });
+
+/** Ticks a record, presses the add button of its section and waits until the reloaded list shows it as added. */
 async function add(page: Page, name: string) {
-  await page.getByRole("button", { name: `Add ${name} to CV` }).click();
-  await expect(page.getByRole("button", { name: `${name} is already on the CV` })).toBeVisible();
+  // A tick made before hydration would be reset by React, so the page settles first.
+  await page.waitForLoadState("networkidle");
+  const box = poolCheckbox(page, name);
+  await box.check();
+  await page.locator("section[data-section]").filter({ has: box }).getByTestId("cv-pool-add").click();
+  await expect(addedRow(page, name)).toBeVisible();
+}
+
+const poolNames = (page: Page, key: string) => section(page, key).locator(".cv-pool-label .cv-item-title > span:first-child").allTextContents();
+const cvRevision = async (user: User) => (await user.client.from("cv_documents").select("revision").eq("user_id", user.id).single()).data!.revision;
+const cvItemCount = async (user: User) => (await user.client.from("cv_items").select("id").eq("user_id", user.id)).data!.length;
+
+async function deleteAchievement(user: User, id: string) {
+  const row = await user.client.from("achievements").select("revision").eq("id", id).single();
+  const deleted = await user.client.rpc("delete_achievement", { p_achievement_id: id, p_expected_revision: row.data!.revision });
+  if (deleted.error) throw new Error("T33 achievement delete failed");
 }
 
 async function expectNoOverflow(page: Page, name: string) {
@@ -171,15 +189,20 @@ test("graduate journey: first open is empty, records are added, moved with the k
   await expect(page.getByRole("heading", { name: "CV", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your CV is empty" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Add all/ })).toHaveCount(0);
+  await expect(page.getByText(/Select all/)).toHaveCount(0);
   await expect(status(page)).toContainText("All changes saved");
   const cvRows = await user.client.from("cv_documents").select("id, locale, title").eq("user_id", user.id);
   expect(cvRows.data).toHaveLength(1);
   expect(cvRows.data?.[0]).toMatchObject({ locale: "en", title: "Master CV" });
   // Draft achievements are not offered.
-  await expect(page.getByRole("button", { name: /Masih draf/ })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: /Masih draf/ })).toHaveCount(0);
+  await expect(page.getByText("Masih draf")).toHaveCount(0);
+  // No per-row Add button is left.
+  await expect(page.getByRole("button", { name: /^Add .* to CV$/ })).toHaveCount(0);
 
   await add(page, "S1 · Informatika · Universitas Contoh");
-  await expect(page.getByRole("button", { name: "S1 · Informatika · Universitas Contoh is already on the CV" })).toHaveAttribute("aria-disabled", "true");
+  await expect(addedRow(page, "S1 · Informatika · Universitas Contoh")).toBeVisible();
+  await expect(poolCheckbox(page, "S1 · Informatika · Universitas Contoh")).toHaveCount(0);
   await expect(page.getByTestId("cv-announcer")).toContainText("added to the CV");
 
   // The achievement brings its project along and renders under it exactly once.
@@ -366,7 +389,8 @@ test("wording typed for an item removed in another session is reported, not drop
   await other.context.close();
 
   // Any reload of the saved CV in the first session (here a stale Add) brings the removal in.
-  await page.getByRole("button", { name: "Add SQL to CV" }).click();
+  await poolCheckbox(page, "SQL").check();
+  await addButton(page, "skills").click();
   await expect(page.getByTestId("cv-dropped-notice")).toContainText("Unsaved wording for 1 item(s) was discarded");
   await expect(section(page, "education").locator('[data-testid="cv-item"]')).toHaveCount(0);
   await expect(status(page)).toContainText("All changes saved");
@@ -385,7 +409,11 @@ test("Add to CV opens the CV with the achievement suggested but not added; draft
   const row = page.locator('[data-testid="cv-pool-row"][aria-current="true"]');
   await expect(row).toContainText("Sudah dikonfirmasi");
   await expect(row).toContainText("Suggested");
-  await expect(page.getByRole("button", { name: "Add Sudah dikonfirmasi to CV" })).toBeFocused();
+  // The suggested record is ticked and focused, and nothing is written until the button is pressed.
+  await expect(poolCheckbox(page, "Sudah dikonfirmasi")).toBeFocused();
+  await expect(poolCheckbox(page, "Sudah dikonfirmasi")).toBeChecked();
+  await expect(addButton(page, "achievements")).toHaveText("Add 1 to CV");
+  await expect(addButton(page, "achievements")).not.toHaveAttribute("aria-disabled", "true");
   const items = await user.client.from("cv_items").select("id").eq("user_id", user.id);
   expect(items.data).toEqual([]);
 
@@ -395,11 +423,16 @@ test("Add to CV opens the CV with the achievement suggested but not added; draft
     await page.goto(`/cv?highlight=${value}`);
     await expect(page.locator('[data-testid="cv-pool-row"][aria-current="true"]')).toHaveCount(0);
     await expect(page.getByText("Suggested")).toHaveCount(0);
+    // A value that is not a suggestible record ticks nothing.
+    await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(0);
+    await expect(addButton(page, "achievements")).toHaveAttribute("aria-disabled", "true");
   }
-  // Already-added records are not suggested either.
+  // The suggested record enters the CV only after the button is pressed.
   await page.goto(`/cv?highlight=${confirmed}`);
-  await add(page, "Sudah dikonfirmasi");
-  await expect(page.getByRole("button", { name: "Sudah dikonfirmasi is already on the CV" })).toBeVisible();
+  await addButton(page, "achievements").click();
+  await expect(addedRow(page, "Sudah dikonfirmasi")).toBeVisible();
+  expect(await cvItemCount(user)).toBe(1);
+  // Already-added records are not suggested either.
   await page.goto(`/cv?highlight=${confirmed}`);
   await expect(page.getByText("Suggested")).toHaveCount(0);
 });
@@ -443,9 +476,253 @@ test("reduced motion is respected and the page works without a pointer", async (
   await signIn(page, user);
   await page.goto(`/cv?highlight=${confirmed}`);
   expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
-  await expect(page.getByRole("button", { name: "Add Fokus tanpa animasi to CV" })).toBeFocused();
+  const box = poolCheckbox(page, "Fokus tanpa animasi");
+  await expect(box).toBeFocused();
+  await expect(box).toBeChecked();
+  // Tab reaches the button, Enter adds, and focus lands on the section heading once the list reloads.
+  await page.keyboard.press("Tab");
+  await expect(addButton(page, "achievements")).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(section(page, "achievements").locator('[data-testid="cv-item"]')).toHaveCount(1);
+  await expect(page.locator("#cv-section-heading-achievements")).toBeFocused();
+  await expect(page.getByTestId("cv-announcer")).toContainText("Fokus tanpa animasi added to the CV.");
   const transition = await page.locator(".cv-panel").first().evaluate((element) => getComputedStyle(element).transitionDuration);
   expect(["0s", "0s, 0s"]).toContain(transition);
+});
+
+test("ticking writes nothing, the button counts the choice, and three records enter in list order with one revision step each", async ({ page }) => {
+  const user = await createUser();
+  for (const title of ["Alfa panduan", "Bravo panduan", "Charlie panduan", "Delta panduan"]) await createAchievement(user, title, null);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  const pool = section(page, "achievements");
+  const button = addButton(page, "achievements");
+
+  // With nothing ticked the button says so, is aria-disabled (still focusable) and a click does nothing.
+  await expect(button).toHaveText("Add to CV");
+  await expect(button).toHaveAttribute("aria-disabled", "true");
+  await expect(pool.getByText("Select at least one record.")).toBeVisible();
+  // Playwright treats aria-disabled as not actionable, so the click is forced to prove it does nothing.
+  await button.click({ force: true });
+  await expect(page.getByTestId("cv-announcer")).toHaveText("");
+  expect(await cvItemCount(user)).toBe(0);
+  // Sections without records have no button, and there is no way to tick everything at once.
+  await expect(addButton(page, "skills")).toHaveCount(0);
+  await expect(page.getByTestId("cv-pool-add")).toHaveCount(1);
+
+  const names = await poolNames(page, "achievements");
+  expect(names).toHaveLength(4);
+  // Tick in the opposite order of the list: the result must follow the list, not the clicks.
+  for (const name of [names[3]!, names[1]!, names[2]!]) await poolCheckbox(page, name).check();
+  await expect(button).toHaveText("Add 3 to CV");
+  await expect(button).not.toHaveAttribute("aria-disabled", "true");
+  await poolCheckbox(page, names[1]!).uncheck();
+  await expect(button).toHaveText("Add 2 to CV");
+  await poolCheckbox(page, names[1]!).check();
+  await expect(button).toHaveText("Add 3 to CV");
+  // Ticking is local: the database is untouched.
+  expect(await cvItemCount(user)).toBe(0);
+  const before = await cvRevision(user);
+
+  await button.click();
+  await expect(pool.getByTestId("cv-pool-added")).toHaveCount(3);
+  expect(await itemTitles(page, "achievements")).toEqual([names[1], names[2], names[3]]);
+  expect(await cvItemCount(user)).toBe(3);
+  expect(await cvRevision(user) - before).toBe(3);
+  // Chained revisions: no false conflict and no error.
+  await expect(page.getByRole("heading", { name: "This CV changed somewhere else" })).toHaveCount(0);
+  await expect(page.getByTestId("cv-notice")).toHaveCount(0);
+  await expect(page.getByTestId("cv-announcer")).toContainText("3 records added to the CV.");
+  await expect(page.locator("#cv-section-heading-achievements")).toBeFocused();
+  // The record left over stays unticked, and the button waits for a new choice.
+  await expect(poolCheckbox(page, names[0]!)).not.toBeChecked();
+  await expect(button).toHaveText("Add to CV");
+  await expect(button).toHaveAttribute("aria-disabled", "true");
+});
+
+test("two achievements of one project added in one batch give one project with two children and no error", async ({ page }) => {
+  const user = await createUser();
+  const projectId = await createProject(user, "Proyek Batch");
+  await createAchievement(user, "Anak pertama", projectId);
+  await createAchievement(user, "Anak kedua", projectId);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  await poolCheckbox(page, "Anak pertama").check();
+  await poolCheckbox(page, "Anak kedua").check();
+  await addButton(page, "achievements").click();
+  await expect(section(page, "achievements").getByTestId("cv-pool-added")).toHaveCount(2);
+  await expect(section(page, "projects").locator('[data-testid="cv-item"]')).toHaveCount(3);
+  expect(await itemTitles(page, "projects")).toEqual(expect.arrayContaining(["Proyek Batch"]));
+  await expect(section(page, "projects").locator(".cv-item-children > li")).toHaveCount(2);
+  await expect(page.getByTestId("cv-notice")).toHaveCount(0);
+  expect(await cvItemCount(user)).toBe(3);
+  // The parent was added by the batch, so the Projects list shows it as added too.
+  await expect(section(page, "projects").getByTestId("cv-pool-added")).toHaveCount(1);
+});
+
+test("a record that disappears mid-batch stops the run: earlier records stay in, the rest stay ticked, and the message gives the count and a correlation ID", async ({ page }) => {
+  const user = await createUser();
+  const ids: Record<string, string> = {};
+  for (const title of ["Satu catatan", "Dua catatan", "Tiga catatan"]) ids[title] = await createAchievement(user, title, null);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  const names = await poolNames(page, "achievements");
+  expect(names).toHaveLength(3);
+  for (const name of names) await poolCheckbox(page, name).check();
+  await expect(addButton(page, "achievements")).toHaveText("Add 3 to CV");
+
+  // Another session removes the second record before the button is pressed.
+  await deleteAchievement(user, ids[names[1]!]!);
+  await addButton(page, "achievements").click();
+
+  const notice = page.getByTestId("cv-notice");
+  await expect(notice).toContainText("This record is no longer available");
+  await expect(notice.locator("p.text-xs")).toHaveText(/^[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("cv-info-notice")).toHaveText("1 of 3 added. The rest stay selected so you can try again.");
+  expect(await cvItemCount(user)).toBe(1);
+  // The record that went in shows as added without another reload; the one after the failure is still ticked.
+  await expect(addedRow(page, names[0]!)).toBeVisible();
+  await expect(poolCheckbox(page, names[2]!)).toBeChecked();
+  await expect(poolCheckbox(page, names[1]!)).toHaveCount(0);
+  await expect(addButton(page, "achievements")).toHaveText("Add 1 to CV");
+  // Focus is on the notice or a control, never lost to the page.
+  expect(await page.evaluate(() => document.activeElement?.tagName ?? "NONE")).not.toMatch(/^(BODY|HTML|NONE)$/);
+
+  // Trying again adds the rest.
+  await addButton(page, "achievements").click();
+  await expect(section(page, "achievements").getByTestId("cv-pool-added")).toHaveCount(2);
+  expect(await cvItemCount(user)).toBe(2);
+});
+
+test("a batch keeps unsaved wording, and a stale revision from another session still ends in the conflict flow", async ({ page, browser }) => {
+  const user = await createUser();
+  await createEducation(user);
+  await createAchievement(user, "Catatan satu", null);
+  await createAchievement(user, "Catatan dua", null);
+  await signIn(page, user);
+  await add(page, "S1 · Informatika · Universitas Contoh");
+  await page.getByRole("button", { name: "Edit wording for S1, Informatika" }).click();
+  await page.getByLabel("CV wording for S1, Informatika").fill("Teks yang bertahan");
+  await expect(status(page)).toContainText("Unsaved changes");
+
+  await poolCheckbox(page, "Catatan satu").check();
+  await poolCheckbox(page, "Catatan dua").check();
+  await addButton(page, "achievements").click();
+  await expect(section(page, "achievements").getByTestId("cv-pool-added")).toHaveCount(2);
+  await expect(page.getByLabel("CV wording for S1, Informatika")).toHaveValue("Teks yang bertahan");
+  await expect(status(page)).toContainText("Unsaved changes");
+  await expect(saveButton(page)).toBeEnabled();
+
+  // A second session saves the CV; this page does not know yet, so the first add of the next batch carries a stale revision.
+  await createAchievement(user, "Catatan tiga", null);
+  await createAchievement(user, "Catatan empat", null);
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Edit wording for S1, Informatika" }).click();
+  await page.getByLabel("CV wording for S1, Informatika").fill("Teks kedua");
+  const other = await secondSession(browser, user);
+  await other.page.locator("#cv-summary").fill("Ringkasan sesi lain");
+  await saveButton(other.page).click();
+  await expect(status(other.page)).toContainText("All changes saved");
+  await other.context.close();
+  const itemsBefore = await cvItemCount(user);
+  await page.locator("#cv-pool-achievements summary").click();
+  await poolCheckbox(page, "Catatan tiga").check();
+  await poolCheckbox(page, "Catatan empat").check();
+  await addButton(page, "achievements").click();
+  // The stale answer reloads the CV and keeps the typed text; nothing was added and both records stay ticked.
+  await expect(page.locator("#cv-pool-achievements")).toHaveJSProperty("open", true);
+  await expect(page.getByLabel("CV wording for S1, Informatika")).toHaveValue("Teks kedua");
+  await expect(status(page)).toContainText("Unsaved changes");
+  expect(await cvItemCount(user)).toBe(itemsBefore);
+  await expect(poolCheckbox(page, "Catatan tiga")).toBeChecked();
+  await expect(poolCheckbox(page, "Catatan empat")).toBeChecked();
+  // The reload brought the other session's summary in, so the revision is current and the same batch goes through.
+  await expect(page.locator("#cv-summary")).toHaveValue("Ringkasan sesi lain");
+  await addButton(page, "achievements").click();
+  await expect.poll(() => cvItemCount(user)).toBe(itemsBefore + 2);
+  await expect(page.getByLabel("CV wording for S1, Informatika")).toHaveValue("Teks kedua");
+});
+test("pool rows are one 44 px target, long names wrap, and nothing overflows or fails Axe at 360 and 1440 px in both themes", async ({ page }, testInfo) => {
+  const user = await createUser();
+  const long = "Merancang dan menerapkan sistem pelaporan terpadu lintas divisi untuk memantau kinerja bulanan " + "sangatpanjangtanpaspasi".repeat(4);
+  await createAchievement(user, long, null);
+  await createAchievement(user, "Pendek", null);
+  await signIn(page, user);
+
+  for (const [width, height] of [[360, 800], [1440, 900]] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      await page.setViewportSize({ width, height });
+      await page.context().addCookies([{ name: "wp-theme", value: theme, url: BASE_URL }]);
+      await page.goto("/cv");
+      await page.waitForLoadState("networkidle");
+      const rows = section(page, "achievements").locator(".cv-pool-label");
+      await expect(rows).toHaveCount(2);
+      for (const row of await rows.all()) {
+        const box = (await row.boundingBox())!;
+        expect(box.height, `${width} ${theme}: row height`).toBeGreaterThanOrEqual(44);
+      }
+      // The whole row toggles the box: click the text, not the box.
+      const longRow = rows.filter({ hasText: "sangatpanjang" });
+      await longRow.locator(".cv-item-title").click();
+      await expect(longRow.getByRole("checkbox")).toBeChecked();
+      await longRow.locator(".cv-item-title").click();
+      await expect(longRow.getByRole("checkbox")).not.toBeChecked();
+      await expectNoOverflow(page, `pool-${width}-${theme}`);
+      await poolCheckbox(page, "Pendek").check();
+      await snapshot(page, testInfo, `cv-pool-${width}-${theme}`);
+    }
+  }
+});
+
+test("a batch whose first record is gone says 0 of 3, drops that row, keeps the rest ticked, and a second press adds them", async ({ page }) => {
+  const user = await createUser();
+  for (const title of ["Satu catatan", "Dua catatan", "Tiga catatan"]) await createAchievement(user, title, null);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  const names = await poolNames(page, "achievements");
+  expect(names).toHaveLength(3);
+  for (const name of names) await poolCheckbox(page, name).check();
+  await expect(addButton(page, "achievements")).toHaveText("Add 3 to CV");
+
+  // Another session removes the first record of the list before the button is pressed.
+  const rows = await user.client.from("achievements").select("id, title").eq("user_id", user.id);
+  await deleteAchievement(user, rows.data!.find((row) => row.title === names[0])!.id);
+  await addButton(page, "achievements").click();
+
+  await expect(page.getByTestId("cv-info-notice")).toHaveText("0 of 3 added. The rest stay selected so you can try again.");
+  await expect(page.getByTestId("cv-notice")).toContainText("This record is no longer available");
+  expect(await cvItemCount(user)).toBe(0);
+  // The list reloaded without a manual refresh: the gone record has left it and the other two are still ticked.
+  await expect(poolCheckbox(page, names[0]!)).toHaveCount(0);
+  await expect(poolCheckbox(page, names[1]!)).toBeChecked();
+  await expect(poolCheckbox(page, names[2]!)).toBeChecked();
+  await expect(addButton(page, "achievements")).toHaveText("Add 2 to CV");
+  expect(await page.evaluate(() => document.activeElement?.tagName ?? "NONE")).not.toMatch(/^(BODY|HTML|NONE)$/);
+
+  await addButton(page, "achievements").click();
+  await expect(section(page, "achievements").getByTestId("cv-pool-added")).toHaveCount(2);
+  expect(await cvItemCount(user)).toBe(2);
+});
+
+test("a parent that came in with its achievement is not ticked again when it is removed", async ({ page }) => {
+  const user = await createUser();
+  const projectId = await createProject(user, "Proyek Pilihan");
+  await createAchievement(user, "Anak Pilihan", projectId);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  await poolCheckbox(page, "Proyek Pilihan").check();
+  await poolCheckbox(page, "Anak Pilihan").check();
+  await addButton(page, "achievements").click();
+  await expect(addedRow(page, "Anak Pilihan")).toBeVisible();
+  await expect(addedRow(page, "Proyek Pilihan")).toBeVisible();
+
+  await page.getByRole("button", { name: "Remove Proyek Pilihan from CV" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Remove parent and its achievements" }).click();
+  await expect(section(page, "projects").locator('[data-testid="cv-item"]')).toHaveCount(0);
+  await page.locator("#cv-pool-projects").evaluate((el) => { (el as HTMLDetailsElement).open = true; });
+  await expect(poolCheckbox(page, "Proyek Pilihan")).not.toBeChecked();
+  await expect(poolCheckbox(page, "Anak Pilihan")).not.toBeChecked();
+  await expect(addButton(page, "projects")).toHaveAttribute("aria-disabled", "true");
+  await expect(addButton(page, "projects")).toHaveText("Add to CV");
 });

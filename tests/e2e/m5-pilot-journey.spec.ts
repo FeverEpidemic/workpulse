@@ -466,9 +466,13 @@ test("M5 pilot journey: sign up → onboarding (id) → import without AI → ca
     const headExperienceId = sql(`select id from public.experiences where user_id = '${userId}'::uuid and role_title = 'Kepala Gudang'`);
     await page.goto("/cv");
     for (const id of [achievementId, headExperienceId]) {
-      const add = page.locator(`#cv-add-${id}`);
-      await press(page, add);
-      await expect(add).toHaveAttribute("aria-disabled", "true");
+      // Tick with Space, then press the add button of that record's section with Enter.
+      const check = page.locator(`#cv-pool-check-${id}`);
+      await expect(check).toHaveAttribute("type", "checkbox");
+      await press(page, check, "Space");
+      await expect(check).toBeChecked();
+      await press(page, page.locator("section[data-section]").filter({ has: check }).getByTestId("cv-pool-add"));
+      await expect(page.locator(`#cv-pool-added-${id}`)).toBeVisible();
     }
     await page.locator("#cv-locale").selectOption("id");
     await press(page, page.getByRole("button", { name: "Simpan perubahan", exact: true }));

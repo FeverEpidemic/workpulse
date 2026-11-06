@@ -4,6 +4,8 @@ import { needsReview, type FreshnessEntry, type ReviewChoice, type ReviewChoiceI
 import type { MessageKey } from "@/i18n/messages";
 import type { ActionState } from "@/server/action-result";
 
+import type { PoolOption } from "./cv-view";
+
 /**
  * Pure state rules of the S13 editor, kept out of the component so they are unit tested without a DOM.
  * The component only wires them to React state and the server actions.
@@ -76,6 +78,67 @@ export function initialPoolOpen(
   hasSuggestion: (key: CvSectionKey) => boolean,
 ): Record<CvSectionKey, boolean> {
   return Object.fromEntries(sections.map((key) => [key, selectedCount(key) === 0 || hasSuggestion(key)])) as Record<CvSectionKey, boolean>;
+}
+
+/** Records to add, in list order: chosen, still in the pool, and not on the CV yet. */
+export function addableSelection(pool: readonly PoolOption[], chosen: ReadonlySet<string>): PoolOption[] {
+  return pool.filter((option) => !option.selected && chosen.has(option.sourceId));
+}
+
+/** Label key and disabled state of a section's add button; null when nothing is left to add. */
+export function poolAddButton(available: number, chosenCount: number): { messageKey: MessageKey; disabled: boolean } | null {
+  if (available === 0) return null;
+  return chosenCount === 0
+    ? { messageKey: "cv.pool.addNone", disabled: true }
+    : { messageKey: "cv.pool.addSelected", disabled: false };
+}
+
+/**
+ * The choice without records that are on the CV now. A parent that came in with its achievement, or a record added in
+ * another session, would otherwise come back ticked when it is removed. Returns the same set when nothing changes.
+ */
+export function pruneChosen(chosen: ReadonlySet<string>, pool: readonly PoolOption[]): ReadonlySet<string> {
+  const onCv = new Set(pool.filter((option) => option.selected).map((option) => option.sourceId));
+  const kept = [...chosen].filter((id) => !onCv.has(id));
+  return kept.length === chosen.size ? chosen : new Set(kept);
+}
+
+export interface SequentialAddResult {
+  added: PoolOption[];
+  /** The record the run stopped at; null when every record was added. */
+  failed: PoolOption | null;
+  /** The failed answer from the server; null when the call threw or gave no revision. */
+  failure: ActionState | null;
+  revision: number;
+}
+
+/**
+ * Adds records one at a time, each with the revision the previous answer returned, and stops at the first failure.
+ * Never throws. A revision is never guessed: an answer without a numeric one ends the run.
+ */
+export async function runSequentialAdds(input: {
+  options: readonly PoolOption[];
+  revision: number;
+  add: (option: PoolOption, revision: number) => Promise<ActionState>;
+  onProgress?: (current: number, total: number) => void;
+}): Promise<SequentialAddResult> {
+  const added: PoolOption[] = [];
+  let revision = input.revision;
+  for (const [index, option] of input.options.entries()) {
+    input.onProgress?.(index + 1, input.options.length);
+    let state: ActionState;
+    try {
+      state = await input.add(option, revision);
+    } catch {
+      return { added, failed: option, failure: null, revision };
+    }
+    if (state.status !== "success") return { added, failed: option, failure: state, revision };
+    const next = (state.data as { cvRevision?: unknown } | undefined)?.cvRevision;
+    if (typeof next !== "number") return { added, failed: option, failure: null, revision };
+    revision = next;
+    added.push(option);
+  }
+  return { added, failed: null, failure: null, revision };
 }
 
 interface PlacedEntry {
