@@ -4,6 +4,7 @@
 
 - Tanggal: 5 November 2026
 - Status saat plan ditulis: **TODO**.
+- Status plan: **DONE**, 6 November 2026 (gate ulang lulus pada `d8831ca`, closeout reviewer).
 - Dependensi: T19 (CV builder), T20 (freshness), dan T32 **DONE** di `main` (`e3e522a`).
 - Asal task: permintaan terarah pengguna pada 5 November 2026 (screenshot daftar "Available to add" di `/cv`, "kalau ini diubah jadi Multiple Select"). T33 **tidak ada** di `IMPLEMENTATION_PLAN.md` §5. Bentuk daftar checkbox dipilih pengguna. Keputusan lain di §2.2 diusulkan di chat, dan pengguna meninjaunya lewat plan ini.
 - Eksekutor: satu agent **Claude Sonnet 5.5** (`claude-sonnet-5-5`) di sesi terpisah, ditetapkan pengguna 5 November 2026. Semua fase berurutan tanpa delegasi.

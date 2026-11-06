@@ -1,6 +1,47 @@
 # WorkPulse Implementation Status
 
-T33 Multi-select di daftar CV: **PARTIAL**, Fase 0-3 selesai dan gate review 5 November 2026 belum lulus. [Rencana](verification/T33-implementation-plan.md), [temuan dan remediasi](verification/T33-review-remediation-plan.md).
+## T33 Multi-select di daftar CV: DONE lokal, 6 November 2026
+
+Status T33: **DONE** (acceptance lokal). Di S13 `/cv`, setiap record di "Available to add" punya checkbox. Satu tombol per section ("Add N to CV") menambahkan record yang dicentang dalam urutan daftar. Tombol Add per baris dihapus, dan tidak ada yang masuk CV sebelum tombol ditekan. Tautan *Add to CV* membuka record Suggested dalam keadaan tercentang dan terfokus, tanpa menulis apa pun. Bila satu record gagal, proses berhenti: yang sudah masuk tetap masuk, sisanya tetap tercentang, pesan menyebut jumlahnya ("1 of 3 added", juga "0 of 3"), dan daftar dimuat ulang.
+
+- Pelaksana: Claude Sonnet 5.5 untuk Fase 0-4 dan remediasi 3b. Gate review: Claude Opus 5.5.
+  - Gate pertama pada `1380bf9` menemukan satu P1 dan satu P2:
+    - RV1: batch buntu bila record pertama sudah hilang.
+    - RV2: induk yang ikut masuk muncul tercentang lagi setelah dihapus.
+  - Keduanya diperbaiki di `eca526b`. Gate ulang pada `d8831ca` **LULUS** tanpa P0-P2.
+- Dependensi: T19, T20, T32 **DONE**. T33 adalah permintaan terarah pengguna (5 November 2026). Tugas ini tidak ada di `IMPLEMENTATION_PLAN.md` §5. Bentuk daftar checkbox dipilih pengguna.
+- Scope:
+  - Dalam scope: baris daftar, tombol per section, state seleksi, runner berurutan, copy en/id, CSS daftar, migrasi test, dan lock ulang aria S13.
+  - Di luar scope: "Pilih semua", pencarian, tombol sticky, RPC batch, undo batch.
+- File:
+  - Kode: `src/features/cv/{cv-builder-state,cv-builder,cv-section}.ts(x)`, `src/app/globals.css` (`.cv-pool-*`), `src/i18n/messages.ts` (kunci `cv.action.add` dan `cv.aria.add` dihapus).
+  - Test unit: `cv-builder-state`, `cv-builder-ui`.
+  - E2E: `cv-builder` (7 test baru), `cv-export`, `cv-freshness`, `m4-cv-journey`, `m5-pilot-journey`, `release-keyboard`.
+  - Aria: `docs/verification/T25-aria/s13-cv.aria.yml`.
+- Keputusan: [decision 0044](decisions/0044-t33-cv-multi-select.md), yang menggantikan sebagian decision 0025 #6:
+  - Bulk-add diizinkan bila tiap record dicentang sendiri.
+  - Tetap tanpa *Add all* dan tanpa auto-selection.
+  - RPC `select_cv_source` lama dipanggil berurutan, dengan revision dirantai dari jawaban server.
+  - Tanpa migration (parity tetap 38/38), tanpa RPC baru, tanpa dependency, dan tanpa perubahan `actions.ts`.
+- Checks reviewer di worktree segar pada `d8831ca`:
+  - Lint, typecheck, `git diff --check`: exit 0.
+  - Unit 163 file / 1577 test. E2E `cv`: 15 lulus.
+  - E2E `release`: 77 lulus, 2 gagal di landing, 1 skip.
+    - `landing.spec.ts:308` juga gagal di base `e3e522a`.
+    - `landing-motion.spec.ts:39` lulus 3 dari 3 saat diulang.
+  - Run release pelaksana (receipt 3b): 79 lulus. `cv-freshness` 11 (receipt 3b). `cv-export` 12, `m4` 1, `m5` 1 (receipt Fase 3).
+- Belum dijalankan:
+  - Safari, Firefox, perangkat nyata, staging, production.
+  - Tampilan bahasa Indonesia daftar ini (hanya unit). Lebar 768 px secara khusus. Screen reader nyata.
+  - Reviewer tidak mengulang `cv-freshness`, `cv-export`, `m4`, dan `m5`.
+- Risiko dan follow-up (P3):
+  - N1: `landing.spec.ts:308` flaky, milik area landing. Tautan email di 360 px mungkin sedikit di bawah 44 px.
+  - N2: selama refresh setelah jawaban stale, tombol tambah masih bisa diklik dan memicu konflik lagi. Data tidak rusak.
+  - Satu run release pertama macet sekitar dua jam di `release-a11y` 1440 dark saat dua sesi memakai DB lokal yang sama. Penyebabnya tidak diselidiki.
+
+Berikutnya: push branch `claude/t33-cv-multi-select-288f9f`, lalu buka PR ke `main` bila pengguna memintanya.
+
+[Rencana](verification/T33-implementation-plan.md), [bukti](verification/T33-cv-multi-select.md), [gate review dan gate ulang](verification/T33-review-remediation-plan.md), receipt [Fase 0](verification/T33-phase0-baseline.md) sampai [3](verification/T33-phase3-e2e-regression.md) dan [3b](verification/T33-phase3b-remediation.md).
 
 ## T32 Landing page dan halaman legal: DONE lokal, 1 November 2026
 
@@ -1348,6 +1389,7 @@ Pada saat checkpoint remediasi ini ditulis, task berikutnya adalah T05 Private s
 | T30 | Animasi dan loading | DONE |
 | T31 | Tab bar mobile mengambang | DONE |
 | T32 | Landing page dan halaman legal | DONE |
+| T33 | Multi-select di daftar CV | DONE |
 
 Status yang digunakan: TODO, IN_PROGRESS, PARTIAL, BLOCKED, DONE. DONE hanya setelah acceptance task memiliki bukti. BLOCKED harus mencantumkan dependensi konkret dan pekerjaan independen yang sudah diselesaikan.
 

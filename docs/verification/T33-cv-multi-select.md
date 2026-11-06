@@ -1,7 +1,7 @@
 # T33 Multi-select di daftar "Available to add" CV: catatan acceptance
 
 - Tanggal: 6 November 2026
-- Status: **Fase 0 sampai 4 selesai. Belum ditandai DONE.** Closeout dan bagian authoritative `IMPLEMENTATION_STATUS.md` dikerjakan reviewer.
+- Status: **DONE** (acceptance lokal), ditandai reviewer saat closeout 6 November 2026.
 - Branch: `claude/t33-cv-multi-select-288f9f`, base `e3e522a`.
 - Pelaksana: Claude Sonnet 5.5. Reviewer: Claude Opus 5.5.
 - Decision: [0044](../decisions/0044-t33-cv-multi-select.md). Rencana: [T33-implementation-plan.md](T33-implementation-plan.md).
@@ -46,7 +46,7 @@ Dua kegagalan di run release gate ulang bukan dari T33: `landing.spec.ts:308` (N
 
 ## Follow-up (P3)
 
-- **N1.** `landing.spec.ts:308` gagal 2 dari 3 run, juga di base `e3e522a`. Ukuran tombol tampak dibulatkan ke 44, jadi tinggi sebenarnya mungkin sedikit di bawah batas. Belum diukur. Milik T32 atau PR berikutnya di area landing.
+- **N1.** `landing.spec.ts:308` gagal 2 dari 3 run, juga di base `e3e522a`. Yang dilaporkan terlalu kecil adalah tautan email `halo@myworkpulse.my.id` di 360 px (200x44). Ukurannya tampak dibulatkan ke 44, jadi tinggi sebenarnya mungkin sedikit di bawah batas. Belum diukur. Milik T32 atau PR berikutnya di area landing.
 - **N2.** Selama `router.refresh()` setelah jawaban stale, tombol tambah masih bisa diklik dan memicu konflik lagi. Data tidak rusak.
 
 ## Batas bukti

@@ -2,7 +2,7 @@
 
 Date: 6 November 2026
 
-Status: Accepted untuk keputusan di bawah. Task T33 belum ditandai DONE. Closeout dikerjakan reviewer. Bentuk daftar checkbox dipilih pengguna pada 5 November 2026. Keputusan lain diusulkan di chat dan ditinjau pengguna lewat plan. Dieksekusi Claude Sonnet 5.5 (Fase 0 sampai 3b) di branch `claude/t33-cv-multi-select-288f9f`. Gate review Claude Opus 5.5: satu P1 (RV1) dan satu P2 (RV2), keduanya diperbaiki, gate ulang lulus tanpa P0-P2 pada commit `d8831ca`. Task: T33 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T33-implementation-plan.md), [bukti](../verification/T33-cv-multi-select.md), [gate review](../verification/T33-review-remediation-plan.md). Tanpa migration (parity tetap 38), tanpa RPC baru, tanpa dependency.
+Status: Accepted. Task T33 DONE lokal pada 6 November 2026 (closeout reviewer). Bentuk daftar checkbox dipilih pengguna pada 5 November 2026. Keputusan lain diusulkan di chat dan ditinjau pengguna lewat plan. Dieksekusi Claude Sonnet 5.5 (Fase 0 sampai 3b) di branch `claude/t33-cv-multi-select-288f9f`. Gate review Claude Opus 5.5: satu P1 (RV1) dan satu P2 (RV2), keduanya diperbaiki, gate ulang lulus tanpa P0-P2 pada commit `d8831ca`. Task: T33 (permintaan terarah pengguna, tidak ada di `IMPLEMENTATION_PLAN.md` §5). [Rencana](../verification/T33-implementation-plan.md), [bukti](../verification/T33-cv-multi-select.md), [gate review](../verification/T33-review-remediation-plan.md). Tanpa migration (parity tetap 38), tanpa RPC baru, tanpa dependency.
 
 ## References
 
