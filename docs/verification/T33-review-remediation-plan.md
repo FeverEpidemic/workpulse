@@ -85,6 +85,37 @@ Worktree segar di commit `1380bf9`, build produksi, lokal.
 
 **Batas bukti:** cek langsung memakai Playwright pada build produksi Chromium, bukan pane browser. Tampilan bahasa Indonesia hanya dibuktikan unit. Belum diuji di Safari, Firefox, perangkat nyata, staging, atau production.
 
+## Gate ulang (6 November 2026): LULUS
+
+Commit `d8831ca` (remediasi `eca526b`, receipt `T33-phase3b-remediation.md`). Diulang di worktree segar dengan build produksi lokal.
+
+| ID | Status | Bukti |
+| --- | --- | --- |
+| RV1 | Ditutup | `cv-builder.tsx`: pool dimuat ulang pada semua jalur gagal, tanpa refresh kedua setelah konflik. Notice jumlah tampil untuk batch lebih dari satu record, termasuk "0 of 3". E2E `cv-builder.spec.ts:678` lulus. |
+| RV2 | Ditutup | Fungsi murni `pruneChosen` di `cv-builder-state.ts` dijalankan saat `savedKey` berubah. Unit dan E2E `cv-builder.spec.ts:708` lulus. |
+| N1, N2 | Tetap P3 | Tidak dikerjakan, sesuai rencana. |
+
+| Command | Exit | Hasil |
+| --- | --- | --- |
+| `pnpm lint`, `pnpm typecheck` | 0 | |
+| `pnpm test` | 0 | 1577 test |
+| `git diff --check e3e522a HEAD` | 0 | |
+| `test:e2e:cv` | 0 | 15 lulus |
+| `test:e2e:release` | 1 | 77 lulus, 2 gagal, 1 skip |
+| `landing-motion.spec.ts:39 --repeat-each 3` | 0 | 3 lulus |
+| File terlarang (`supabase/migrations`, `package.json`, `pnpm-lock.yaml`, `actions.ts`) | | Tidak berubah |
+
+**Dua kegagalan di run release tidak berasal dari T33.** T33 tidak menyentuh landing. Perubahan CSS-nya hanya kelas `.cv-pool-*`.
+
+- `landing.spec.ts:308` adalah N1, yang juga gagal di base.
+- `landing-motion.spec.ts:39`: cerita hero berhenti di `idle`. Tes ini lulus 3 dari 3 saat diulang, dan lulus di run release gate pertama.
+
+**Run release yang tidak dihitung.** Run sebelumnya pada commit yang sama macet sekitar dua jam di `release-a11y` 1440 dark lalu dihentikan, mirip run 2 Fase 3. Penyebabnya tidak diselidiki. Kemungkinan bentrok dengan sesi pelaksana yang menjalankan suite di DB lokal yang sama pada waktu itu.
+
+**Tidak dijalankan ulang oleh reviewer:** `test:e2e:cv-freshness`, `test:e2e:cv-export`, `test:e2e:m4`, `test:e2e:m5`. Angka freshness diambil dari receipt 3b, sisanya dari receipt Fase 3.
+
+Langkah berikutnya: Fase 4 (decision 0044 dan `T33-cv-multi-select.md`), lalu closeout oleh reviewer.
+
 ## Yang harus diulang setelah remediasi
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e:cv`, `pnpm test:e2e:cv-freshness`, `pnpm test:e2e:release`, `git diff --check`. Tulis hasilnya di `docs/verification/T33-phase3b-remediation.md`, lalu minta gate ulang. Jangan lanjut ke Fase 4 sebelum gate ulang lulus.
