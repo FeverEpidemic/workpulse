@@ -53,7 +53,7 @@ export function HeroStory({ sample, locale }: { sample: LandingSample["hero"]; l
   const activity = { ...sample.activity, raw_text: characters.slice(0, state.typed).join("") };
 
   return (
-    <div className="landing-hero-example">
+    <div className="landing-hero-example" data-reveal-item="">
       <ExampleFrame label={t(locale, "landing.hero.exampleLabel")} locale={locale}>
         <div className="landing-hero-stack" data-phase={state.phase} data-saved={String(saved)} data-suggested={String(suggested)}>
           <div className="landing-card landing-hero-activity">
