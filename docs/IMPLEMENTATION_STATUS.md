@@ -1,5 +1,9 @@
 # WorkPulse Implementation Status
 
+## T34 WorkPulse sebagai remote MCP server: TODO, 6 November 2026
+
+Status T34: **TODO**. Permintaan terarah pengguna, di luar PRD v0.1: claude.ai dan ChatGPT bisa membaca data karier dan menambah Activity atau draft Achievement lewat OAuth, di balik flag dan hanya untuk akun pilot. Eksekutor Claude Sonnet 5.5, gate review Claude Opus. [Spec](superpowers/specs/2026-11-06-mcp-server-design.md), [rencana](verification/T34-implementation-plan.md). Fase 1 adalah spike dengan client asli yang menunggu keputusan pemilik produk sebelum kode produk ditulis.
+
 ## Landing: fade dua arah saat scroll, 3 November 2026
 
 Permintaan terarah pengguna, lanjutan T32. Item landing, termasuk hero, memudar saat keluar lewat tepi viewport dan muncul lagi saat kembali. Keputusan: [decision 0043](decisions/0043-landing-two-way-fade.md), tanpa migration dan dependency. Checks: lint dan typecheck exit 0; unit 164 file / 1569 test; E2E `landing-motion.spec.ts` 19 lulus dan 1 skip (rekaman video), `landing.spec.ts` 24 lulus di production build; cek browser di 1440 dan 375 piksel. Belum dijalankan: `test:e2e:release` lengkap, Safari, Firefox, perangkat nyata.
