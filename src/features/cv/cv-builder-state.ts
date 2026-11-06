@@ -93,6 +93,16 @@ export function poolAddButton(available: number, chosenCount: number): { message
     : { messageKey: "cv.pool.addSelected", disabled: false };
 }
 
+/**
+ * The choice without records that are on the CV now. A parent that came in with its achievement, or a record added in
+ * another session, would otherwise come back ticked when it is removed. Returns the same set when nothing changes.
+ */
+export function pruneChosen(chosen: ReadonlySet<string>, pool: readonly PoolOption[]): ReadonlySet<string> {
+  const onCv = new Set(pool.filter((option) => option.selected).map((option) => option.sourceId));
+  const kept = [...chosen].filter((id) => !onCv.has(id));
+  return kept.length === chosen.size ? chosen : new Set(kept);
+}
+
 export interface SequentialAddResult {
   added: PoolOption[];
   /** The record the run stopped at; null when every record was added. */

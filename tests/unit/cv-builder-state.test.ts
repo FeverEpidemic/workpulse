@@ -5,7 +5,7 @@ import type { CvFreshnessRow } from "@/domain/cv/contracts";
 import { actionFailure, actionSuccess } from "@/server/action-result";
 import {
   achievementPlacements, addableSelection, announcedPosition, choiceKeys, clientCorrelationId, deriveSaveState, fieldElementId, firstInvalidField, initialPoolOpen,
-  BULK_FOCUS_CANDIDATES, isReviewBlocked, isSourceChangedConflict, isStaleConflict, poolAddButton, reviewFocusCandidates, reviewSummaryKey, reviewTargets,
+  BULK_FOCUS_CANDIDATES, isReviewBlocked, isSourceChangedConflict, isStaleConflict, poolAddButton, pruneChosen, reviewFocusCandidates, reviewSummaryKey, reviewTargets,
   runSequentialAdds, singleResolution, stateBadge,
 } from "@/features/cv/cv-builder-state";
 import type { PoolOption } from "@/features/cv/cv-view";
@@ -232,5 +232,21 @@ describe("T33 pool multi-select rules", () => {
     const add = vi.fn();
     expect(await runSequentialAdds({ options: [], revision: 3, add })).toEqual({ added: [], failed: null, failure: null, revision: 3 });
     expect(add).not.toHaveBeenCalled();
+  });
+});
+
+describe("T33 chosen set follows the pool", () => {
+  const option = (n: number, selected: boolean): PoolOption => ({ sourceType: "project", sourceId: uuid(n), label: `Record ${n}`, detail: null, selected });
+
+  it("drops every id whose record is on the CV now, keeps the rest, and keeps ids it does not know", () => {
+    const pool = [option(1, true), option(2, false), option(3, true)];
+    expect([...pruneChosen(new Set([uuid(1), uuid(2), uuid(3), uuid(99)]), pool)].sort()).toEqual([uuid(2), uuid(99)].sort());
+  });
+
+  it("returns the same set when nothing changes, so a reload does not re-render for nothing", () => {
+    const chosen = new Set([uuid(2)]);
+    expect(pruneChosen(chosen, [option(1, true), option(2, false)])).toBe(chosen);
+    const empty = new Set<string>();
+    expect(pruneChosen(empty, [option(1, true)])).toBe(empty);
   });
 });

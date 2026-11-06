@@ -23,7 +23,7 @@ import {
 } from "./actions";
 import {
   achievementPlacements, addableSelection, announcedPosition, BULK_FOCUS_CANDIDATES, choiceKeys, clientCorrelationId, deriveSaveState, firstInvalidField,
-  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, previewLinkState, reviewFocusCandidates, reviewTargets, runSequentialAdds,
+  initialPoolOpen, isReviewBlocked, isSourceChangedConflict, isStaleConflict, previewLinkState, pruneChosen, reviewFocusCandidates, reviewTargets, runSequentialAdds,
   singleResolution,
 } from "./cv-builder-state";
 import { CvConflictPanel, CvProfileEditor, CvRemoveDialog, CvSaveBar, CvSettings, type ConflictField, type ProfileReview } from "./cv-panels";
@@ -76,6 +76,8 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
   const savedDraft = useMemo(() => draftFromSaved(doc, items), [doc, items]);
   const [sync, setSync] = useState<DraftSync>(() => ({ base: savedDraft, draft: savedDraft, unresolved: [] }));
   const [seenKey, setSeenKey] = useState(savedKey);
+  // Records ticked in the "Available to add" lists. A suggested record starts ticked; nothing is saved until a button is pressed.
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(highlightId ? [highlightId] : []));
   // Wording typed for items that were removed elsewhere cannot be saved; the count is shown, not lost silently.
   const [droppedCount, setDroppedCount] = useState(0);
   // A newly loaded saved CV merges into the draft during render so the typed text is never dropped.
@@ -84,6 +86,8 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
     const dropped = droppedEdits({ base: sync.base, draft: sync.draft, saved: savedDraft }).length;
     if (dropped > 0) setDroppedCount(dropped);
     setSync(syncDraft({ base: sync.base, draft: sync.draft, unresolved: sync.unresolved, saved: savedDraft }));
+    // A record that is on the CV now (added here, as a parent, or in another session) leaves the choice for good.
+    setChosen(pruneChosen(chosen, Object.values(pool).flat()));
   }
 
   const [localRevision, setLocalRevision] = useState(doc.revision);
@@ -103,8 +107,6 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
   // Review panels are closed until the user opens one; "profile" is the key of the profile panel.
   const [openReviews, setOpenReviews] = useState<ReadonlySet<string>>(new Set());
   const [infoNotice, setInfoNotice] = useState("");
-  // Records ticked in the "Available to add" lists. A suggested record starts ticked; nothing is saved until a button is pressed.
-  const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(highlightId ? [highlightId] : []));
   const [adding, setAdding] = useState<{ sectionKey: CvSectionKey; current: number; total: number } | null>(null);
   const busyRef = useRef(false);
   const pendingFocus = useRef<(() => void) | null>(null);
@@ -261,11 +263,12 @@ export function CvBuilder({ locale, document: doc, items, pool, highlightId, fre
       pendingFocus.current = null;
       if (result.failure?.status === "error") fail(result.failure);
       else setNotice({ messageKey: "error.unavailable", correlationId: clientCorrelationId() });
-      if (result.added.length > 0) {
-        setInfoNotice(t(locale, "cv.notice.partialAdd", { added: result.added.length, total: options.length }));
-        // fail() reloads only for a conflict; the records that did go in must show up either way.
-        startTransition(() => router.refresh());
-      }
+      // A batch says how far it got, even when no record went in: "0 of 3 added" tells the user the first one failed.
+      if (options.length > 1) setInfoNotice(t(locale, "cv.notice.partialAdd", { added: result.added.length, total: options.length }));
+      // fail() reloads only for a conflict. Otherwise the list reloads here, so a record that is gone leaves it
+      // and one that did go in shows as added; without this the user is stuck on the same failing row.
+      const reloaded = result.failure?.status === "error" && (isSourceChangedConflict(result.failure) || isStaleConflict(result.failure));
+      if (!reloaded) startTransition(() => router.refresh());
       setNoticeFocus((count) => count + 1);
     } finally {
       busyRef.current = false;

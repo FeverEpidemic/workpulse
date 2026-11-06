@@ -674,3 +674,55 @@ test("pool rows are one 44 px target, long names wrap, and nothing overflows or 
     }
   }
 });
+
+test("a batch whose first record is gone says 0 of 3, drops that row, keeps the rest ticked, and a second press adds them", async ({ page }) => {
+  const user = await createUser();
+  for (const title of ["Satu catatan", "Dua catatan", "Tiga catatan"]) await createAchievement(user, title, null);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  const names = await poolNames(page, "achievements");
+  expect(names).toHaveLength(3);
+  for (const name of names) await poolCheckbox(page, name).check();
+  await expect(addButton(page, "achievements")).toHaveText("Add 3 to CV");
+
+  // Another session removes the first record of the list before the button is pressed.
+  const rows = await user.client.from("achievements").select("id, title").eq("user_id", user.id);
+  await deleteAchievement(user, rows.data!.find((row) => row.title === names[0])!.id);
+  await addButton(page, "achievements").click();
+
+  await expect(page.getByTestId("cv-info-notice")).toHaveText("0 of 3 added. The rest stay selected so you can try again.");
+  await expect(page.getByTestId("cv-notice")).toContainText("This record is no longer available");
+  expect(await cvItemCount(user)).toBe(0);
+  // The list reloaded without a manual refresh: the gone record has left it and the other two are still ticked.
+  await expect(poolCheckbox(page, names[0]!)).toHaveCount(0);
+  await expect(poolCheckbox(page, names[1]!)).toBeChecked();
+  await expect(poolCheckbox(page, names[2]!)).toBeChecked();
+  await expect(addButton(page, "achievements")).toHaveText("Add 2 to CV");
+  expect(await page.evaluate(() => document.activeElement?.tagName ?? "NONE")).not.toMatch(/^(BODY|HTML|NONE)$/);
+
+  await addButton(page, "achievements").click();
+  await expect(section(page, "achievements").getByTestId("cv-pool-added")).toHaveCount(2);
+  expect(await cvItemCount(user)).toBe(2);
+});
+
+test("a parent that came in with its achievement is not ticked again when it is removed", async ({ page }) => {
+  const user = await createUser();
+  const projectId = await createProject(user, "Proyek Pilihan");
+  await createAchievement(user, "Anak Pilihan", projectId);
+  await signIn(page, user);
+  await page.waitForLoadState("networkidle");
+  await poolCheckbox(page, "Proyek Pilihan").check();
+  await poolCheckbox(page, "Anak Pilihan").check();
+  await addButton(page, "achievements").click();
+  await expect(addedRow(page, "Anak Pilihan")).toBeVisible();
+  await expect(addedRow(page, "Proyek Pilihan")).toBeVisible();
+
+  await page.getByRole("button", { name: "Remove Proyek Pilihan from CV" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Remove parent and its achievements" }).click();
+  await expect(section(page, "projects").locator('[data-testid="cv-item"]')).toHaveCount(0);
+  await page.locator("#cv-pool-projects").evaluate((el) => { (el as HTMLDetailsElement).open = true; });
+  await expect(poolCheckbox(page, "Proyek Pilihan")).not.toBeChecked();
+  await expect(poolCheckbox(page, "Anak Pilihan")).not.toBeChecked();
+  await expect(addButton(page, "projects")).toHaveAttribute("aria-disabled", "true");
+  await expect(addButton(page, "projects")).toHaveText("Add to CV");
+});
