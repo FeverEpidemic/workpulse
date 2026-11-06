@@ -305,11 +305,11 @@ Draft copy final ini masih harus lolos review copy (antislop-copywriting dan Del
 
 | Fase | Isi | Selesai kalau |
 |---|---|---|
-| 0. Spike (dibuang) | Nyalakan OAuth server dan DCR di staging; endpoint minimal dengan `whoami`; consent seadanya | Pertanyaan §10.1 terjawab dan dicatat di `docs/verification/T34-phase0-spike.md`. Kode tidak di-merge. Kalau claude.ai atau ChatGPT gagal sampai `whoami`, berhenti dan desain ulang ke pendekatan B (OAuth server sendiri) |
+| 0. Spike (dibuang) | Nyalakan OAuth server dan DCR di staging; endpoint minimal dengan `whoami`; consent seadanya | Pertanyaan §10.1 terjawab dan dicatat di `docs/verification/T34-phase0-spike.md`. Kode tidak di-merge. Connect dari client asli dikerjakan product owner (§14.2). Kalau claude.ai atau ChatGPT gagal sampai `whoami`, eksekutor berhenti dan melapor; product owner yang memutuskan pindah ke pendekatan B (OAuth server sendiri) |
 | 1. Skema | §5 seluruhnya, hook pre-request, policy storage | pgTAP hijau, guard release T25 hijau |
 | 2. Endpoint | §7, sepuluh tool | unit dan integrasi hijau |
 | 3. Consent dan S12 | §6.2, §8 | e2e hijau, review copy lolos |
-| 4. Staging | flag menyala di staging, akun pilot menyambung dari claude.ai dan ChatGPT | smoke manual dengan screenshot tercatat, lalu gate review |
+| 4. Staging | flag menyala di staging, akun pilot menyambung dari claude.ai dan ChatGPT (dikerjakan product owner, §14.2) | smoke manual dengan screenshot tercatat, lalu gate review |
 
 ### 10.1 Pertanyaan yang dijawab Fase 0
 
@@ -352,5 +352,40 @@ Ketiganya dicatat apa adanya di dokumen verifikasi T34.
 
 ## 13. Dokumen lanjutan
 
-- Handoff plan T34 di `docs/verification`, setelah spec ini disetujui.
+- Handoff plan `docs/verification/T34-implementation-plan.md`, ditulis setelah spec ini disetujui.
 - Decision 0044, entri `IMPLEMENTATION_STATUS`, dan README ditulis saat closeout.
+
+## 14. Eksekusi
+
+### 14.1 Peran
+
+| Peran | Siapa | Tugas |
+|---|---|---|
+| Eksekutor | Claude Sonnet 5.5, single agent | Mengerjakan fase 0–4 satu per satu sesuai handoff plan dan menulis receipt per fase |
+| Gate reviewer | Claude Opus | Review read-only setelah Fase 3 dan setelah Fase 4, menjalankan ulang check, memberi temuan P0–P3 dan verdict |
+| Product owner | user | Mengerjakan langkah yang memerlukan akunnya sendiri (§14.2) dan menyetujui perubahan di staging |
+
+Hanya gate reviewer yang menulis status resmi dan menandai T34 DONE.
+
+### 14.2 Langkah yang tidak bisa dikerjakan eksekutor
+
+Eksekutor tidak boleh login ke akun pihak ketiga milik user dan tidak boleh mengubah project hosted tanpa persetujuan. Jadi langkah berikut ditulis di handoff sebagai instruksi untuk product owner, dan eksekutor berhenti sampai product owner melaporkan hasilnya:
+
+1. Menambahkan connector WorkPulse di claude.ai dan ChatGPT, login, consent, lalu meminta `whoami` dan tool lain (Fase 0 dan Fase 4).
+2. Menyalakan OAuth server, DCR, dan hook `db-pre-request` di Supabase staging, kalau perubahan itu tidak bisa dilakukan lewat migration yang di-review.
+3. Meng-enroll akun pilot staging dengan `set_mcp_access` dan mengisi allowlist dengan `set_mcp_settings`.
+
+### 14.3 Aturan untuk eksekutor
+
+Handoff plan menuliskan aturan ini secara eksplisit, tanpa mengandalkan memori sesi lain:
+
+- Antislop memakai mode `during` (session override), jadi eksekutor tidak perlu bertanya lagi soal mode.
+- Quirk lingkungan lokal ditulis di dalam handoff: sumber secret key, pin image Supabase worktree (`42P10`), jebakan pipeline PowerShell, dan `.env.ai.local`.
+- Kode spike Fase 0 dikerjakan di branch terpisah dan tidak pernah di-merge.
+- Tanpa push, PR, atau menandai DONE.
+- **Kondisi berhenti** (lapor ke product owner, jangan improvisasi):
+  - Fase 0 gagal di salah satu dari §10.1 nomor 1, 3, atau 5. Pindah ke pendekatan B diputuskan product owner, bukan eksekutor.
+  - Implementasi menuntut pelonggaran §3.1, misalnya token OAuth harus boleh memanggil RPC app biasa.
+  - Ada check yang masih gagal setelah dua kali perbaikan.
+  - Perlu perubahan di project hosted yang tidak tercantum di handoff.
+  - Perlu menambah dependency di luar SDK MCP resmi.
